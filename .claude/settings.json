@@ -20,7 +20,12 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//c/Users/thstj/source/repos/EPIHome/**)",
+      "Bash(find /c/Users/thstj/source/repos/EPIHome -name \"*.cs\" -type f -exec grep -l \"\\\\.csv\\\\|MapFile\\\\|Load.*File\" {})",
+      "Bash(find /c/Users/thstj/source/repos/EPIHome -type f \\\\\\(-name *.map -o -name *.sum -o -name *.csv \\\\\\))",
+      "Bash(xargs ls:*)",
+      "Read(//c/Users/thstj/.claude/projects/c--epi-web/memory/**)"
     ]
   }
 }

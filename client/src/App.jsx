@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Measurement from './pages/epi/Measurement'
 import MocvdSource from './pages/epi/mocvd/Source'
 import Simulator from './pages/epi/Simulator'
+import WaferMap from './pages/WaferMap'
 import DataGrid from './pages/DataGrid'
 import Admin from './pages/Admin'
 
@@ -39,6 +40,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/epi/mocvd/source" element={<MocvdSource />} />
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />
+          <Route path="/wafermap" element={<WaferMap />} />
           <Route path="/grid" element={<DataGrid />} />
           {user.role === 'admin' && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

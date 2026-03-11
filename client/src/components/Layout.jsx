@@ -16,6 +16,7 @@ import {
   LogoutOutlined,
   UserOutlined,
   RocketOutlined,
+  HeatMapOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../context/AuthContext'
 
@@ -41,6 +42,7 @@ function buildMenuItems(isAdmin) {
       ],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
+    { key: '/wafermap', icon: <HeatMapOutlined />, label: 'Wafer Map' },
     { key: '/grid', icon: <TableOutlined />, label: '데이터 조회/입력' },
   ]
   if (isAdmin) {

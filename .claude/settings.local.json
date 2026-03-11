@@ -5,7 +5,8 @@
       "Bash(pip install:*)",
       "Bash(python -m pip install -r requirements.txt)",
       "Bash(py --version)",
-      "Bash(where python:*)"
+      "Bash(where python:*)",
+      "Bash(find c:UsersthstjsourcereposEPIHomeEPI -type f \\\\\\(-name *.csv -o -name *.txt -o -name *.map -o -name *.sum \\\\\\))"
     ]
   }
 }

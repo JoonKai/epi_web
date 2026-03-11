@@ -47,3 +47,15 @@ def db_check(db: Session = Depends(get_db)):
         return {"db": "connected"}
     except Exception as e:
         return {"db": "error", "detail": str(e)}
+
+
+@app.get("/api/dashboard/stats")
+def dashboard_stats(db: Session = Depends(get_db)):
+    from models import User, MocvdMachine, MocvdSource, SourceType
+    return {
+        "active_machines": db.query(MocvdMachine).filter(MocvdMachine.is_active == True).count(),
+        "total_machines":  db.query(MocvdMachine).count(),
+        "active_users":    db.query(User).filter(User.is_active == True).count(),
+        "source_types":    db.query(SourceType).filter(SourceType.is_active == True).count(),
+        "source_entries":  db.query(MocvdSource).count(),
+    }

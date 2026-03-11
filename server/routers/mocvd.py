@@ -63,3 +63,36 @@ def update_sources(machine_no: int, items: list[SourceUpdate], db: Session = Dep
                                remaining=item.remaining, unit=item.unit))
     db.commit()
     return {"result": "ok"}
+
+
+@router.get("/sources/all")
+def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """전 호기 × 전 소스 현황 (DataGrid용)"""
+    machines = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
+    source_types = db.query(SourceType).filter(SourceType.is_active == True).order_by(SourceType.order_idx).all()
+    source_names = [s.name for s in source_types]
+
+    # 모든 소스 데이터를 machine_no 기준으로 그룹화
+    all_rows = db.query(MocvdSource).all()
+    data_map = {}
+    for r in all_rows:
+        data_map[(r.machine_no, r.source_name)] = {"remaining": r.remaining, "unit": r.unit, "updated_at": r.updated_at}
+
+    result = []
+    for m in machines:
+        row = {"machine_no": m.machine_no, "description": m.description or ""}
+        latest_at = None
+        for sname in source_names:
+            key = (m.machine_no, sname)
+            if key in data_map:
+                row[sname] = data_map[key]["remaining"]
+                row[f"{sname}_unit"] = data_map[key]["unit"]
+                if data_map[key]["updated_at"] and (latest_at is None or data_map[key]["updated_at"] > latest_at):
+                    latest_at = data_map[key]["updated_at"]
+            else:
+                row[sname] = None
+                row[f"{sname}_unit"] = "kg"
+        row["updated_at"] = latest_at.strftime("%Y-%m-%d %H:%M") if latest_at else None
+        result.append(row)
+
+    return {"source_names": source_names, "rows": result}
