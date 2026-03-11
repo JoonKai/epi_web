@@ -1,0 +1,16 @@
+[project]
+name = "junes"
+version = "0.1.0"
+description = "epi_server"
+authors = [
+    {name = "JoonKai",email = "joonseok831@gmail.com"}
+]
+requires-python = ">=3.12,<=3.15"
+dependencies = [
+    "fastapi[all] (>=0.135.1,<0.136.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

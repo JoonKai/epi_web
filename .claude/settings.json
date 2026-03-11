@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/Users/thstj/AppData/Local/Microsoft/WindowsApps/python.exe\" --version)",
+      "Bash(where python3:*)",
+      "Read(//usr/**)",
+      "Read(//usr/local/**)",
+      "Bash(cmd.exe /c \"python --version\")",
+      "Bash(cmd.exe /c \"python --version && where python\")",
+      "Bash(cmd.exe /c \"py -3 --version\")",
+      "Bash(cmd.exe /c \"py -3 --version 2>&1\")",
+      "Read(//c/Users/thstj/AppData/Local/Programs/Python//**)",
+      "Read(//c/Users/thstj/AppData/Local/Programs//**)",
+      "Bash(/c/Users/thstj/AppData/Local/Programs/Python/Launcher/py.exe --version)",
+      "Bash(/c/Users/thstj/AppData/Local/Programs/Python/Launcher/py.exe -m pip install -r \"c:/Users/thstj/OneDrive/바탕 화면/epi_web/server/requirements.txt\")",
+      "Bash(ls /c/epi_web/server/venv*)"
+    ]
+  }
+}
