@@ -11,6 +11,7 @@ import {
   MenuUnfoldOutlined,
   ControlOutlined,
   ApartmentOutlined,
+  NodeIndexOutlined,
 } from '@ant-design/icons'
 
 const { Sider, Content, Header } = AntLayout
@@ -22,7 +23,14 @@ const menuItems = [
     icon: <ExperimentOutlined />,
     label: 'EPI',
     children: [
-      { key: '/epi/mocvd', icon: <ControlOutlined />, label: 'MOCVD' },
+      {
+        key: 'epi-mocvd',
+        icon: <ControlOutlined />,
+        label: 'MOCVD',
+        children: [
+          { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스' },
+        ],
+      },
       { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
     ],
   },
@@ -96,7 +104,7 @@ function Layout({ children, isDark, onThemeToggle }) {
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={['epi']}
+          defaultOpenKeys={['epi', 'epi-mocvd']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{

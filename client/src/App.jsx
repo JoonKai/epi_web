@@ -3,8 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ConfigProvider, theme as antTheme } from 'antd'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
-import Mocvd from './pages/epi/Mocvd'
 import Measurement from './pages/epi/Measurement'
+import MocvdSource from './pages/epi/mocvd/Source'
 import DataGrid from './pages/DataGrid'
 
 function App() {
@@ -26,7 +26,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/epi/mocvd" element={<Mocvd />} />
+            <Route path="/epi/mocvd/source" element={<MocvdSource />} />
             <Route path="/epi/measurement" element={<Measurement />} />
             <Route path="/grid" element={<DataGrid />} />
           </Routes>

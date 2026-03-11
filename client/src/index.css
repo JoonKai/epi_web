@@ -34,3 +34,8 @@ body {
 .ant-menu-dark .ant-menu-item:hover {
   background: rgba(255,255,255,0.08) !important;
 }
+
+/* 수정된 행 강조 */
+.row-edited td {
+  background: rgba(250, 173, 20, 0.06) !important;
+}

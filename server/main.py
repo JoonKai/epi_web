@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import engine, get_db, Base
+import models  # noqa: F401
+from routers import mocvd
 
 Base.metadata.create_all(bind=engine)
 
@@ -15,6 +17,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(mocvd.router)
 
 
 @app.get("/api/")
