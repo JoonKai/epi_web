@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Button, Tooltip, theme } from 'antd'
+import { Layout as AntLayout, Menu, Button, Tooltip, theme, Avatar, Dropdown } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -12,30 +12,42 @@ import {
   ControlOutlined,
   ApartmentOutlined,
   NodeIndexOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+  UserOutlined,
+  RocketOutlined,
 } from '@ant-design/icons'
+import { useAuth } from '../context/AuthContext'
 
 const { Sider, Content, Header } = AntLayout
 
-const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: '대시보드' },
-  {
-    key: 'epi',
-    icon: <ExperimentOutlined />,
-    label: 'EPI',
-    children: [
-      {
-        key: 'epi-mocvd',
-        icon: <ControlOutlined />,
-        label: 'MOCVD',
-        children: [
-          { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스' },
-        ],
-      },
-      { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
-    ],
-  },
-  { key: '/grid', icon: <TableOutlined />, label: '데이터 조회/입력' },
-]
+function buildMenuItems(isAdmin) {
+  const items = [
+    { key: '/dashboard', icon: <DashboardOutlined />, label: '대시보드' },
+    {
+      key: 'epi',
+      icon: <ExperimentOutlined />,
+      label: 'EPI',
+      children: [
+        {
+          key: 'epi-mocvd',
+          icon: <ControlOutlined />,
+          label: 'MOCVD',
+          children: [
+            { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스' },
+          ],
+        },
+        { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
+      ],
+    },
+    { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
+    { key: '/grid', icon: <TableOutlined />, label: '데이터 조회/입력' },
+  ]
+  if (isAdmin) {
+    items.push({ key: '/admin', icon: <SettingOutlined />, label: '관리자 설정' })
+  }
+  return items
+}
 
 function findLabel(items, pathname) {
   for (const item of items) {
@@ -53,8 +65,18 @@ function Layout({ children, isDark, onThemeToggle }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { token } = theme.useToken()
+  const { user, logout } = useAuth()
 
+  const isAdmin = user?.role === 'admin'
+  const menuItems = buildMenuItems(isAdmin)
   const currentLabel = findLabel(menuItems, location.pathname) ?? 'EPI Web'
+
+  const userMenu = {
+    items: [
+      { key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', danger: true },
+    ],
+    onClick: ({ key }) => { if (key === 'logout') logout() },
+  }
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
@@ -70,7 +92,6 @@ function Layout({ children, isDark, onThemeToggle }) {
           boxShadow: '2px 0 12px rgba(0,0,0,0.3)',
         }}
       >
-        {/* 로고 */}
         <div style={{
           height: 64,
           display: 'flex',
@@ -81,17 +102,10 @@ function Layout({ children, isDark, onThemeToggle }) {
           cursor: 'pointer',
         }} onClick={() => navigate('/dashboard')}>
           <div style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
+            width: 32, height: 32, borderRadius: 8,
             background: 'linear-gradient(135deg, #4f7fff, #7b5ea7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            fontWeight: 'bold',
-            color: '#fff',
-            flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16, fontWeight: 'bold', color: '#fff', flexShrink: 0,
           }}>E</div>
           {!collapsed && (
             <span style={{ color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: 1 }}>
@@ -100,24 +114,18 @@ function Layout({ children, isDark, onThemeToggle }) {
           )}
         </div>
 
-        {/* 메뉴 */}
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
           defaultOpenKeys={['epi', 'epi-mocvd']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            marginTop: 8,
-          }}
+          style={{ background: 'transparent', border: 'none', marginTop: 8 }}
           theme="dark"
         />
       </Sider>
 
       <AntLayout>
-        {/* 헤더 */}
         <Header style={{
           background: token.colorBgContainer,
           padding: '0 24px',
@@ -137,12 +145,7 @@ function Layout({ children, isDark, onThemeToggle }) {
               onClick={() => setCollapsed(p => !p)}
               style={{ fontSize: 16, color: token.colorTextSecondary }}
             />
-            <span style={{
-              fontSize: 16,
-              fontWeight: 600,
-              color: token.colorText,
-              letterSpacing: 0.3,
-            }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: token.colorText, letterSpacing: 0.3 }}>
               {currentLabel}
             </span>
           </div>
@@ -150,25 +153,31 @@ function Layout({ children, isDark, onThemeToggle }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Tooltip title={isDark ? '라이트 모드' : '다크 모드'}>
               <Button
-                type="text"
-                shape="circle"
+                type="text" shape="circle"
                 icon={isDark ? <SunOutlined style={{ color: '#faad14' }} /> : <MoonOutlined />}
                 onClick={onThemeToggle}
                 style={{ fontSize: 16 }}
               />
             </Tooltip>
+            <Dropdown menu={userMenu} placement="bottomRight">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8 }}>
+                <Avatar size="small" icon={<UserOutlined />} style={{ background: '#4f7fff' }} />
+                {!collapsed && (
+                  <span style={{ fontSize: 13, color: token.colorText }}>
+                    {user?.username}
+                    {isAdmin && <span style={{ color: '#ff4d4f', fontSize: 11, marginLeft: 4 }}>[관리자]</span>}
+                  </span>
+                )}
+              </div>
+            </Dropdown>
           </div>
         </Header>
 
-        {/* 컨텐츠 */}
         <Content style={{
-          margin: 24,
-          padding: 28,
+          margin: 24, padding: 28,
           background: token.colorBgContainer,
           borderRadius: 12,
-          boxShadow: isDark
-            ? '0 2px 16px rgba(0,0,0,0.4)'
-            : '0 2px 16px rgba(0,0,0,0.06)',
+          boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.4)' : '0 2px 16px rgba(0,0,0,0.06)',
           minHeight: 'calc(100vh - 112px)',
           transition: 'background 0.3s',
         }}>
