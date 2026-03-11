@@ -13,7 +13,12 @@
       "Read(//c/Users/thstj/AppData/Local/Programs//**)",
       "Bash(/c/Users/thstj/AppData/Local/Programs/Python/Launcher/py.exe --version)",
       "Bash(/c/Users/thstj/AppData/Local/Programs/Python/Launcher/py.exe -m pip install -r \"c:/Users/thstj/OneDrive/바탕 화면/epi_web/server/requirements.txt\")",
-      "Bash(ls /c/epi_web/server/venv*)"
+      "Bash(ls /c/epi_web/server/venv*)",
+      "Bash(.venv/Scripts/python -c \":*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

@@ -1,23 +1,38 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { ConfigProvider, theme as antTheme } from 'antd'
+import Layout from './components/Layout'
+import Dashboard from './pages/Dashboard'
+import Mocvd from './pages/epi/Mocvd'
+import Measurement from './pages/epi/Measurement'
+import DataGrid from './pages/DataGrid'
 
 function App() {
-  const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    fetch('/api/')
-      .then((res) => res.json())
-      .then((data) => setMessage(data.message))
-      .catch(() => setMessage('서버에 연결할 수 없습니다.'))
-  }, [])
+  const [isDark, setIsDark] = useState(false)
 
   return (
-    <div className="app">
-      <h1>Epi Web</h1>
-      <p className="server-message">
-        서버 응답: <strong>{message || '로딩 중...'}</strong>
-      </p>
-    </div>
+    <ConfigProvider
+      theme={{
+        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#4f7fff',
+          borderRadius: 8,
+          fontFamily: "'Segoe UI', 'Pretendard', sans-serif",
+        },
+      }}
+    >
+      <BrowserRouter>
+        <Layout isDark={isDark} onThemeToggle={() => setIsDark(p => !p)}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/epi/mocvd" element={<Mocvd />} />
+            <Route path="/epi/measurement" element={<Measurement />} />
+            <Route path="/grid" element={<DataGrid />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
+    </ConfigProvider>
   )
 }
 
