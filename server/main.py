@@ -1,12 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
 from sqlalchemy import text
-from database import engine, get_db, Base
+from sqlalchemy.orm import Session
+
+from database import Base, engine, get_db
 import models  # noqa: F401
-from routers import mocvd, auth, admin
-import os
+from routers import admin, auth, mocvd
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,15 +23,10 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(mocvd.router)
 
-# 시뮬레이터 정적 파일 서빙
-simulator_dist = os.path.join(os.path.dirname(__file__), "..", "simulator", "dist")
-if os.path.exists(simulator_dist):
-    app.mount("/simulator", StaticFiles(directory=simulator_dist, html=True), name="simulator")
-
 
 @app.get("/api/")
 def root():
-    return {"message": "FastAPI 서버가 정상 작동 중입니다."}
+    return {"message": "FastAPI server is running."}
 
 
 @app.get("/api/health")
@@ -51,11 +45,12 @@ def db_check(db: Session = Depends(get_db)):
 
 @app.get("/api/dashboard/stats")
 def dashboard_stats(db: Session = Depends(get_db)):
-    from models import User, MocvdMachine, MocvdSource, SourceType
+    from models import MocvdMachine, MocvdSource, SourceType, User
+
     return {
         "active_machines": db.query(MocvdMachine).filter(MocvdMachine.is_active == True).count(),
-        "total_machines":  db.query(MocvdMachine).count(),
-        "active_users":    db.query(User).filter(User.is_active == True).count(),
-        "source_types":    db.query(SourceType).filter(SourceType.is_active == True).count(),
-        "source_entries":  db.query(MocvdSource).count(),
+        "total_machines": db.query(MocvdMachine).count(),
+        "active_users": db.query(User).filter(User.is_active == True).count(),
+        "source_types": db.query(SourceType).filter(SourceType.is_active == True).count(),
+        "source_entries": db.query(MocvdSource).count(),
     }
