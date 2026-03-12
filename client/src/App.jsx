@@ -12,6 +12,21 @@ import WaferMap from './pages/WaferMap'
 import DataGrid from './pages/DataGrid'
 import Admin from './pages/Admin'
 
+// 딥 네이비 다크 토큰
+const DARK_TOKENS = {
+  colorBgBase:           '#0a1628',
+  colorBgContainer:      '#0f2040',
+  colorBgElevated:       '#162848',
+  colorBgLayout:         '#070f1e',
+  colorBgSpotlight:      '#162848',
+  colorBorder:           'rgba(255,255,255,0.10)',
+  colorBorderSecondary:  'rgba(255,255,255,0.06)',
+  colorFillAlter:        'rgba(255,255,255,0.04)',
+  colorFillContent:      'rgba(255,255,255,0.06)',
+}
+
+const LIGHT_TOKENS = {}
+
 function AppRoutes({ isDark, onThemeToggle }) {
   const { user, loading, logout } = useAuth()
 
@@ -23,7 +38,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#070f1e' }}>
         <Spin size="large" />
       </div>
     )
@@ -51,7 +66,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
 }
 
 function App() {
-  const [isDark, setIsDark] = useState(false)
+  const [isDark, setIsDark] = useState(true)   // 다크 모드 기본값
 
   return (
     <ConfigProvider
@@ -60,7 +75,19 @@ function App() {
         token: {
           colorPrimary: '#4f7fff',
           borderRadius: 8,
-          fontFamily: "'Segoe UI', 'Pretendard', sans-serif",
+          fontFamily: "'Pretendard', 'Segoe UI', -apple-system, sans-serif",
+          ...(isDark ? DARK_TOKENS : LIGHT_TOKENS),
+        },
+        components: {
+          Menu: isDark ? {
+            darkItemBg:           'transparent',
+            darkItemHoverBg:      'rgba(79,127,255,0.12)',
+            darkItemSelectedBg:   'rgba(79,127,255,0.20)',
+            darkSubMenuItemBg:    'transparent',
+          } : {},
+          Card: isDark ? {
+            colorBgContainer: '#0f2040',
+          } : {},
         },
       }}
     >

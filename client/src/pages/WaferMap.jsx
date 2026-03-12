@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
-import { Card, Select, Upload, Button, Space, Typography, theme, message, Tag, Divider } from 'antd'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Card, Select, Upload, Button, Space, Typography, theme, message, Tag, Divider, Switch } from 'antd'
 import { UploadOutlined, ReloadOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
+import WaferMapRange, { PALETTES } from '../components/WaferMapRange'
 
 const { Text } = Typography
 
@@ -19,24 +20,17 @@ const COL_MAP = {
   'bluereflection':      'brefl',
 }
 
-// 표시할 파라미터 (기본 7개 + 값이 있으면 추가)
 const BASE_PARAMS = [
-  { key: 'pw',    label: 'PW',   fullLabel: 'Peak Wavelength',      unit: 'nm', decimals: 4 },
-  { key: 'dw',    label: 'DW',   fullLabel: 'Dominant Wavelength',  unit: 'nm', decimals: 4 },
-  { key: 'fwhm',  label: 'FWHM', fullLabel: 'FWHM',                 unit: 'nm', decimals: 4 },
-  { key: 'pi',    label: 'PI',   fullLabel: 'Peak Intensity',        unit: '',   decimals: 4 },
-  { key: 'ii',    label: 'II',   fullLabel: 'Integrated Intensity',  unit: '',   decimals: 4 },
-  { key: 'refl',  label: 'Refl', fullLabel: 'Reflection',            unit: '',   decimals: 4 },
-  { key: 'thick', label: 'Thick','fullLabel': 'Thickness',           unit: '',   decimals: 4 },
+  { key: 'pw',    label: 'PW',   fullLabel: 'Peak Wavelength',     unit: 'nm', decimals: 4 },
+  { key: 'dw',    label: 'DW',   fullLabel: 'Dominant Wavelength', unit: 'nm', decimals: 4 },
+  { key: 'fwhm',  label: 'FWHM', fullLabel: 'FWHM',                unit: 'nm', decimals: 4 },
+  { key: 'pi',    label: 'PI',   fullLabel: 'Peak Intensity',       unit: '',   decimals: 4 },
+  { key: 'ii',    label: 'II',   fullLabel: 'Integrated Intensity', unit: '',   decimals: 4 },
+  { key: 'refl',  label: 'Refl', fullLabel: 'Reflection',           unit: '',   decimals: 4 },
+  { key: 'thick', label: 'Thick', fullLabel: 'Thickness',           unit: '',   decimals: 4 },
 ]
 
-// Jet colormap
-const JET = [
-  '#00007f', '#0000ff', '#0080ff', '#00ffff',
-  '#80ff80', '#ffff00', '#ff8000', '#ff0000', '#7f0000',
-]
-
-function waferCircle(r = 11.3, n = 360) {
+function waferCircle(r = WAFER_R, n = 360) {
   const pts = []
   for (let i = 0; i <= n; i++) {
     const a = (i / n) * 2 * Math.PI
@@ -45,48 +39,46 @@ function waferCircle(r = 11.3, n = 360) {
   return pts
 }
 
-// 데모 데이터 — 실제 .map 파일과 동일한 x,y 좌표계
 const noise = (x, y, s) => Math.sin(x * 0.31 + y * 0.71) * Math.cos(x * 0.53 - y * 0.29) * s
+
+// 반경 R 내부 셀만 포함 — 셀 코너가 원 밖으로 나가지 않도록 0.5√2 여유 확보
+const CELL_HALF_DIAG = Math.SQRT2 * 0.5  // ≈ 0.707
+const WAFER_R        = 11.3               // 표시 원 반경
+const DATA_R         = WAFER_R - CELL_HALF_DIAG - 0.05  // ≈ 10.54 → 셀이 완전히 원 안에 수납
 
 function generateDemoData() {
   const points = []
-  const R = 11.2
-
+  const R = DATA_R
   for (let y = -11; y <= 11; y++) {
-    // 각 y 행에서 원 안에 들어오는 x 범위 계산
     const xMax = Math.floor(Math.sqrt(R * R - y * y))
     for (let x = -xMax; x <= xMax; x++) {
-      const r  = Math.sqrt(x * x + y * y) / R
-      const a  = Math.atan2(y, x)
-      const pw   = +(439.5 + 1.5 * r  + noise(x, y, 0.4)).toFixed(4)
-      const dw   = +(pw + 4.5          + noise(x, y, 0.3)).toFixed(4)
-      const fwhm = +(15.0 + 2.5 * r   + noise(x, y, 0.6)).toFixed(4)
-      const pi   = +(17.5 - 4.0 * r * r + noise(x, y, 0.8)).toFixed(4)
-      const ii   = +(340  - 70 * r * r + noise(x, y, 12)).toFixed(4)
-      const refl = +(222  - 20 * r     + noise(x, y, 5)).toFixed(4)
-      const thick = +(7.4 + 0.3 * Math.sin(a * 2) * r + noise(x, y, 0.1)).toFixed(4)
-      points.push({ x, y, pw, dw, fwhm, pi, ii, refl, thick, pd: 0, trans: 0, brefl: 0 })
+      const r = Math.sqrt(x * x + y * y) / R
+      const a = Math.atan2(y, x)
+      points.push({
+        x, y,
+        pw:   +(439.5 + 1.5 * r  + noise(x, y, 0.4)).toFixed(4),
+        dw:   +(444.0 + 1.5 * r  + noise(x, y, 0.3)).toFixed(4),
+        fwhm: +(15.0  + 2.5 * r  + noise(x, y, 0.6)).toFixed(4),
+        pi:   +(17.5  - 4.0 * r * r + noise(x, y, 0.8)).toFixed(4),
+        ii:   +(340   - 70  * r * r + noise(x, y, 12)).toFixed(4),
+        refl: +(222   - 20  * r  + noise(x, y, 5)).toFixed(4),
+        thick: +(7.4  + 0.3 * Math.sin(a * 2) * r + noise(x, y, 0.1)).toFixed(4),
+        pd: 0, trans: 0, brefl: 0,
+      })
     }
   }
   return { waferId: 'DEMO-W001', lot: 'DEMO', points }
 }
 
-// .map 파일 파싱
 function parseMapFile(text, filename) {
   const lines = text.trim().split(/\r?\n/)
   if (lines.length < 2) throw new Error('데이터가 없습니다.')
-
-  // 헤더 파싱 (공백 제거)
   const rawHeaders = lines[0].split(',').map(h => h.trim())
   const headers    = rawHeaders.map(h => h.toLowerCase().replace(/\s+/g, ''))
-
   const xIdx = headers.indexOf('x')
   const yIdx = headers.indexOf('y')
   if (xIdx < 0 || yIdx < 0) throw new Error('x, y 컬럼을 찾을 수 없습니다.')
-
-  // 각 컬럼의 내부 키 매핑
   const colKeys = headers.map(h => COL_MAP[h] ?? null)
-
   const points = []
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -95,20 +87,13 @@ function parseMapFile(text, filename) {
     const x = parseInt(vals[xIdx])
     const y = parseInt(vals[yIdx])
     if (isNaN(x) || isNaN(y)) continue
-
+    if (Math.sqrt(x * x + y * y) > DATA_R) continue  // 원 밖 셀 제외
     const pt = { x, y }
-    colKeys.forEach((key, j) => {
-      if (key) pt[key] = parseFloat(vals[j]) || 0
-    })
+    colKeys.forEach((key, j) => { if (key) pt[key] = parseFloat(vals[j]) || 0 })
     points.push(pt)
   }
-
   if (!points.length) throw new Error('파싱된 포인트가 없습니다.')
-  return {
-    waferId: filename.replace(/\.\w+$/, ''),
-    lot: '-',
-    points,
-  }
+  return { waferId: filename.replace(/\.\w+$/, ''), lot: '-', points }
 }
 
 function calcStats(points, key) {
@@ -121,69 +106,89 @@ function calcStats(points, key) {
   return { avg, std, min, max, range: max - min, uniformity: avg > 0 ? (std / avg) * 100 : 0 }
 }
 
+// 값 → 컬러 인덱스
+function valToColor(val, rangeStart, rangeEnd, colors) {
+  if (!val || val === 0 || isNaN(val)) return 'rgba(50,60,80,0.35)'
+  const t   = Math.max(0, Math.min(1, (val - rangeStart) / Math.max(1e-10, rangeEnd - rangeStart)))
+  const idx = Math.min(colors.length - 1, Math.floor(t * colors.length))
+  return colors[idx]
+}
+
 const WAFER_CIRCLE = waferCircle(11.3)
 
 export default function WaferMapPage() {
-  const [data, setData]       = useState(generateDemoData)
-  const [param, setParam]     = useState('pw')
+  const [data, setData]     = useState(generateDemoData)
+  const [param, setParam]   = useState('pw')
   const [hovered, setHovered] = useState(null)
-  const { token }             = theme.useToken()
+  const { token }           = theme.useToken()
 
-  // 현재 데이터에서 실제 값이 있는 파라미터만 표시
-  const activeParams = useMemo(() => {
-    return BASE_PARAMS.filter(p =>
-      data.points.some(pt => pt[p.key] != null && pt[p.key] !== 0)
-    )
-  }, [data])
+  // 범위 상태
+  const [rangeStart,    setRangeStart]    = useState(0)
+  const [rangeEnd,      setRangeEnd]      = useState(1)
+  const [useAutoRange,  setUseAutoRange]  = useState(true)
+  const [colors,        setColors]        = useState(PALETTES.jet)
+  const [useDistribution, setUseDistribution] = useState(false)
 
-  const pInfo   = activeParams.find(p => p.key === param) ?? BASE_PARAMS[0]
-  const stats   = useMemo(() => calcStats(data.points, param), [data, param])
+  // 파라미터 / 데이터 변경 시 auto range 계산
+  useEffect(() => {
+    if (!useAutoRange) return
+    const vals = data.points.map(p => p[param]).filter(v => v !== 0 && !isNaN(v))
+    if (!vals.length) return
+    setRangeStart(Math.min(...vals))
+    setRangeEnd(Math.max(...vals))
+  }, [data, param, useAutoRange])
+
+  const activeParams = useMemo(() =>
+    BASE_PARAMS.filter(p => data.points.some(pt => pt[p.key] != null && pt[p.key] !== 0))
+  , [data])
+
+  const pInfo    = activeParams.find(p => p.key === param) ?? BASE_PARAMS[0]
+  const stats    = useMemo(() => calcStats(data.points, param), [data, param])
   const allStats = useMemo(
     () => Object.fromEntries(activeParams.map(p => [p.key, calcStats(data.points, p.key)])),
     [data, activeParams]
   )
 
-  // row,col → point lookup (by x,y)
+  // 분포 계산 (WaferMapRange의 히스토그램용)
+  const distributions = useMemo(() => {
+    if (!useDistribution) return null
+    const n = colors.length
+    const counts = new Array(n).fill(0)
+    data.points.forEach(pt => {
+      const v = pt[param]
+      if (!v || v === 0 || isNaN(v)) return
+      const t   = Math.max(0, Math.min(1, (v - rangeStart) / Math.max(1e-10, rangeEnd - rangeStart)))
+      const idx = Math.min(n - 1, Math.floor(t * n))
+      counts[idx]++
+    })
+    return counts
+  }, [data, param, rangeStart, rangeEnd, colors.length, useDistribution])
+
   const pointMap = useMemo(() => {
     const m = {}
     data.points.forEach(p => { m[`${p.x},${p.y}`] = p })
     return m
   }, [data])
 
+  // ECharts 옵션 — visualMap 없이 renderItem에서 직접 컬러 계산
   const chartOption = useMemo(() => {
-    const vals = data.points.map(p => p[param]).filter(v => v !== 0 && !isNaN(v))
-    const vmin = vals.length ? Math.min(...vals) : 0
-    const vmax = vals.length ? Math.max(...vals) : 1
-
     return {
       backgroundColor: 'transparent',
       tooltip: { show: false },
-      visualMap: {
-        type: 'continuous',
-        seriesIndex: 1,
-        dimension: 2,
-        min: vmin,
-        max: vmax,
-        calculable: true,
-        orient: 'vertical',
-        right: 6,
-        top: 'center',
-        inRange: { color: JET },
-        textStyle: { color: token.colorText, fontSize: 10 },
-        formatter: v => v.toFixed(4),
-      },
-      grid: { left: 36, right: 90, top: 16, bottom: 36 },
+      grid: { left: 4, right: 4, top: 4, bottom: 4 },
       xAxis: {
         type: 'value', min: -12.5, max: 12.5,
-        axisLabel: { color: token.colorTextSecondary, fontSize: 10 },
+        axisLabel: { show: false },
         splitLine: { show: false },
-        axisLine: { lineStyle: { color: token.colorBorder } },
+        axisLine: { show: false },
+        axisTick: { show: false },
       },
       yAxis: {
         type: 'value', min: -12.5, max: 12.5,
-        axisLabel: { color: token.colorTextSecondary, fontSize: 10 },
+        axisLabel: { show: false },
         splitLine: { show: false },
-        axisLine: { lineStyle: { color: token.colorBorder } },
+        axisLine: { show: false },
+        axisTick: { show: false },
       },
       series: [
         // ① 웨이퍼 경계선
@@ -191,27 +196,32 @@ export default function WaferMapPage() {
           type: 'line',
           data: WAFER_CIRCLE,
           showSymbol: false,
-          lineStyle: { color: '#aaaaaa', width: 1.5 },
+          lineStyle: { color: 'rgba(160,170,190,0.7)', width: 1.5 },
           z: 3, silent: true,
           encode: { x: 0, y: 1 },
         },
-        // ② 데이터 셀 (사각형)
+        // ② 데이터 셀 (사각형 — 수동 컬러)
         {
           type: 'custom',
           renderItem: (_p, api) => {
-            const cx = api.value(0)
-            const cy = api.value(1)
-            const tl = api.coord([cx - 0.5, cy + 0.5])
-            const br = api.coord([cx + 0.5, cy - 0.5])
+            const cx  = api.value(0)
+            const cy  = api.value(1)
+            const val = api.value(2)
+            const tl  = api.coord([cx - 0.5, cy + 0.5])
+            const br  = api.coord([cx + 0.5, cy - 0.5])
+            const fill = valToColor(val, rangeStart, rangeEnd, colors)
             return {
               type: 'rect',
               shape: {
-                x: tl[0],
-                y: tl[1],
+                x: tl[0], y: tl[1],
                 width:  Math.max(br[0] - tl[0], 1),
                 height: Math.max(br[1] - tl[1], 1),
               },
-              style: api.style({ stroke: 'rgba(0,0,0,0.15)', lineWidth: 0.5 }),
+              style: {
+                fill,
+                stroke: 'rgba(0,0,0,0.12)',
+                lineWidth: 0.5,
+              },
             }
           },
           encode: { x: 0, y: 1, value: 2 },
@@ -220,7 +230,7 @@ export default function WaferMapPage() {
         },
       ],
     }
-  }, [data, param, token])
+  }, [data, param, rangeStart, rangeEnd, colors, token])
 
   const onEvents = useMemo(() => ({
     mousemove: (params) => {
@@ -233,7 +243,14 @@ export default function WaferMapPage() {
     globalout: () => setHovered(null),
   }), [pointMap])
 
-  // .map 파일 로드
+  // WaferMapRange 콜백
+  const handleRangeChange = ({ start, end, auto, dist }) => {
+    if (dist !== undefined) setUseDistribution(dist)
+    setUseAutoRange(auto ?? false)
+    if (start != null) setRangeStart(start)
+    if (end   != null) setRangeEnd(end)
+  }
+
   const handleUpload = (file) => {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -241,7 +258,7 @@ export default function WaferMapPage() {
         const parsed = parseMapFile(e.target.result, file.name)
         setData(parsed)
         setHovered(null)
-        // 첫 번째 유효 파라미터로 자동 전환
+        setUseAutoRange(true)
         const first = BASE_PARAMS.find(p => parsed.points.some(pt => pt[p.key] && pt[p.key] !== 0))
         if (first) setParam(first.key)
         message.success(`${parsed.points.length}개 포인트 로드 완료 — ${parsed.waferId}`)
@@ -259,7 +276,7 @@ export default function WaferMapPage() {
       {/* ─── 본문 ─── */}
       <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
 
-        {/* 맵 */}
+        {/* 맵 카드 */}
         <Card
           size="small"
           title={
@@ -273,24 +290,18 @@ export default function WaferMapPage() {
           extra={
             <Space>
               <Select
-                value={param}
-                onChange={setParam}
-                size="small"
-                style={{ width: 230 }}
+                value={param} onChange={v => { setParam(v); setUseAutoRange(true) }}
+                size="small" style={{ width: 230 }}
                 options={activeParams.map(p => ({
                   value: p.key,
                   label: `${p.label}  —  ${p.fullLabel}${p.unit ? ` (${p.unit})` : ''}`,
                 }))}
               />
-              <Upload
-                showUploadList={false}
-                beforeUpload={handleUpload}
-                accept=".map"
-              >
+              <Upload showUploadList={false} beforeUpload={handleUpload} accept=".map">
                 <Button size="small" icon={<UploadOutlined />}>맵 파일 로드 (.map)</Button>
               </Upload>
               <Button size="small" icon={<ReloadOutlined />}
-                onClick={() => { setData(generateDemoData()); setHovered(null); setParam('pw') }}>
+                onClick={() => { setData(generateDemoData()); setHovered(null); setParam('pw'); setUseAutoRange(true) }}>
                 데모
               </Button>
             </Space>
@@ -298,13 +309,38 @@ export default function WaferMapPage() {
           style={{ flex: 1, borderRadius: 8 }}
           styles={{ body: { padding: 0 } }}
         >
-          <div style={{ width: '100%', aspectRatio: '1 / 1', maxHeight: 580, maxWidth: 580, margin: '0 auto' }}>
-            <ReactECharts
-              option={chartOption}
-              style={{ width: '100%', height: '100%' }}
-              onEvents={onEvents}
-              opts={{ renderer: 'canvas' }}
-            />
+          {/* 차트 + 컬러바 나란히 — 차트는 항상 1:1 정사각형 */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 8px 8px 0' }}>
+            {/* 1:1 비율 정사각형 차트 */}
+            <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: 640, aspectRatio: '1 / 1' }}>
+              <ReactECharts
+                option={chartOption}
+                style={{ width: '100%', height: '100%' }}
+                onEvents={onEvents}
+                opts={{ renderer: 'canvas' }}
+              />
+            </div>
+            {/* 커스텀 WaferMapRange 컬러바 — 차트 높이에 맞춤 */}
+            <div style={{
+              width: 260,
+              alignSelf: 'stretch',
+              padding: '16px 8px 36px 4px',
+              flexShrink: 0,
+              boxSizing: 'border-box',
+            }}>
+              <WaferMapRange
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                colors={colors}
+                distributions={distributions}
+                useDistribution={useDistribution}
+                useAutoRange={useAutoRange}
+                displayFormat="F4"
+                labelFontSize={10}
+                onRangeChange={handleRangeChange}
+                onColorsChange={setColors}
+              />
+            </div>
           </div>
         </Card>
 
@@ -328,28 +364,25 @@ export default function WaferMapPage() {
             ))}
           </Card>
 
-          {/* 파라미터 선택 */}
+          {/* 파라미터 목록 */}
           <Card size="small" title="파라미터" style={{ borderRadius: 8 }}>
             {activeParams.map(p => {
-              const s = allStats[p.key] ?? { avg: 0, std: 0, uniformity: 0 }
+              const s      = allStats[p.key] ?? { avg: 0, std: 0, uniformity: 0 }
               const active = p.key === param
               return (
                 <div
                   key={p.key}
-                  onClick={() => setParam(p.key)}
+                  onClick={() => { setParam(p.key); setUseAutoRange(true) }}
                   style={{
                     padding: '6px 8px', borderRadius: 6, cursor: 'pointer', marginBottom: 4,
                     background: active ? token.colorPrimaryBg : token.colorFillAlter,
                     border: `1px solid ${active ? token.colorPrimary : 'transparent'}`,
-                    transition: 'all 0.15s',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                     <Text strong style={{ fontSize: 12, color: active ? token.colorPrimary : token.colorText }}>
                       {p.label}
-                      <Text type="secondary" style={{ fontWeight: 400, fontSize: 11, marginLeft: 4 }}>
-                        {p.fullLabel}
-                      </Text>
+                      <Text type="secondary" style={{ fontWeight: 400, fontSize: 11, marginLeft: 4 }}>{p.fullLabel}</Text>
                     </Text>
                     {p.unit && <Tag color={active ? 'blue' : 'default'} style={{ fontSize: 10, margin: 0 }}>{p.unit}</Tag>}
                   </div>
@@ -367,6 +400,7 @@ export default function WaferMapPage() {
               ['웨이퍼 ID', data.waferId],
               ['포인트 수', `${data.points.length} 점`],
               ['크기', '4" (100 mm)'],
+              ['범위 모드', useAutoRange ? '자동' : '수동'],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>{k}</Text>
@@ -375,8 +409,9 @@ export default function WaferMapPage() {
             ))}
             <Divider style={{ margin: '8px 0' }} />
             <Text type="secondary" style={{ fontSize: 11 }}>
-              지원 형식: <strong>.map</strong><br />
-              필수 컬럼: number, x, y, PeakWavelength, ...
+              컬러바 우클릭 → 범위/컬러맵 설정<br />
+              스크롤: 줌  |  드래그: 패닝<br />
+              더블클릭: 범위 직접 입력
             </Text>
           </Card>
 

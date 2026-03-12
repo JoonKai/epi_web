@@ -5,37 +5,80 @@
 }
 
 body {
-  font-family: 'Segoe UI', 'Pretendard', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Pretendard', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #070f1e;
   transition: background-color 0.3s, color 0.3s;
 }
 
-/* 스크롤바 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.4);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.7);
-}
+/* 슬림 스크롤바 */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(79,127,255,0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(79,127,255,0.5); }
 
-/* Ant Design 사이드바 메뉴 스타일 */
+/* 사이드바 선택 효과 */
 .ant-menu-dark .ant-menu-item-selected {
-  background: linear-gradient(90deg, rgba(79,127,255,0.3), rgba(79,127,255,0.1)) !important;
-  border-right: 3px solid #4f7fff;
+  background: linear-gradient(90deg, rgba(79,127,255,0.25), rgba(79,127,255,0.08)) !important;
+  border-right: 3px solid #4f7fff !important;
+  border-radius: 0 !important;
+}
+.ant-menu-dark .ant-menu-item:hover {
+  background: rgba(255,255,255,0.07) !important;
+}
+.ant-menu-dark .ant-menu-sub {
+  background: rgba(0,0,0,0.15) !important;
 }
 
-.ant-menu-dark .ant-menu-item:hover {
-  background: rgba(255,255,255,0.08) !important;
+/* AG Grid 다크 테마 보정 */
+.ag-theme-quartz {
+  --ag-background-color: transparent;
+  --ag-odd-row-background-color: rgba(255,255,255,0.02);
+  --ag-row-hover-color: rgba(79,127,255,0.08);
+  --ag-header-background-color: rgba(79,127,255,0.08);
+  --ag-border-color: rgba(255,255,255,0.07);
+  --ag-header-column-separator-color: rgba(255,255,255,0.07);
+  --ag-row-border-color: rgba(255,255,255,0.04);
 }
 
 /* 수정된 행 강조 */
 .row-edited td {
   background: rgba(250, 173, 20, 0.06) !important;
+}
+
+/* ── 로그인 폼 다크 인풋 ────────────────────────────────────────────────────
+   브라우저 autofill이 흰색 배경을 강제하는 문제 → box-shadow 트릭으로 덮기    */
+/* 모든 상태(기본/hover/focus/autofill)에서 동일한 배경 유지 */
+.login-dark-input .ant-input-affix-wrapper,
+.login-dark-input .ant-input-affix-wrapper:hover,
+.login-dark-input .ant-input-affix-wrapper-focused,
+.login-dark-input .ant-input-affix-wrapper:focus-within {
+  background: #131f38 !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+.login-dark-input .ant-input-affix-wrapper-focused,
+.login-dark-input .ant-input-affix-wrapper:focus-within {
+  border-color: rgba(79,127,255,0.40) !important;
+}
+.login-dark-input .ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  color: rgba(255,255,255,0.82) !important;
+  caret-color: #4f7fff;
+}
+.login-dark-input .ant-input-affix-wrapper .ant-input::placeholder {
+  color: rgba(255,255,255,0.22) !important;
+}
+.login-dark-input .ant-input-prefix,
+.login-dark-input .ant-input-suffix { color: rgba(255,255,255,0.28) !important; }
+
+/* 브라우저 자동완성 — 같은 solid 색으로 덮어 배경 변화 없음 */
+.login-dark-input input:-webkit-autofill,
+.login-dark-input input:-webkit-autofill:hover,
+.login-dark-input input:-webkit-autofill:focus,
+.login-dark-input input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #131f38 inset !important;
+  -webkit-text-fill-color: rgba(255,255,255,0.82) !important;
+  transition: background-color 86400s ease-in-out 0s !important;
+  caret-color: #4f7fff;
 }
