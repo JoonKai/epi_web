@@ -1,31 +1,60 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ConfigProvider, theme as antTheme, Spin } from 'antd'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ConfigProvider, Spin, theme as antTheme } from 'antd'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
-import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import DataGrid from './pages/DataGrid'
+import Admin from './pages/Admin'
+import Login from './pages/Login'
+import WaferMap from './pages/WaferMap'
 import Measurement from './pages/epi/Measurement'
 import MocvdSource from './pages/epi/mocvd/Source'
 import Simulator from './pages/epi/Simulator'
-import WaferMap from './pages/WaferMap'
-import DataGrid from './pages/DataGrid'
-import Admin from './pages/Admin'
 
-// 딥 네이비 다크 토큰
 const DARK_TOKENS = {
-  colorBgBase:           '#0a1628',
-  colorBgContainer:      '#0f2040',
-  colorBgElevated:       '#162848',
-  colorBgLayout:         '#070f1e',
-  colorBgSpotlight:      '#162848',
-  colorBorder:           'rgba(255,255,255,0.10)',
-  colorBorderSecondary:  'rgba(255,255,255,0.06)',
-  colorFillAlter:        'rgba(255,255,255,0.04)',
-  colorFillContent:      'rgba(255,255,255,0.06)',
+  colorPrimary: '#ff6a3d',
+  colorSuccess: '#35d07f',
+  colorWarning: '#ffb648',
+  colorError: '#ff5b6e',
+  colorInfo: '#4aa3ff',
+  colorTextBase: '#edf3ff',
+  colorBgBase: '#050b16',
+  colorBgLayout: '#050b16',
+  colorBgContainer: '#0f1828',
+  colorBgElevated: '#131f31',
+  colorBorder: 'rgba(120,145,180,0.18)',
+  colorBorderSecondary: 'rgba(120,145,180,0.12)',
+  colorFillAlter: 'rgba(255,255,255,0.03)',
+  colorFillContent: 'rgba(255,255,255,0.05)',
+  colorTextSecondary: 'rgba(220,232,255,0.72)',
+  colorTextTertiary: 'rgba(163,184,217,0.48)',
+  colorTextQuaternary: 'rgba(163,184,217,0.36)',
+  borderRadius: 14,
+  fontFamily: "'Pretendard', 'Segoe UI', -apple-system, sans-serif",
 }
 
-const LIGHT_TOKENS = {}
+const LIGHT_TOKENS = {
+  colorPrimary: '#d85a34',
+  colorSuccess: '#1f9d61',
+  colorWarning: '#c8891d',
+  colorError: '#d4485d',
+  colorInfo: '#2f74db',
+  colorTextBase: '#102033',
+  colorBgBase: '#eef3fa',
+  colorBgLayout: '#eef3fa',
+  colorBgContainer: '#ffffff',
+  colorBgElevated: '#f7f9fc',
+  colorBorder: 'rgba(35,58,92,0.12)',
+  colorBorderSecondary: 'rgba(35,58,92,0.08)',
+  colorFillAlter: 'rgba(16,32,51,0.035)',
+  colorFillContent: 'rgba(16,32,51,0.05)',
+  colorTextSecondary: 'rgba(16,32,51,0.72)',
+  colorTextTertiary: 'rgba(16,32,51,0.5)',
+  colorTextQuaternary: 'rgba(16,32,51,0.36)',
+  borderRadius: 14,
+  fontFamily: "'Pretendard', 'Segoe UI', -apple-system, sans-serif",
+}
 
 function AppRoutes({ isDark, onThemeToggle }) {
   const { user, loading, logout } = useAuth()
@@ -38,7 +67,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#070f1e' }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
         <Spin size="large" />
       </div>
     )
@@ -66,33 +95,60 @@ function AppRoutes({ isDark, onThemeToggle }) {
 }
 
 function App() {
-  const [isDark, setIsDark] = useState(true)   // 다크 모드 기본값
+  const [isDark, setIsDark] = useState(true)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+  }, [isDark])
 
   return (
     <ConfigProvider
       theme={{
         algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
-        token: {
-          colorPrimary: '#4f7fff',
-          borderRadius: 8,
-          fontFamily: "'Pretendard', 'Segoe UI', -apple-system, sans-serif",
-          ...(isDark ? DARK_TOKENS : LIGHT_TOKENS),
-        },
+        token: isDark ? DARK_TOKENS : LIGHT_TOKENS,
         components: {
-          Menu: isDark ? {
-            darkItemBg:           'transparent',
-            darkItemHoverBg:      'rgba(79,127,255,0.12)',
-            darkItemSelectedBg:   'rgba(79,127,255,0.20)',
-            darkSubMenuItemBg:    'transparent',
-          } : {},
-          Card: isDark ? {
-            colorBgContainer: '#0f2040',
-          } : {},
+          Layout: {
+            headerBg: 'transparent',
+            siderBg: 'transparent',
+            bodyBg: 'transparent',
+          },
+          Menu: {
+            darkItemBg: 'transparent',
+            darkSubMenuItemBg: 'transparent',
+            darkItemColor: isDark ? 'rgba(220,232,255,0.72)' : 'rgba(16,32,51,0.72)',
+            darkItemHoverColor: isDark ? '#ffffff' : '#102033',
+            darkItemSelectedColor: isDark ? '#ffffff' : '#102033',
+            darkItemSelectedBg: 'transparent',
+          },
+          Card: {
+            colorBgContainer: isDark ? '#0f1828' : '#ffffff',
+            headerBg: 'transparent',
+          },
+          Tabs: {
+            itemColor: isDark ? 'rgba(163,184,217,0.48)' : 'rgba(16,32,51,0.48)',
+            itemSelectedColor: isDark ? '#ff6a3d' : '#d85a34',
+            itemHoverColor: isDark ? '#ffffff' : '#102033',
+            inkBarColor: isDark ? '#ff6a3d' : '#d85a34',
+          },
+          Table: {
+            headerBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(16,32,51,0.03)',
+            headerColor: isDark ? 'rgba(163,184,217,0.48)' : 'rgba(16,32,51,0.48)',
+            rowHoverBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(16,32,51,0.03)',
+            borderColor: isDark ? 'rgba(120,145,180,0.12)' : 'rgba(35,58,92,0.12)',
+          },
+          Input: {
+            activeBorderColor: isDark ? 'rgba(255,106,61,0.48)' : 'rgba(216,90,52,0.48)',
+            hoverBorderColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(16,32,51,0.14)',
+          },
+          Select: {
+            optionSelectedBg: isDark ? 'rgba(255,106,61,0.12)' : 'rgba(216,90,52,0.12)',
+          },
         },
       }}
     >
       <AuthProvider>
-        <AppRoutes isDark={isDark} onThemeToggle={() => setIsDark(p => !p)} />
+        <AppRoutes isDark={isDark} onThemeToggle={() => setIsDark((prev) => !prev)} />
       </AuthProvider>
     </ConfigProvider>
   )

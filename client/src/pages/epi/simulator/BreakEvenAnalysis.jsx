@@ -1,90 +1,50 @@
 import { useMemo } from 'react'
-import { theme, Alert } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import { Alert } from 'antd'
 import { useCostStore } from './store'
 import { calcBreakEven, calcFullCost, krw } from './calculations'
+import { ConsoleChart, consoleColors, makeChartBase } from '../../../theme/consoleTheme'
 
 export default function BreakEvenAnalysis() {
   const { bom, mocvd, bake, measurements, shipment, overhead, lotSize, sellingPrice } = useCostStore()
-  const { token } = theme.useToken()
-
-  const bep = useMemo(
-    () => calcBreakEven(bom, mocvd, bake, measurements, shipment, overhead, sellingPrice),
-    [bom, mocvd, bake, measurements, shipment, overhead, sellingPrice]
-  )
-
+  const bep = useMemo(() => calcBreakEven(bom, mocvd, bake, measurements, shipment, overhead, sellingPrice), [bom, mocvd, bake, measurements, shipment, overhead, sellingPrice])
   const points = useMemo(() => {
-    const maxQ = bep ? Math.max(bep.bepQuantity * 2, lotSize * 1.5, 500) : 2000
-    const step = Math.ceil(maxQ / 40)
-    const arr = []
-    for (let q = 0; q <= maxQ; q += step) {
-      const c = calcFullCost(bom, mocvd, bake, measurements, shipment, overhead, q || 1)
-      arr.push({
-        q,
-        totalCost: q === 0 ? bep?.fixedCost ?? 0 : c.totalCost,
-        revenue: sellingPrice * q,
-      })
+    const maxQty = bep ? Math.max(bep.bepQuantity * 2, lotSize * 1.5, 500) : 2000
+    const step = Math.ceil(maxQty / 36)
+    const rows = []
+    for (let qty = 0; qty <= maxQty; qty += step) {
+      const cost = calcFullCost(bom, mocvd, bake, measurements, shipment, overhead, qty || 1)
+      rows.push({ qty, totalCost: qty === 0 ? bep?.fixedCost ?? 0 : cost.totalCost, revenue: sellingPrice * qty })
     }
-    return arr
+    return rows
   }, [bom, mocvd, bake, measurements, shipment, overhead, sellingPrice, lotSize, bep])
 
-  const lineOption = {
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params) => `수량: ${krw(params[0]?.axisValue)}매<br/>${params.map(p => `${p.seriesName}: ${krw(Math.round(p.value))}원`).join('<br/>')}`,
-    },
-    legend: { data: ['총비용', '매출'], bottom: 0, textStyle: { color: token.colorText } },
-    xAxis: { type: 'category', data: points.map(p => p.q), name: '수량(매)', axisLabel: { color: token.colorTextSecondary } },
-    yAxis: { type: 'value', name: '금액(원)', axisLabel: { color: token.colorTextSecondary, formatter: v => (v / 1e6).toFixed(0) + 'M' } },
+  const option = {
+    ...makeChartBase('손익분기점 곡선'),
+    tooltip: { ...makeChartBase().tooltip, formatter: (params) => [`생산량 ${params[0]?.axisValue}매`, ...params.map((p) => `${p.seriesName}: ${krw(Math.round(p.value))}원`)].join('<br/>') },
+    legend: { ...makeChartBase().legend, bottom: 0 },
+    xAxis: { ...makeChartBase().xAxis, type: 'category', data: points.map((p) => p.qty) },
+    yAxis: { ...makeChartBase().yAxis, type: 'value' },
     series: [
-      { name: '총비용', type: 'line', data: points.map(p => p.totalCost), itemStyle: { color: '#ff4d4f' }, smooth: false, symbol: 'none' },
-      { name: '매출', type: 'line', data: points.map(p => p.revenue), itemStyle: { color: '#52c41a' }, smooth: false, symbol: 'none' },
+      { name: '총원가', type: 'line', data: points.map((p) => p.totalCost), symbol: 'none', lineStyle: { color: consoleColors.danger, width: 3 } },
+      { name: '매출', type: 'line', data: points.map((p) => p.revenue), symbol: 'none', lineStyle: { color: consoleColors.success, width: 3 } },
+      ...(bep ? [{ name: '손익분기점', type: 'scatter', data: [[String(Math.round(bep.bepQuantity)), bep.bepRevenue]], symbolSize: 14, itemStyle: { color: consoleColors.warning } }] : []),
     ],
-    grid: { left: 80, right: 20, top: 20, bottom: 50 },
-  }
-
-  if (bep) {
-    lineOption.series.push({
-      name: '손익분기점',
-      type: 'scatter',
-      data: [[String(bep.bepQuantity), bep.bepRevenue]],
-      symbolSize: 12,
-      itemStyle: { color: '#faad14' },
-    })
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {!bep ? (
-        <Alert type="error" message="손익분기 불가: 판매가가 변동원가보다 낮습니다. 판매가를 높이거나 원가를 줄여주세요." style={{ marginBottom: 12 }} />
+        <Alert type="error" showIcon message="현재 판매단가가 변동원가보다 낮아 손익분기점이 계산되지 않습니다." description="판매 가격을 높이거나 공정 원가를 낮춘 뒤 다시 확인하세요." style={{ background: 'rgba(255,91,110,0.08)', borderColor: 'rgba(255,91,110,0.26)', color: 'var(--console-text)' }} />
       ) : (
-        <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-          {[
-            { label: '손익분기 수량', value: `${krw(bep.bepQuantity)}매`, color: '#faad14' },
-            { label: '손익분기 매출', value: `${krw(Math.round(bep.bepRevenue))}원` },
-            { label: '변동원가/매', value: `${krw(Math.round(bep.variableCostPerWafer))}원` },
-            { label: '고정비 합계', value: `${krw(Math.round(bep.fixedCost))}원` },
-            { label: '단위 공헌마진', value: `${krw(Math.round(bep.margin))}원` },
-          ].map(k => (
-            <div key={k.label} style={{ flex: 1, textAlign: 'center', padding: 10, background: token.colorFillAlter, borderRadius: 8 }}>
-              <div style={{ fontSize: 11, color: token.colorTextSecondary }}>{k.label}</div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: k.color }}>{k.value}</div>
-            </div>
-          ))}
+        <div className="console-summary-grid">
+          <div className="console-kpi"><div className="console-label">손익분기 수량</div><div className="console-number" style={{ color: consoleColors.warning, marginTop: 8, fontSize: 24 }}>{krw(Math.round(bep.bepQuantity))}매</div></div>
+          <div className="console-kpi"><div className="console-label">손익분기 매출</div><div className="console-number" style={{ color: consoleColors.info, marginTop: 8, fontSize: 24 }}>{krw(Math.round(bep.bepRevenue))}원</div></div>
+          <div className="console-kpi"><div className="console-label">변동원가</div><div className="console-number" style={{ marginTop: 8, fontSize: 24 }}>{krw(Math.round(bep.variableCostPerWafer))}원/매</div></div>
+          <div className="console-kpi"><div className="console-label">고정비</div><div className="console-number" style={{ marginTop: 8, fontSize: 24 }}>{krw(Math.round(bep.fixedCost))}원</div></div>
+          <div className="console-kpi"><div className="console-label">현재 차이</div><div className="console-number" style={{ marginTop: 8, fontSize: 24, color: lotSize >= bep.bepQuantity ? consoleColors.success : consoleColors.danger }}>{lotSize >= bep.bepQuantity ? `+${krw(Math.round(lotSize - bep.bepQuantity))}매` : `-${krw(Math.round(bep.bepQuantity - lotSize))}매`}</div></div>
         </div>
       )}
-      <ReactECharts option={lineOption} style={{ height: 320 }} />
-      {bep && (
-        <div style={{ marginTop: 12, padding: 12, background: token.colorFillAlter, borderRadius: 8 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>현재 상황 분석</div>
-          <div style={{ color: token.colorTextSecondary, fontSize: 13 }}>
-            목표 생산량 <b>{krw(lotSize)}매</b>는 손익분기({krw(bep.bepQuantity)}매) 대비{' '}
-            <b style={{ color: lotSize >= bep.bepQuantity ? '#52c41a' : '#ff4d4f' }}>
-              {lotSize >= bep.bepQuantity ? `+${krw(lotSize - bep.bepQuantity)}매 초과 (흑자)` : `${krw(bep.bepQuantity - lotSize)}매 부족 (적자)`}
-            </b>
-          </div>
-        </div>
-      )}
+      <div className="console-surface"><ConsoleChart option={option} style={{ height: 340 }} /></div>
     </div>
   )
 }

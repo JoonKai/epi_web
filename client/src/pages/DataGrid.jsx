@@ -1,19 +1,19 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { Card, Space, Button, Select, Tag, theme, Spin, Alert, Tooltip } from 'antd'
-import { ReloadOutlined, DownloadOutlined } from '@ant-design/icons'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Button, Card, Select, Space, Spin, Tag, Tooltip } from 'antd'
+import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { authFetch } from '../context/AuthContext'
+import { panelStyle, sectionTitleStyle } from '../theme/consoleTheme'
 
-// 잔량에 따라 셀 색상 지정 (0이면 회색, 낮으면 빨강, 높으면 초록)
 function remainingCellStyle(params) {
-  const v = params.value
-  if (v == null) return { background: 'rgba(0,0,0,0.04)', color: '#aaa' }
-  if (v === 0)  return { background: '#fff1f0', color: '#ff4d4f', fontWeight: 600 }
-  if (v < 1)    return { background: '#fff7e6', color: '#fa8c16', fontWeight: 600 }
-  if (v < 3)    return { background: '#fffbe6', color: '#faad14' }
-  return { color: '#389e0d' }
+  const value = params.value
+  if (value == null) return { color: 'rgba(163,184,217,0.48)' }
+  if (value === 0) return { color: '#ff5b6e', fontWeight: 700, background: 'rgba(255,91,110,0.08)' }
+  if (value < 1) return { color: '#ffb648', fontWeight: 700, background: 'rgba(255,182,72,0.08)' }
+  if (value < 3) return { color: '#ffd166', fontWeight: 600 }
+  return { color: '#35d07f' }
 }
 
 function remainingFormatter(params) {
@@ -21,66 +21,40 @@ function remainingFormatter(params) {
   return params.value.toFixed(2)
 }
 
-// updated_at 컬럼 포매터
-function dateFormatter(params) {
-  if (!params.value) return '-'
-  return params.value
-}
-
 export default function DataGrid() {
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [sourceNames, setSourceNames] = useState([])
-  const [rows, setRows]             = useState([])
+  const [rows, setRows] = useState([])
   const [quickFilter, setQuickFilter] = useState('')
   const [selectedSource, setSelectedSource] = useState('all')
-  const gridRef                     = useRef(null)
-  const { token }                   = theme.useToken()
+  const gridRef = useRef(null)
 
   const fetchData = useCallback(() => {
     setLoading(true)
     setError(null)
     authFetch('/api/mocvd/sources/all')
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => {
-        setSourceNames(d.source_names ?? [])
-        setRows(d.rows ?? [])
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data) => {
+        setSourceNames(data.source_names ?? [])
+        setRows(data.rows ?? [])
       })
-      .catch(e => setError(`데이터 로드 실패: ${e}`))
+      .catch((err) => setError(`데이터 로딩 실패: ${err}`))
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
-  // 컬럼 정의 동적 생성
   const columnDefs = useMemo(() => {
-    const fixed = [
-      {
-        headerName: '호기',
-        field: 'machine_no',
-        width: 80,
-        pinned: 'left',
-        cellStyle: { fontWeight: 700, textAlign: 'center' },
-        filter: 'agNumberColumnFilter',
-      },
-      {
-        headerName: '설명',
-        field: 'description',
-        width: 140,
-        pinned: 'left',
-        filter: 'agTextColumnFilter',
-      },
-      {
-        headerName: '최종 입력',
-        field: 'updated_at',
-        width: 150,
-        valueFormatter: dateFormatter,
-        filter: 'agTextColumnFilter',
-        cellStyle: { color: token.colorTextSecondary, fontSize: 12 },
-      },
+    const fixedColumns = [
+      { headerName: '호기', field: 'machine_no', width: 90, pinned: 'left', cellStyle: { fontWeight: 700, textAlign: 'center' }, filter: 'agNumberColumnFilter' },
+      { headerName: '설명', field: 'description', width: 160, pinned: 'left', filter: 'agTextColumnFilter' },
+      { headerName: '최종 입력', field: 'updated_at', width: 160, filter: 'agTextColumnFilter', cellStyle: { color: 'rgba(220,232,255,0.72)', fontSize: 12 } },
     ]
 
-    const sourceCols = sourceNames.map(name => ({
+    const sourceColumns = sourceNames.map((name) => ({
       headerName: name,
       field: name,
       width: 110,
@@ -88,152 +62,79 @@ export default function DataGrid() {
       cellStyle: remainingCellStyle,
       filter: 'agNumberColumnFilter',
       type: 'numericColumn',
-      headerTooltip: name,
     }))
 
-    return [...fixed, ...sourceCols]
-  }, [sourceNames, token])
+    return [...fixedColumns, ...sourceColumns]
+  }, [sourceNames])
 
-  const defaultColDef = useMemo(() => ({
-    sortable: true,
-    resizable: true,
-    filter: true,
-    floatingFilter: true,
-    suppressMovable: false,
-  }), [])
-
-  // 선택한 소스에 따라 행 필터
   const filteredRows = useMemo(() => {
     if (selectedSource === 'all') return rows
-    return rows.filter(r => r[selectedSource] != null)
+    return rows.filter((row) => row[selectedSource] != null)
   }, [rows, selectedSource])
 
-  // CSV 내보내기
+  const defaultColDef = useMemo(() => ({ sortable: true, resizable: true, filter: true, floatingFilter: true }), [])
+
   const exportCsv = () => {
-    if (gridRef.current?.api) {
-      gridRef.current.api.exportDataAsCsv({
-        fileName: `mocvd_source_${new Date().toISOString().slice(0, 10)}.csv`,
-      })
-    }
+    gridRef.current?.api?.exportDataAsCsv({
+      fileName: `mocvd_source_${new Date().toISOString().slice(0, 10)}.csv`,
+    })
   }
 
-  // 소스별 평균 잔량 계산 (요약)
-  const summary = useMemo(() => {
-    return sourceNames.map(name => {
-      const vals = rows.map(r => r[name]).filter(v => v != null && !isNaN(v))
-      const avg  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0
-      const low  = vals.filter(v => v < 1).length
-      return { name, avg, low, total: vals.length }
-    })
-  }, [sourceNames, rows])
+  const summary = useMemo(() => sourceNames.map((name) => {
+    const values = rows.map((row) => row[name]).filter((value) => value != null && !Number.isNaN(value))
+    const avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
+    const low = values.filter((value) => value < 1).length
+    return { name, avg, low, total: values.length }
+  }), [sourceNames, rows])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
-
-      {/* 헤더 */}
-      <div style={{ marginBottom: 0 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>소스 잔량 현황</h2>
-        <span style={{ fontSize: 13, opacity: 0.6 }}>전 MOCVD 호기 소스 잔량 조회</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="console-toolbar">
+        <div>
+          <div style={sectionTitleStyle}>데이터 조회</div>
+          <div style={{ color: 'var(--console-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>MOCVD 소스 현황</div>
+          <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>호기별 소스 잔량을 필터링하고 부족 자재를 빠르게 확인하는 화면</div>
+        </div>
+        <div className="console-toolbar-group">
+          <div className="console-pill">{filteredRows.length}대</div>
+          <div className="console-pill">{sourceNames.length}종류</div>
+        </div>
       </div>
 
-      {/* 소스별 요약 태그 */}
       {!loading && !error && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {summary.map(s => (
-            <Tooltip key={s.name} title={`평균: ${s.avg.toFixed(2)} kg  |  부족(< 1 kg): ${s.low}대`}>
-              <Tag
-                color={s.low > 0 ? 'error' : s.avg < 3 ? 'warning' : 'success'}
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setSelectedSource(prev => prev === s.name ? 'all' : s.name)}
-              >
-                {s.name}: {s.avg.toFixed(1)} kg {s.low > 0 ? `⚠ ${s.low}대 부족` : ''}
+        <div className="console-toolbar-group">
+          {summary.map((item) => (
+            <Tooltip key={item.name} title={`평균: ${item.avg.toFixed(2)} kg | 부족 장비: ${item.low}대`}>
+              <Tag color={item.low > 0 ? 'error' : item.avg < 3 ? 'warning' : 'success'} style={{ cursor: 'pointer' }} onClick={() => setSelectedSource((prev) => (prev === item.name ? 'all' : item.name))}>
+                {item.name}: {item.avg.toFixed(1)} kg
               </Tag>
             </Tooltip>
           ))}
         </div>
       )}
 
-      {/* 데이터 그리드 */}
       <Card
-        size="small"
-        style={{ flex: 1, borderRadius: 8, minHeight: 0 }}
+        className="console-panel"
+        style={{ ...panelStyle, minHeight: 0 }}
         styles={{ body: { padding: 0, height: '100%', display: 'flex', flexDirection: 'column' } }}
-        title={
-          <Space>
-            <span>MOCVD 소스 잔량</span>
-            {!loading && <Tag color="blue">{filteredRows.length} 호기</Tag>}
-            {!loading && <Tag color="purple">{sourceNames.length} 소스</Tag>}
-          </Space>
-        }
+        title="소스 재고 표"
         extra={
-          <Space>
-            <Select
-              value={selectedSource}
-              onChange={setSelectedSource}
-              size="small"
-              style={{ width: 160 }}
-              options={[
-                { value: 'all', label: '전체 호기' },
-                ...sourceNames.map(n => ({ value: n, label: n })),
-              ]}
-            />
-            <input
-              placeholder="검색..."
-              value={quickFilter}
-              onChange={e => setQuickFilter(e.target.value)}
-              style={{
-                padding: '2px 8px',
-                borderRadius: 6,
-                border: `1px solid ${token.colorBorder}`,
-                background: token.colorBgContainer,
-                color: token.colorText,
-                fontSize: 13,
-                width: 160,
-                outline: 'none',
-              }}
-            />
-            <Button size="small" icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-              새로고침
-            </Button>
-            <Button size="small" icon={<DownloadOutlined />} onClick={exportCsv}>
-              CSV 내보내기
-            </Button>
+          <Space wrap>
+            <Select value={selectedSource} onChange={setSelectedSource} style={{ width: 180 }} options={[{ value: 'all', label: '전체 설비' }, ...sourceNames.map((name) => ({ value: name, label: name }))]} />
+            <input value={quickFilter} onChange={(e) => setQuickFilter(e.target.value)} placeholder="검색" style={{ width: 180, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--console-shell-border)', background: 'var(--console-button-bg)', color: 'var(--console-text)', outline: 'none' }} />
+            <Button className="console-button" icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
+            <Button className="console-button" icon={<DownloadOutlined />} onClick={exportCsv}>CSV 내보내기</Button>
           </Space>
         }
       >
-        {error && <Alert type="error" message={error} style={{ margin: 8 }} />}
-
+        {error && <Alert type="error" message={error} style={{ margin: 10 }} />}
         {loading ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60 }}>
-            <Spin tip="로딩 중..." />
+          <div style={{ display: 'grid', placeItems: 'center', minHeight: 360 }}>
+            <Spin tip="데이터를 불러오는 중입니다." />
           </div>
         ) : (
-          <div
-            className="ag-theme-quartz"
-            style={{
-              flex: 1,
-              height: 'calc(100vh - 300px)',
-              minHeight: 300,
-              '--ag-font-family': 'inherit',
-              '--ag-font-size': '13px',
-            }}
-          >
-            <AgGridReact
-              ref={gridRef}
-              rowData={filteredRows}
-              columnDefs={columnDefs}
-              defaultColDef={defaultColDef}
-              quickFilterText={quickFilter}
-              animateRows
-              pagination
-              paginationPageSize={50}
-              paginationPageSizeSelector={[25, 50, 100, 200]}
-              rowHeight={36}
-              headerHeight={40}
-              floatingFiltersHeight={36}
-              suppressCellFocus={false}
-              enableCellTextSelection
-            />
+          <div className="ag-theme-quartz" style={{ flex: 1, height: 'calc(100vh - 340px)', minHeight: 360 }}>
+            <AgGridReact ref={gridRef} rowData={filteredRows} columnDefs={columnDefs} defaultColDef={defaultColDef} quickFilterText={quickFilter} animateRows pagination paginationPageSize={50} paginationPageSizeSelector={[25, 50, 100, 200]} rowHeight={38} headerHeight={42} floatingFiltersHeight={36} enableCellTextSelection />
           </div>
         )}
       </Card>

@@ -1,16 +1,16 @@
-import { useRef } from 'react'
-import { Tabs, Card, Button, Space, Upload, message, Typography } from 'antd'
+import { Button, Card, Space, Tabs, Typography, Upload, message } from 'antd'
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons'
 import { useCostStore } from './store'
-import SimDashboard from './SimDashboard'
 import BOMTable from './BOMTable'
-import ProcessCost from './ProcessCost'
-import OverheadCost from './OverheadCost'
+import BreakEvenAnalysis from './BreakEvenAnalysis'
 import CostSummary from './CostSummary'
 import LotSimulation from './LotSimulation'
-import BreakEvenAnalysis from './BreakEvenAnalysis'
+import OverheadCost from './OverheadCost'
+import ProcessCost from './ProcessCost'
+import SimDashboard from './SimDashboard'
+import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 
 export default function CostSimulator() {
   const store = useCostStore()
@@ -28,107 +28,62 @@ export default function CostSimulator() {
     }
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `cost_config_${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `epi_cost_config_${new Date().toISOString().slice(0, 10)}.json`
+    anchor.click()
     URL.revokeObjectURL(url)
-    message.success('설정이 내보내기 되었습니다.')
+    message.success('시뮬레이터 설정을 내보냈습니다.')
   }
 
   const importConfig = (file) => {
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = (event) => {
       try {
-        const config = JSON.parse(e.target.result)
-        store.loadConfig(config)
+        store.loadConfig(JSON.parse(event.target.result))
         message.success('설정을 불러왔습니다.')
       } catch {
-        message.error('올바른 JSON 파일이 아닙니다.')
+        message.error('유효한 JSON 설정 파일이 아닙니다.')
       }
     }
     reader.readAsText(file)
     return false
   }
 
+  const wrap = (title, children) => (
+    <Card className="console-panel" style={panelStyle} styles={{ body: { padding: 18 } }} title={title}>
+      {children}
+    </Card>
+  )
+
   const items = [
-    {
-      key: 'dashboard',
-      label: '대시보드',
-      children: (
-        <Card size="small" style={{ borderRadius: 8 }}>
-          <SimDashboard />
-        </Card>
-      ),
-    },
-    {
-      key: 'bom',
-      label: 'BOM (자재)',
-      children: (
-        <Card size="small" title="원자재 명세서 (BOM)" style={{ borderRadius: 8 }}>
-          <BOMTable />
-        </Card>
-      ),
-    },
-    {
-      key: 'process',
-      label: '공정비용',
-      children: (
-        <Card size="small" title="공정별 비용 입력" style={{ borderRadius: 8 }}>
-          <ProcessCost />
-        </Card>
-      ),
-    },
-    {
-      key: 'overhead',
-      label: '고정경비',
-      children: (
-        <Card size="small" title="월 고정경비 / 판매관리비" style={{ borderRadius: 8 }}>
-          <OverheadCost />
-        </Card>
-      ),
-    },
-    {
-      key: 'summary',
-      label: '원가 요약',
-      children: (
-        <Card size="small" title="원가 구성 요약" style={{ borderRadius: 8 }}>
-          <CostSummary />
-        </Card>
-      ),
-    },
-    {
-      key: 'lot',
-      label: '로트 시뮬레이션',
-      children: (
-        <Card size="small" title="생산량별 원가·이익 분석" style={{ borderRadius: 8 }}>
-          <LotSimulation />
-        </Card>
-      ),
-    },
-    {
-      key: 'bep',
-      label: '손익분기 분석',
-      children: (
-        <Card size="small" title="손익분기점 (BEP) 분석" style={{ borderRadius: 8 }}>
-          <BreakEvenAnalysis />
-        </Card>
-      ),
-    },
+    { key: 'overview', label: '운영 개요', children: wrap('원가 운영 개요', <SimDashboard />) },
+    { key: 'bom', label: 'BOM', children: wrap('원자재 입력', <BOMTable />) },
+    { key: 'process', label: '공정비', children: wrap('공정 비용 입력', <ProcessCost />) },
+    { key: 'overhead', label: '고정비', children: wrap('고정비 및 판관비', <OverheadCost />) },
+    { key: 'summary', label: '원가 요약', children: wrap('원가 구성 요약', <CostSummary />) },
+    { key: 'lot', label: '로트 분석', children: wrap('생산량 및 수익 분석', <LotSimulation />) },
+    { key: 'bep', label: '손익분기', children: wrap('손익분기점 분석', <BreakEvenAnalysis />) },
   ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={4} style={{ margin: 0 }}>GaN EPI 원가 시뮬레이터</Title>
-        <Space>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="console-toolbar">
+        <div>
+          <div style={sectionTitleStyle}>시뮬레이터</div>
+          <Title level={3} style={{ margin: '8px 0 4px', color: 'var(--console-text)' }}>
+            GaN EPI 원가 시뮬레이터
+          </Title>
+          <Text style={{ color: 'var(--console-text-soft)' }}>공정 원가, 생산량, 손익분기점을 한 흐름으로 분석하는 계산 화면</Text>
+        </div>
+        <Space wrap>
           <Upload showUploadList={false} beforeUpload={importConfig} accept=".json">
-            <Button icon={<UploadOutlined />} size="small">설정 불러오기</Button>
+            <Button className="console-button" icon={<UploadOutlined />}>설정 불러오기</Button>
           </Upload>
-          <Button icon={<DownloadOutlined />} size="small" onClick={exportConfig}>설정 내보내기</Button>
+          <Button className="console-button" type="primary" icon={<DownloadOutlined />} onClick={exportConfig}>설정 내보내기</Button>
         </Space>
       </div>
-      <Tabs items={items} size="small" style={{ flex: 1 }} />
+      <Tabs className="console-tabs" items={items} />
     </div>
   )
 }

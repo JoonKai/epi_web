@@ -1,84 +1,357 @@
-*, *::before, *::after {
+:root {
+  color-scheme: dark;
+  --console-bg: #050b16;
+  --console-bg-raised: #0a1222;
+  --console-panel: #0f1828;
+  --console-panel-alt: #111d31;
+  --console-border: rgba(120, 145, 180, 0.18);
+  --console-border-strong: rgba(255, 119, 61, 0.38);
+  --console-text: #edf3ff;
+  --console-text-soft: rgba(220, 232, 255, 0.72);
+  --console-text-muted: rgba(163, 184, 217, 0.48);
+  --console-accent: #ff6a3d;
+  --console-accent-soft: rgba(255, 106, 61, 0.16);
+  --console-success: #35d07f;
+  --console-danger: #ff5b6e;
+  --console-warning: #ffb648;
+  --console-sider-bg: linear-gradient(180deg, rgba(5,11,22,0.96), rgba(8,14,24,0.94));
+  --console-header-bg: linear-gradient(180deg, rgba(7,15,28,0.92), rgba(7,13,24,0.9));
+  --console-content-bg: linear-gradient(180deg, rgba(6,12,23,0.84), rgba(8,13,23,0.92));
+  --console-shell-border: rgba(120,145,180,0.12);
+  --console-button-bg: rgba(255,255,255,0.03);
+  --console-brand-highlight: #ffb648;
+  --console-brand-deep: #d9472c;
+  --console-brand-glow: rgba(255,106,61,0.35);
+  --console-shadow-strong: 0 20px 40px rgba(0,0,0,0.36);
+  --console-shadow-medium: 0 22px 44px rgba(0,0,0,0.28);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --console-bg: #eef3fa;
+  --console-bg-raised: #f5f8fc;
+  --console-panel: #ffffff;
+  --console-panel-alt: #f7f9fc;
+  --console-border: rgba(35, 58, 92, 0.12);
+  --console-border-strong: rgba(216, 90, 52, 0.3);
+  --console-text: #102033;
+  --console-text-soft: rgba(16, 32, 51, 0.78);
+  --console-text-muted: rgba(16, 32, 51, 0.5);
+  --console-accent: #d85a34;
+  --console-accent-soft: rgba(216, 90, 52, 0.1);
+  --console-success: #1f9d61;
+  --console-danger: #d4485d;
+  --console-warning: #c8891d;
+  --console-sider-bg: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,247,252,0.96));
+  --console-header-bg: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,253,0.96));
+  --console-content-bg: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,249,252,0.95));
+  --console-shell-border: rgba(35,58,92,0.1);
+  --console-button-bg: rgba(16,32,51,0.03);
+  --console-brand-highlight: #f5a13c;
+  --console-brand-deep: #d85a34;
+  --console-brand-glow: rgba(216,90,52,0.18);
+  --console-shadow-strong: 0 16px 34px rgba(24,39,75,0.12);
+  --console-shadow-medium: 0 18px 36px rgba(24,39,75,0.1);
+}
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html,
+body,
+#root {
   margin: 0;
-  padding: 0;
+  min-height: 100%;
 }
 
 body {
-  font-family: 'Pretendard', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #070f1e;
-  transition: background-color 0.3s, color 0.3s;
+  font-family: 'Pretendard', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(255, 106, 61, 0.09), transparent 24%),
+    radial-gradient(circle at 80% 20%, rgba(54, 92, 180, 0.14), transparent 30%),
+    linear-gradient(180deg, var(--console-bg) 0%, color-mix(in srgb, var(--console-bg) 92%, #16325e 8%) 52%, var(--console-bg) 100%);
+  color: var(--console-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* 슬림 스크롤바 */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(79,127,255,0.25); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(79,127,255,0.5); }
-
-/* 사이드바 선택 효과 */
-.ant-menu-dark .ant-menu-item-selected {
-  background: linear-gradient(90deg, rgba(79,127,255,0.25), rgba(79,127,255,0.08)) !important;
-  border-right: 3px solid #4f7fff !important;
-  border-radius: 0 !important;
-}
-.ant-menu-dark .ant-menu-item:hover {
-  background: rgba(255,255,255,0.07) !important;
-}
-.ant-menu-dark .ant-menu-sub {
-  background: rgba(0,0,0,0.15) !important;
+a {
+  color: inherit;
 }
 
-/* AG Grid 다크 테마 보정 */
-.ag-theme-quartz {
-  --ag-background-color: transparent;
-  --ag-odd-row-background-color: rgba(255,255,255,0.02);
-  --ag-row-hover-color: rgba(79,127,255,0.08);
-  --ag-header-background-color: rgba(79,127,255,0.08);
-  --ag-border-color: rgba(255,255,255,0.07);
-  --ag-header-column-separator-color: rgba(255,255,255,0.07);
-  --ag-row-border-color: rgba(255,255,255,0.04);
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-/* 수정된 행 강조 */
-.row-edited td {
-  background: rgba(250, 173, 20, 0.06) !important;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* ── 로그인 폼 다크 인풋 ────────────────────────────────────────────────────
-   브라우저 autofill이 흰색 배경을 강제하는 문제 → box-shadow 트릭으로 덮기    */
-/* 모든 상태(기본/hover/focus/autofill)에서 동일한 배경 유지 */
-.login-dark-input .ant-input-affix-wrapper,
-.login-dark-input .ant-input-affix-wrapper:hover,
-.login-dark-input .ant-input-affix-wrapper-focused,
-.login-dark-input .ant-input-affix-wrapper:focus-within {
-  background: #131f38 !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
-  border-radius: 10px !important;
+::-webkit-scrollbar-thumb {
+  background: rgba(129, 153, 184, 0.22);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 106, 61, 0.34);
+}
+
+.console-shell .ant-layout {
+  background: transparent;
+}
+
+.console-menu.ant-menu {
+  background: transparent !important;
+  color: var(--console-text-soft);
+  border-inline-end: none !important;
+}
+
+.console-menu.ant-menu .ant-menu-item,
+.console-menu.ant-menu .ant-menu-submenu-title {
+  height: 42px;
+  line-height: 42px;
+  margin-inline: 10px;
+  width: calc(100% - 20px);
+  border-radius: 10px;
+}
+
+.console-menu.ant-menu .ant-menu-item-selected {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--console-accent) 18%, transparent), color-mix(in srgb, var(--console-accent) 5%, transparent)) !important;
+  color: var(--console-text) !important;
+  box-shadow: inset 3px 0 0 var(--console-accent);
+}
+
+.console-menu.ant-menu .ant-menu-item:hover,
+.console-menu.ant-menu .ant-menu-submenu-title:hover {
+  background: var(--console-button-bg) !important;
+  color: var(--console-text) !important;
+}
+
+.console-menu.ant-menu .ant-menu-sub {
+  background: color-mix(in srgb, var(--console-button-bg) 80%, transparent) !important;
+}
+
+.console-panel.ant-card {
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--console-accent) 8%, transparent), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--console-panel) 96%, white 4%), color-mix(in srgb, var(--console-panel-alt) 96%, white 4%));
+  border: 1px solid var(--console-border);
+  border-radius: 16px;
+  box-shadow: var(--console-shadow-medium), inset 0 1px 0 color-mix(in srgb, var(--console-text) 3%, transparent);
+}
+
+.console-panel .ant-card-head {
+  min-height: 46px;
+  border-bottom: 1px solid rgba(128, 153, 184, 0.12);
+}
+
+.console-panel .ant-card-head-title,
+.console-panel .ant-card-extra {
+  color: var(--console-text);
+}
+
+.console-metric-card.ant-card .ant-card-body {
+  padding: 18px 18px 16px;
+}
+
+.console-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.console-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.console-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.console-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.console-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--console-text-soft);
+  font-size: 12px;
+}
+
+.console-label {
+  color: var(--console-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.console-number {
+  color: var(--console-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.console-button.ant-btn,
+.console-button.ant-btn:hover,
+.console-button.ant-btn:focus {
+  border-color: var(--console-shell-border);
+  background: var(--console-button-bg);
+  color: var(--console-text);
+  box-shadow: none;
+}
+
+.console-button.ant-btn-primary,
+.console-button.ant-btn-primary:hover,
+.console-button.ant-btn-primary:focus {
+  background: linear-gradient(90deg, var(--console-accent), color-mix(in srgb, var(--console-accent) 72%, white 28%));
+  border-color: var(--console-accent);
+  color: #fff;
+}
+
+.console-tabs.ant-tabs .ant-tabs-nav::before {
+  border-bottom-color: rgba(128, 153, 184, 0.14);
+}
+
+.console-tabs.ant-tabs .ant-tabs-tab {
+  color: var(--console-text-muted);
+}
+
+.console-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--console-accent);
+}
+
+.console-tabs.ant-tabs .ant-tabs-ink-bar {
+  background: var(--console-accent);
+}
+
+.console-table.ant-table-wrapper .ant-table {
+  background: transparent;
+  color: var(--console-text);
+}
+
+.console-table.ant-table-wrapper .ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--console-text-muted);
+  border-bottom: 1px solid rgba(128, 153, 184, 0.14);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.console-table.ant-table-wrapper .ant-table-tbody > tr > td {
+  background: transparent;
+  border-bottom: 1px solid rgba(128, 153, 184, 0.1);
+  color: var(--console-text-soft);
+}
+
+.console-table.ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.console-form .ant-form-item-label > label,
+.console-form .ant-input-number-group-addon,
+.console-form .ant-input-group-addon {
+  color: var(--console-text-muted);
+}
+
+.console-form.ant-input,
+.console-form.ant-input-number,
+.console-form.ant-select .ant-select-selector,
+.console-form.ant-input-affix-wrapper,
+.console-form .ant-input,
+.console-form .ant-input-number,
+.console-form .ant-input-number-group-addon,
+.console-form .ant-select-selector,
+.console-form .ant-input-affix-wrapper {
+  background: var(--console-button-bg) !important;
+  border-color: var(--console-shell-border) !important;
+  color: var(--console-text) !important;
   box-shadow: none !important;
 }
-.login-dark-input .ant-input-affix-wrapper-focused,
-.login-dark-input .ant-input-affix-wrapper:focus-within {
-  border-color: rgba(79,127,255,0.40) !important;
-}
-.login-dark-input .ant-input-affix-wrapper .ant-input {
-  background: transparent !important;
-  color: rgba(255,255,255,0.82) !important;
-  caret-color: #4f7fff;
-}
-.login-dark-input .ant-input-affix-wrapper .ant-input::placeholder {
-  color: rgba(255,255,255,0.22) !important;
-}
-.login-dark-input .ant-input-prefix,
-.login-dark-input .ant-input-suffix { color: rgba(255,255,255,0.28) !important; }
 
-/* 브라우저 자동완성 — 같은 solid 색으로 덮어 배경 변화 없음 */
-.login-dark-input input:-webkit-autofill,
-.login-dark-input input:-webkit-autofill:hover,
-.login-dark-input input:-webkit-autofill:focus,
-.login-dark-input input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #131f38 inset !important;
-  -webkit-text-fill-color: rgba(255,255,255,0.82) !important;
-  transition: background-color 86400s ease-in-out 0s !important;
-  caret-color: #4f7fff;
+.console-form.ant-input::placeholder,
+.console-form .ant-input::placeholder {
+  color: var(--console-text-muted);
+}
+
+.console-form.ant-input-number .ant-input-number-input,
+.console-form.ant-select .ant-select-selection-item,
+.console-form.ant-select .ant-select-selection-placeholder,
+.console-form .ant-input-number-input,
+.console-form .ant-select-selection-item,
+.console-form .ant-select-selection-placeholder {
+  color: var(--console-text) !important;
+}
+
+.console-form.ant-select .ant-select-arrow,
+.console-form.ant-input-number .ant-input-number-handler-wrap,
+.console-form .ant-select-arrow,
+.console-form .ant-input-number-handler-wrap {
+  color: var(--console-text-muted);
+}
+
+.console-surface {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--console-shell-border);
+  background: var(--console-button-bg);
+}
+
+.console-kpi {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--console-shell-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--console-button-bg) 100%, transparent), color-mix(in srgb, var(--console-button-bg) 72%, transparent));
+}
+
+.console-kpi strong {
+  color: var(--console-text);
+}
+
+.ag-theme-quartz {
+  --ag-background-color: transparent;
+  --ag-foreground-color: var(--console-text-soft);
+  --ag-header-background-color: rgba(255, 255, 255, 0.03);
+  --ag-header-foreground-color: var(--console-text-muted);
+  --ag-odd-row-background-color: rgba(255, 255, 255, 0.02);
+  --ag-row-hover-color: rgba(255, 106, 61, 0.08);
+  --ag-selected-row-background-color: rgba(255, 106, 61, 0.12);
+  --ag-border-color: rgba(128, 153, 184, 0.12);
+  --ag-row-border-color: rgba(128, 153, 184, 0.1);
+  --ag-header-column-separator-color: rgba(128, 153, 184, 0.12);
+  --ag-input-focus-border-color: rgba(255, 106, 61, 0.48);
+  --ag-font-size: 12px;
+}
+
+@media (max-width: 1200px) {
+  .console-stat-grid,
+  .console-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .console-stat-grid,
+  .console-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
