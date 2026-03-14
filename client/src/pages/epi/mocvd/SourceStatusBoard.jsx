@@ -28,12 +28,13 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
+import { formatMachineLabel } from './machineLabel'
 
 const STATUS_META = {
   overdue: { color: '#f87171', bg: 'rgba(248,113,113,0.12)', label: '부족' },
   urgent: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', label: '임박' },
   upcoming: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', label: '예정' },
-  normal: { color: '#34d399', bg: 'rgba(52,211,153,0.12)', label: '안정' },
+  normal: { color: '#34d399', bg: 'rgba(52,211,153,0.12)', label: '정상' },
 }
 
 function formatDate(value) {
@@ -97,10 +98,10 @@ function SourceStatusBoard() {
     try {
       const res = await authFetch('/api/mocvd/source-status')
       const json = await res.json()
-      if (!res.ok) throw new Error(json.detail || '소스 현황판을 불러오지 못했습니다.')
+      if (!res.ok) throw new Error(json.detail || '소스 현황을 불러오지 못했습니다.')
       setData(json)
     } catch (err) {
-      setError(err.message || '소스 현황판을 불러오지 못했습니다.')
+      setError(err.message || '소스 현황을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -130,6 +131,7 @@ function SourceStatusBoard() {
       }
       map.set(item.source_label, current)
     })
+
     return [...map.values()].sort((a, b) => {
       if (b.overdue !== a.overdue) return b.overdue - a.overdue
       if (b.urgent !== a.urgent) return b.urgent - a.urgent
@@ -144,7 +146,7 @@ function SourceStatusBoard() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((item) => {
-      const target = `${item.machine_no} ${item.area ?? ''} ${item.source_label}`.toLowerCase()
+      const target = `${item.machine_no} ${formatMachineLabel(item.machine_no)} ${item.area ?? ''} ${item.source_label}`.toLowerCase()
       if (searchText && !target.includes(searchText.toLowerCase().trim())) return false
       if (statusFilter !== 'all' && item.status !== statusFilter) return false
       if (sourceFilter !== 'all' && item.source_label !== sourceFilter) return false
@@ -154,6 +156,7 @@ function SourceStatusBoard() {
 
   const machineSummary = useMemo(() => {
     const map = new Map()
+
     filteredEvents.forEach((item) => {
       const current = map.get(item.machine_no) ?? {
         key: item.machine_no,
@@ -164,13 +167,17 @@ function SourceStatusBoard() {
         nextDate: item.projected_replacement_date,
         reflected: 0,
       }
+
       if (getRiskOrder(item.status) < getRiskOrder(current.highestRisk)) {
         current.highestRisk = item.status
       }
+
       current.focusSources.push(item.source_label)
+
       if (item.projected_replacement_date && (!current.nextDate || item.projected_replacement_date < current.nextDate)) {
         current.nextDate = item.projected_replacement_date
       }
+
       if (item.projected_replacement_date) current.reflected += 1
       map.set(item.machine_no, current)
     })
@@ -186,6 +193,7 @@ function SourceStatusBoard() {
 
   const eventsByDate = useMemo(() => {
     const map = new Map()
+
     filteredEvents.forEach((item) => {
       if (!item.projected_replacement_date) return
       const key = item.projected_replacement_date
@@ -193,11 +201,13 @@ function SourceStatusBoard() {
       bucket.push(item)
       map.set(key, bucket)
     })
+
     return map
   }, [filteredEvents])
 
   const eventsByMonth = useMemo(() => {
     const map = new Map()
+
     filteredEvents.forEach((item) => {
       if (!item.projected_replacement_date) return
       const key = dayjs(item.projected_replacement_date).format('YYYY-MM')
@@ -205,6 +215,7 @@ function SourceStatusBoard() {
       bucket.push(item)
       map.set(key, bucket)
     })
+
     return map
   }, [filteredEvents])
 
@@ -218,12 +229,35 @@ function SourceStatusBoard() {
     return filteredEvents.filter((item) => item.projected_replacement_date?.startsWith(prefix))
   }, [filteredEvents, selectedDate, viewMode])
 
+  const groupedVisibleListEvents = useMemo(() => {
+    const map = new Map()
+
+    visibleListEvents.forEach((item) => {
+      const key = item.projected_replacement_date
+      if (!key) return
+      const bucket = map.get(key) ?? []
+      bucket.push(item)
+      map.set(key, bucket)
+    })
+
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, items]) => ({
+        date,
+        items: [...items].sort((a, b) => {
+          const riskDiff = getRiskOrder(a.status) - getRiskOrder(b.status)
+          if (riskDiff !== 0) return riskDiff
+          return a.machine_no - b.machine_no
+        }),
+      }))
+  }, [visibleListEvents])
+
   const machineColumns = [
     {
       title: '호기',
       dataIndex: 'machine_no',
-      width: 100,
-      render: (value) => <span style={{ fontWeight: 700 }}>{value}</span>,
+      width: 140,
+      render: (value) => <span style={{ fontWeight: 700 }}>{formatMachineLabel(value)}</span>,
     },
     { title: '라인', dataIndex: 'area', width: 90 },
     {
@@ -313,7 +347,7 @@ function SourceStatusBoard() {
                   textOverflow: 'ellipsis',
                 }}
               >
-                {item.machine_no} {item.source_label}
+                {formatMachineLabel(item.machine_no)} {item.source_label}
               </div>
             )
           })}
@@ -451,7 +485,7 @@ function SourceStatusBoard() {
                     fontSize: 14,
                   }}
                 >
-                  {item.machine_no}호기 {item.source_label} / {formatDate(item.projected_replacement_date)}
+                  {formatMachineLabel(item.machine_no)} {item.source_label} / {formatDate(item.projected_replacement_date)}
                 </Tag>
               )
             })}
@@ -527,47 +561,59 @@ function SourceStatusBoard() {
                 }}
               />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {visibleListEvents.slice(0, 12).map((item) => {
-                  const meta = STATUS_META[item.status] ?? STATUS_META.normal
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        padding: '14px 16px',
-                        borderRadius: 16,
-                        border: '1px solid var(--nowa-border)',
-                        background: 'rgba(255,255,255,0.02)',
-                      }}
-                    >
-                      <div>
-                        <div style={{ color: 'var(--nowa-text)', fontWeight: 700 }}>
-                          {item.machine_no}호기 / {item.source_label}
-                        </div>
-                        <div style={{ color: 'var(--nowa-text-muted)', marginTop: 4 }}>
-                          예정일 {formatDate(item.projected_replacement_date)}
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '4px 10px',
-                          borderRadius: 999,
-                          color: meta.color,
-                          background: meta.bg,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {meta.label}
-                      </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {groupedVisibleListEvents.map(({ date, items }) => (
+                  <div
+                    key={date}
+                    style={{
+                      padding: '16px 18px',
+                      borderRadius: 18,
+                      border: '1px solid var(--nowa-border)',
+                      background: 'rgba(255,255,255,0.02)',
+                    }}
+                  >
+                    <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
+                      {formatDate(date)}
                     </div>
-                  )
-                })}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {items.map((item) => {
+                        const meta = STATUS_META[item.status] ?? STATUS_META.normal
+                        return (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 12,
+                              padding: '12px 14px',
+                              borderRadius: 14,
+                              background: 'rgba(11,18,36,0.42)',
+                              border: '1px solid rgba(99,113,153,0.14)',
+                            }}
+                          >
+                            <div style={{ color: 'var(--nowa-text)', fontWeight: 700 }}>
+                              {formatMachineLabel(item.machine_no)} / {item.source_label}
+                            </div>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '4px 10px',
+                                borderRadius: 999,
+                                color: meta.color,
+                                background: meta.bg,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {meta.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </SectionCard>
@@ -632,7 +678,7 @@ function SourceStatusBoard() {
               { value: 'overdue', label: '부족' },
               { value: 'urgent', label: '임박' },
               { value: 'upcoming', label: '예정' },
-              { value: 'normal', label: '안정' },
+              { value: 'normal', label: '정상' },
             ]}
           />
           <Select

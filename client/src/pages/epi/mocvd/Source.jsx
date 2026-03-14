@@ -1,20 +1,45 @@
 import { useEffect, useState } from 'react'
-import { Button, InputNumber, message, Select, Table, Tabs, Tag, theme } from 'antd'
+import { Button, Empty, InputNumber, message, Select, Table, Tabs, Tag, theme } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import SourceStatusBoard from './SourceStatusBoard'
+import { formatMachineLabel } from './machineLabel'
 
 const UNITS = ['kg', 'g', 'L', 'mL', '%']
-const MACHINES = Array.from({ length: 136 }, (_, index) => 101 + index)
 
 function SourceInputTab() {
-  const [machineNo, setMachineNo] = useState(101)
+  const [machines, setMachines] = useState([])
+  const [machineNo, setMachineNo] = useState(null)
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
+  const [machineLoading, setMachineLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const { token } = theme.useToken()
 
+  const fetchMachines = async () => {
+    setMachineLoading(true)
+    try {
+      const res = await authFetch('/api/mocvd/machines')
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.detail || '호기 목록을 불러오지 못했습니다.')
+      setMachines(json)
+      setMachineNo((prev) => {
+        if (prev && json.some((row) => row.machine_no === prev)) return prev
+        return json[0]?.machine_no ?? null
+      })
+    } catch (err) {
+      message.error(err.message || '호기 목록을 불러오지 못했습니다.')
+    } finally {
+      setMachineLoading(false)
+    }
+  }
+
   const fetchData = async (no) => {
+    if (!no) {
+      setData([])
+      return
+    }
+
     setLoading(true)
     try {
       const res = await authFetch(`/api/mocvd/source/${no}`)
@@ -29,6 +54,10 @@ function SourceInputTab() {
   }
 
   useEffect(() => {
+    fetchMachines()
+  }, [])
+
+  useEffect(() => {
     fetchData(machineNo)
   }, [machineNo])
 
@@ -41,6 +70,8 @@ function SourceInputTab() {
   }
 
   const handleSave = async () => {
+    if (!machineNo) return
+
     setSaving(true)
     try {
       const res = await authFetch(`/api/mocvd/source/${machineNo}`, {
@@ -54,7 +85,7 @@ function SourceInputTab() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.detail || '저장에 실패했습니다.')
-      message.success('저장되었습니다.')
+      message.success('저장 완료')
       fetchData(machineNo)
     } catch (err) {
       message.error(err.message || '저장 중 오류가 발생했습니다.')
@@ -115,32 +146,41 @@ function SourceInputTab() {
           <span style={{ fontWeight: 600, fontSize: 15 }}>호기 선택</span>
           <Select
             value={machineNo}
-            style={{ width: 140 }}
+            style={{ width: 180 }}
             showSearch
-            options={MACHINES.map((machine) => ({ value: machine, label: `${machine}호기` }))}
+            loading={machineLoading}
+            placeholder="호기를 선택하세요"
+            options={machines.map((machine) => ({
+              value: machine.machine_no,
+              label: formatMachineLabel(machine.machine_no),
+            }))}
             onChange={setMachineNo}
           />
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button icon={<ReloadOutlined />} onClick={() => fetchData(machineNo)}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchData(machineNo)} disabled={!machineNo}>
             새로고침
           </Button>
-          <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+          <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} disabled={!machineNo}>
             저장
           </Button>
         </div>
       </div>
 
-      <Table
-        className="console-table"
-        rowKey="source_name"
-        columns={columns}
-        dataSource={data}
-        loading={loading}
-        pagination={false}
-        bordered
-        size="middle"
-      />
+      {machineNo ? (
+        <Table
+          className="console-table"
+          rowKey="source_name"
+          columns={columns}
+          dataSource={data}
+          loading={loading}
+          pagination={false}
+          bordered
+          size="middle"
+        />
+      ) : (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="활성화된 호기가 없습니다." />
+      )}
     </div>
   )
 }

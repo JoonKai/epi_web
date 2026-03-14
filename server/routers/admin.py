@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from auth import hash_password, require_admin
 from database import get_db
-from models import User, MocvdMachine, SourceType
-from auth import require_admin, hash_password
+from models import MocvdMachine, SourceType, SystemSetting, User
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-
-# ── 사용자 관리 ──────────────────────────────────────────
 
 class UserCreate(BaseModel):
     username: str
@@ -21,13 +20,28 @@ class UserUpdate(BaseModel):
     is_active: bool
 
 
+class MachineCreate(BaseModel):
+    machine_no: int
+    description: str = ""
+
+
+class SourceCreate(BaseModel):
+    name: str
+    order_idx: int = 0
+
+
 @router.get("/users")
 def list_users(db: Session = Depends(get_db), _=Depends(require_admin)):
     users = db.query(User).order_by(User.id).all()
     return [
-        {"id": u.id, "username": u.username, "role": u.role,
-         "is_active": u.is_active, "created_at": u.created_at.strftime("%Y-%m-%d") if u.created_at else None}
-        for u in users
+        {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.strftime("%Y-%m-%d") if user.created_at else None,
+        }
+        for user in users
     ]
 
 
@@ -71,17 +85,18 @@ def reset_password(user_id: int, body: dict, db: Session = Depends(get_db), _=De
     return {"result": "ok"}
 
 
-# ── MOCVD 호기 관리 ─────────────────────────────────────
-
-class MachineCreate(BaseModel):
-    machine_no: int
-    description: str = ""
-
-
 @router.get("/machines")
 def list_machines(db: Session = Depends(get_db), _=Depends(require_admin)):
     rows = db.query(MocvdMachine).order_by(MocvdMachine.machine_no).all()
-    return [{"id": r.id, "machine_no": r.machine_no, "description": r.description, "is_active": r.is_active} for r in rows]
+    return [
+        {
+            "id": row.id,
+            "machine_no": row.machine_no,
+            "description": row.description,
+            "is_active": row.is_active,
+        }
+        for row in rows
+    ]
 
 
 @router.post("/machines")
@@ -98,6 +113,16 @@ def update_machine(machine_id: int, body: dict, db: Session = Depends(get_db), _
     machine = db.query(MocvdMachine).filter(MocvdMachine.id == machine_id).first()
     if not machine:
         raise HTTPException(status_code=404, detail="호기를 찾을 수 없습니다.")
+
+    next_machine_no = body.get("machine_no", machine.machine_no)
+    duplicate = db.query(MocvdMachine).filter(
+        MocvdMachine.machine_no == next_machine_no,
+        MocvdMachine.id != machine_id,
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=400, detail="이미 존재하는 호기 번호입니다.")
+
+    machine.machine_no = next_machine_no
     machine.description = body.get("description", machine.description)
     machine.is_active = body.get("is_active", machine.is_active)
     db.commit()
@@ -114,17 +139,18 @@ def delete_machine(machine_id: int, db: Session = Depends(get_db), _=Depends(req
     return {"result": "ok"}
 
 
-# ── 소스 종류 관리 ───────────────────────────────────────
-
-class SourceCreate(BaseModel):
-    name: str
-    order_idx: int = 0
-
-
 @router.get("/sources")
 def list_sources(db: Session = Depends(get_db), _=Depends(require_admin)):
     rows = db.query(SourceType).order_by(SourceType.order_idx).all()
-    return [{"id": r.id, "name": r.name, "order_idx": r.order_idx, "is_active": r.is_active} for r in rows]
+    return [
+        {
+            "id": row.id,
+            "name": row.name,
+            "order_idx": row.order_idx,
+            "is_active": row.is_active,
+        }
+        for row in rows
+    ]
 
 
 @router.post("/sources")
@@ -141,7 +167,16 @@ def update_source(source_id: int, body: dict, db: Session = Depends(get_db), _=D
     source = db.query(SourceType).filter(SourceType.id == source_id).first()
     if not source:
         raise HTTPException(status_code=404, detail="소스를 찾을 수 없습니다.")
-    source.name = body.get("name", source.name)
+
+    next_name = body.get("name", source.name)
+    duplicate = db.query(SourceType).filter(
+        SourceType.name == next_name,
+        SourceType.id != source_id,
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=400, detail="이미 존재하는 소스명입니다.")
+
+    source.name = next_name
     source.order_idx = body.get("order_idx", source.order_idx)
     source.is_active = body.get("is_active", source.is_active)
     db.commit()
@@ -158,24 +193,19 @@ def delete_source(source_id: int, db: Session = Depends(get_db), _=Depends(requi
     return {"result": "ok"}
 
 
-# ── 시스템 설정 ──────────────────────────────────────────
-
-from models import SystemSetting as _SystemSetting
-
-
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db), _=Depends(require_admin)):
-    rows = db.query(_SystemSetting).all()
-    return {r.key: r.value for r in rows}
+    rows = db.query(SystemSetting).all()
+    return {row.key: row.value for row in rows}
 
 
 @router.put("/settings")
 def update_settings(body: dict, db: Session = Depends(get_db), _=Depends(require_admin)):
     for key, value in body.items():
-        row = db.query(_SystemSetting).filter(_SystemSetting.key == key).first()
+        row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
         if row:
             row.value = str(value)
         else:
-            db.add(_SystemSetting(key=key, value=str(value)))
+            db.add(SystemSetting(key=key, value=str(value)))
     db.commit()
     return {"result": "ok"}

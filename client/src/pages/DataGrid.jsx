@@ -6,6 +6,7 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { authFetch } from '../context/AuthContext'
 import { panelStyle, sectionTitleStyle } from '../theme/consoleTheme'
+import { formatMachineLabel } from './epi/mocvd/machineLabel'
 
 function remainingCellStyle(params) {
   const value = params.value
@@ -49,7 +50,15 @@ export default function DataGrid() {
 
   const columnDefs = useMemo(() => {
     const fixedColumns = [
-      { headerName: '호기', field: 'machine_no', width: 90, pinned: 'left', cellStyle: { fontWeight: 700, textAlign: 'center' }, filter: 'agNumberColumnFilter' },
+      {
+        headerName: '호기',
+        field: 'machine_no',
+        width: 130,
+        pinned: 'left',
+        cellStyle: { fontWeight: 700, textAlign: 'center' },
+        filter: 'agNumberColumnFilter',
+        valueFormatter: (params) => formatMachineLabel(params.value),
+      },
       { headerName: '설명', field: 'description', width: 160, pinned: 'left', filter: 'agTextColumnFilter' },
       { headerName: '최종 입력', field: 'updated_at', width: 160, filter: 'agTextColumnFilter', cellStyle: { color: 'rgba(220,232,255,0.72)', fontSize: 12 } },
     ]

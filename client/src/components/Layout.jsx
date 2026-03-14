@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   ApartmentOutlined,
   ApiOutlined,
+  AppstoreAddOutlined,
   BarChartOutlined,
   BellOutlined,
   BuildOutlined,
@@ -38,7 +39,10 @@ function buildMenuItems(isAdmin) {
           key: 'epi-mocvd',
           icon: <ControlOutlined />,
           label: 'MOCVD',
-          children: [{ key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스' }],
+          children: [
+            { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스' },
+            { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보관리' },
+          ],
         },
         { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
       ],
@@ -59,7 +63,7 @@ function buildMenuItems(isAdmin) {
       key: 'analysis',
       icon: <BarChartOutlined />,
       label: '분석',
-      children: [{ key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼 맵' }],
+      children: [{ key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼맵' }],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
     { key: '/grid', icon: <TableOutlined />, label: '데이터 조회' },
@@ -84,10 +88,10 @@ function findPath(items, pathname, trail = []) {
   return null
 }
 
-// 각 경로별 accent 색
 const PAGE_COLOR = {
   '/dashboard': '#6366f1',
   '/epi/mocvd/source': '#14b8a6',
+  '/epi/mocvd/master-data': '#8b5cf6',
   '/epi/measurement': '#3b82f6',
   '/epi/simulator': '#f59e0b',
   '/wafermap': '#ec4899',
@@ -115,15 +119,7 @@ function Layout({ children, isDark, onThemeToggle }) {
   }
 
   return (
-    <AntLayout
-      style={{
-        minHeight: '100vh',
-        background: 'var(--nowa-bg)',
-        display: 'flex',
-        flexDirection: 'row',
-      }}
-    >
-      {/* ── Sidebar ──────────────────────────────────────────────── */}
+    <AntLayout style={{ minHeight: '100vh', background: 'var(--nowa-bg)', display: 'flex', flexDirection: 'row' }}>
       <Sider
         width={240}
         collapsedWidth={72}
@@ -142,7 +138,6 @@ function Layout({ children, isDark, onThemeToggle }) {
           overflow: 'hidden',
         }}
       >
-        {/* Logo */}
         <div
           onClick={() => navigate('/dashboard')}
           style={{
@@ -150,7 +145,7 @@ function Layout({ children, isDark, onThemeToggle }) {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            padding: collapsed ? '0 20px' : '0 20px',
+            padding: '0 20px',
             borderBottom: '1px solid var(--nowa-border)',
             cursor: 'pointer',
             flexShrink: 0,
@@ -186,7 +181,6 @@ function Layout({ children, isDark, onThemeToggle }) {
           )}
         </div>
 
-        {/* Menu group label */}
         {!collapsed && (
           <div style={{ padding: '16px 16px 4px', color: 'var(--nowa-text-muted)', fontSize: 10, fontWeight: 700, letterSpacing: 1.6, textTransform: 'uppercase' }}>
             메인 메뉴
@@ -205,10 +199,8 @@ function Layout({ children, isDark, onThemeToggle }) {
             style={{ background: 'transparent', border: 'none' }}
           />
         </div>
-
       </Sider>
 
-      {/* ── Main area ───────────────────────────────────────────── */}
       <AntLayout
         style={{
           marginLeft: collapsed ? 72 : 240,
@@ -219,7 +211,6 @@ function Layout({ children, isDark, onThemeToggle }) {
           minHeight: '100vh',
         }}
       >
-        {/* ── Header ────────────────────────────────────────────── */}
         <Header
           style={{
             height: 64,
@@ -236,7 +227,6 @@ function Layout({ children, isDark, onThemeToggle }) {
             flexShrink: 0,
           }}
         >
-          {/* Left */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <Button
               type="text"
@@ -252,8 +242,8 @@ function Layout({ children, isDark, onThemeToggle }) {
               }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--nowa-text-muted)', fontSize: 13 }}>
-              {breadcrumbs.slice(0, -1).map((crumb, i) => (
-                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {breadcrumbs.slice(0, -1).map((crumb, index) => (
+                <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>{crumb}</span>
                   <span style={{ opacity: 0.4 }}>/</span>
                 </span>
@@ -262,9 +252,7 @@ function Layout({ children, isDark, onThemeToggle }) {
             </div>
           </div>
 
-          {/* Right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Theme toggle */}
             <Tooltip title={isDark ? '라이트 모드' : '다크 모드'}>
               <Button
                 type="text"
@@ -281,7 +269,6 @@ function Layout({ children, isDark, onThemeToggle }) {
               />
             </Tooltip>
 
-            {/* Bell */}
             <Tooltip title="알림">
               <Badge dot color="var(--nowa-primary)" offset={[-4, 4]}>
                 <Button
@@ -299,10 +286,8 @@ function Layout({ children, isDark, onThemeToggle }) {
               </Badge>
             </Tooltip>
 
-            {/* Divider */}
             <div style={{ width: 1, height: 24, background: 'var(--nowa-border)', margin: '0 4px' }} />
 
-            {/* User dropdown */}
             <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
               <div
                 style={{
@@ -317,11 +302,7 @@ function Layout({ children, isDark, onThemeToggle }) {
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Avatar
-                  size={30}
-                  icon={<UserOutlined />}
-                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', flexShrink: 0 }}
-                />
+                <Avatar size={30} icon={<UserOutlined />} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', flexShrink: 0 }} />
                 <div style={{ lineHeight: 1.3 }}>
                   <div style={{ color: 'var(--nowa-text)', fontSize: 13, fontWeight: 600 }}>{user?.username}</div>
                   <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11 }}>{isAdmin ? '관리자' : '사용자'}</div>
@@ -331,15 +312,7 @@ function Layout({ children, isDark, onThemeToggle }) {
           </div>
         </Header>
 
-        {/* ── Content ───────────────────────────────────────────── */}
-        <Content
-          style={{
-            flex: 1,
-            padding: 24,
-            background: 'var(--nowa-bg)',
-            minHeight: 0,
-          }}
-        >
+        <Content style={{ flex: 1, padding: 24, background: 'var(--nowa-bg)', minHeight: 0 }}>
           {children}
         </Content>
       </AntLayout>

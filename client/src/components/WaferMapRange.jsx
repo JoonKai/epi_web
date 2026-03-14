@@ -45,7 +45,7 @@ function fmtVal(v, fmt) {
 // ─── canvas 렌더링 ────────────────────────────────────────────────────────────
 function renderCanvas(canvas, container, {
   rangeStart, rangeEnd, colors, distributions, useDistribution,
-  useLogScaleBar, displayFormat, labelFontSize,
+  useLogScaleBar, displayFormat, labelFontSize, labelColor, tickColor, borderColor,
 }) {
   const W = container.clientWidth
   const H = container.clientHeight
@@ -102,7 +102,7 @@ function renderCanvas(canvas, container, {
   }
 
   // ② 보더
-  ctx.strokeStyle = 'rgba(150,160,180,0.5)'
+  ctx.strokeStyle = borderColor
   ctx.lineWidth = 1
   ctx.strokeRect(barLeft, barTop, barW, barH)
 
@@ -110,8 +110,8 @@ function renderCanvas(canvas, container, {
   if (delta > 0) {
     const step = delta / n
     ctx.font      = `${labelFontSize}px Consolas, monospace`
-    ctx.fillStyle = 'rgba(200,215,235,0.9)'
-    ctx.strokeStyle = 'rgba(120,140,170,0.7)'
+    ctx.fillStyle = labelColor
+    ctx.strokeStyle = tickColor
     ctx.textAlign    = 'right'
     ctx.textBaseline = 'middle'
 
@@ -152,6 +152,9 @@ export default function WaferMapRange({
   useLogScaleBar  = false,
   displayFormat   = 'F4',
   labelFontSize   = 10,
+  labelColor,
+  tickColor,
+  borderColor,
   useAutoRange    = true,
   onRangeChange,
   onColorsChange,
@@ -172,9 +175,9 @@ export default function WaferMapRange({
     if (!canvas || !container) return
     renderCanvas(canvas, container, {
       rangeStart, rangeEnd, colors, distributions,
-      useDistribution, useLogScaleBar, displayFormat, labelFontSize,
+      useDistribution, useLogScaleBar, displayFormat, labelFontSize, labelColor, tickColor, borderColor,
     })
-  }, [rangeStart, rangeEnd, colors, distributions, useDistribution, useLogScaleBar, displayFormat, labelFontSize])
+  }, [rangeStart, rangeEnd, colors, distributions, useDistribution, useLogScaleBar, displayFormat, labelFontSize, labelColor, tickColor, borderColor])
 
   // ResizeObserver
   useEffect(() => {

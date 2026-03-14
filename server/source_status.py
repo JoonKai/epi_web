@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
+import re
 
 
 EXCEL_MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
@@ -272,3 +273,54 @@ def get_source_status_snapshot() -> dict[str, Any]:
         raise FileNotFoundError("source status workbook not found")
     stat = path.stat()
     return _get_snapshot_cached(str(path), stat.st_mtime)
+
+
+def _normalize_source_label(value: str | None) -> str:
+    if not value:
+        return ""
+    normalized = str(value).strip().lower()
+    normalized = re.sub(r"#\d+$", "", normalized)
+    return normalized
+
+
+def filter_source_status_snapshot(
+    snapshot: dict[str, Any],
+    active_machine_nos: set[int] | None = None,
+    active_source_names: set[str] | None = None,
+) -> dict[str, Any]:
+    events = snapshot.get("events", [])
+    normalized_active_source_names = (
+        {_normalize_source_label(name) for name in active_source_names}
+        if active_source_names is not None
+        else None
+    )
+
+    filtered_events = [
+        event
+        for event in events
+        if (active_machine_nos is None or event.get("machine_no") in active_machine_nos)
+        and (
+            normalized_active_source_names is None
+            or _normalize_source_label(event.get("source_label")) in normalized_active_source_names
+        )
+    ]
+
+    current_month = date.today().isoformat()[:7]
+    overdue_count = sum(1 for event in filtered_events if event.get("status") == "overdue")
+    urgent_count = sum(1 for event in filtered_events if event.get("status") == "urgent")
+    month_count = sum(
+        1
+        for event in filtered_events
+        if event.get("projected_replacement_date") and event["projected_replacement_date"].startswith(current_month)
+    )
+
+    return {
+        **snapshot,
+        "summary": {
+            "total": len(filtered_events),
+            "overdue": overdue_count,
+            "urgent": urgent_count,
+            "this_month": month_count,
+        },
+        "events": filtered_events,
+    }

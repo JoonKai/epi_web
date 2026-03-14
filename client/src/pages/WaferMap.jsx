@@ -336,7 +336,10 @@ export default function WaferMapPage() {
                 useDistribution={useDistribution}
                 useAutoRange={useAutoRange}
                 displayFormat="F4"
-                labelFontSize={10}
+                labelFontSize={12}
+                labelColor={token.colorText}
+                tickColor={token.colorTextSecondary}
+                borderColor={token.colorBorder}
                 onRangeChange={handleRangeChange}
                 onColorsChange={setColors}
               />

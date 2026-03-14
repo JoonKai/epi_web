@@ -1,104 +1,73 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Modal } from 'antd'
 
 const AuthContext = createContext(null)
 
-// JWT payload 디코드 (서명 검증 없이 클라이언트용)
 function parseJwtExp(token) {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.exp ? payload.exp * 1000 : null // ms
+    return payload.exp ? payload.exp * 1000 : null
   } catch {
     return null
   }
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null)
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const warningTimerRef = useRef(null)
-  const expireTimerRef  = useRef(null)
-  const refreshTimerRef = useRef(null)   // 갱신 예약 타이머
-  const lastActivityRef = useRef(Date.now()) // 마지막 사용자 활동 시각
 
-  const clearTimers = () => {
+  const warningTimerRef = useRef(null)
+  const expireTimerRef = useRef(null)
+  const refreshTimerRef = useRef(null)
+  const lastActivityRef = useRef(Date.now())
+  const refreshInFlightRef = useRef(null)
+  const sessionMinutesRef = useRef(60)
+
+  const clearTimers = useCallback(() => {
     clearTimeout(warningTimerRef.current)
     clearTimeout(expireTimerRef.current)
     clearTimeout(refreshTimerRef.current)
-  }
+  }, [])
 
   const logout = useCallback((reason) => {
     clearTimers()
+    refreshInFlightRef.current = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setUser(null)
+
     if (reason === 'expired') {
       Modal.warning({
         title: '세션 만료',
-        content: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+        content: '활동이 없어 세션이 만료되었습니다. 다시 로그인해 주세요.',
         okText: '확인',
       })
     }
-  }, [])
+  }, [clearTimers])
 
-  // ── 토큰 갱신 ──────────────────────────────────────────────────────────────
-  // 만료 시각까지 남은 시간의 절반 시점에, 사용자가 최근 활동했으면 갱신 요청
-  const scheduleRefresh = useCallback((expMs, expireMinutes) => {
-    clearTimeout(refreshTimerRef.current)
-    const now       = Date.now()
-    const remaining = expMs - now
-    // 절반 시점에 갱신 시도 (최소 10초 뒤, 남은 시간이 있을 때만)
-    const refreshIn = Math.max(10_000, remaining / 2)
-
-    refreshTimerRef.current = setTimeout(async () => {
-      // 마지막 활동으로부터 expireMinutes * 0.8 분 이내면 "활성" 간주
-      const idleThresholdMs = expireMinutes * 60 * 1000 * 0.8
-      const idle = (Date.now() - lastActivityRef.current) > idleThresholdMs
-
-      if (idle) return  // 오래 비활성이면 갱신 안 함 (자연스럽게 만료 대기)
-
-      try {
-        const token = localStorage.getItem('token')
-        const res = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) return
-        const data = await res.json()
-        localStorage.setItem('token', data.access_token)
-        const newExpMs = parseJwtExp(data.access_token)
-        if (newExpMs) {
-          scheduleExpiry(newExpMs, data.expire_minutes)
-        }
-      } catch {
-        // 네트워크 오류 시 무시 — 기존 타이머가 만료 처리
-      }
-    }, refreshIn)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── 만료 타이머 ────────────────────────────────────────────────────────────
   const scheduleExpiry = useCallback((expMs, expireMinutes = 60) => {
     clearTimeout(warningTimerRef.current)
     clearTimeout(expireTimerRef.current)
-    const now       = Date.now()
-    const remaining = expMs - now
 
+    const remaining = expMs - Date.now()
     if (remaining <= 0) {
       logout('expired')
       return
     }
 
-    // 갱신 예약 (활동 시 자동 연장)
-    scheduleRefresh(expMs, expireMinutes)
+    sessionMinutesRef.current = expireMinutes
 
-    // 만료 5분 전 경고
     const warnAt = remaining - 5 * 60 * 1000
     if (warnAt > 0) {
       warningTimerRef.current = setTimeout(() => {
-        // 경고 시점에도 최근 활동이 있으면 이미 갱신됐을 것이므로 토큰 잔여 재확인
-        const cur    = localStorage.getItem('token')
-        const curExp = cur ? parseJwtExp(cur) : 0
-        if (curExp && curExp - Date.now() > 5 * 60 * 1000) return  // 이미 갱신됨
+        const token = localStorage.getItem('token')
+        const currentExp = token ? parseJwtExp(token) : 0
+        if (currentExp && currentExp - Date.now() > 5 * 60 * 1000) return
+
+        const idleMs = Date.now() - lastActivityRef.current
+        const idleLimit = expireMinutes * 60 * 1000 * 0.8
+        if (idleMs < idleLimit) return
+
         Modal.warning({
           title: '세션 만료 임박',
           content: '5분 후 자동 로그아웃됩니다.',
@@ -107,39 +76,119 @@ export function AuthProvider({ children }) {
       }, warnAt)
     }
 
-    // 만료 시 자동 로그아웃
     expireTimerRef.current = setTimeout(() => {
+      const idleMs = Date.now() - lastActivityRef.current
+      const activeWindowMs = Math.min(5 * 60 * 1000, expireMinutes * 60 * 1000 * 0.2)
+
+      if (idleMs <= activeWindowMs) {
+        window.dispatchEvent(new Event('auth:activity-refresh'))
+        return
+      }
+
       logout('expired')
     }, remaining)
-  }, [logout, scheduleRefresh])
+  }, [logout])
 
-  // ── 사용자 활동 추적 ────────────────────────────────────────────────────────
+  const refreshToken = useCallback(async ({ force = false } = {}) => {
+    const token = localStorage.getItem('token')
+    if (!token) return false
+
+    const expMs = parseJwtExp(token)
+    const now = Date.now()
+    const expireMinutes = sessionMinutesRef.current || 60
+    const refreshThresholdMs = Math.min(10 * 60 * 1000, Math.max(60 * 1000, expireMinutes * 60 * 1000 * 0.25))
+
+    if (!force && expMs && expMs - now > refreshThresholdMs) {
+      return false
+    }
+
+    if (refreshInFlightRef.current) {
+      return refreshInFlightRef.current
+    }
+
+    refreshInFlightRef.current = (async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) return false
+
+        const data = await res.json()
+        localStorage.setItem('token', data.access_token)
+
+        const nextExpMs = parseJwtExp(data.access_token)
+        if (nextExpMs) {
+          scheduleExpiry(nextExpMs, data.expire_minutes)
+          scheduleRefresh(nextExpMs, data.expire_minutes)
+        }
+        return true
+      } catch {
+        return false
+      } finally {
+        refreshInFlightRef.current = null
+      }
+    })()
+
+    return refreshInFlightRef.current
+  }, [scheduleExpiry])
+
+  const scheduleRefresh = useCallback((expMs, expireMinutes = 60) => {
+    clearTimeout(refreshTimerRef.current)
+
+    const remaining = expMs - Date.now()
+    if (remaining <= 0) return
+
+    const refreshIn = Math.max(30_000, remaining / 2)
+    refreshTimerRef.current = setTimeout(async () => {
+      const idleMs = Date.now() - lastActivityRef.current
+      const idleLimit = expireMinutes * 60 * 1000 * 0.8
+      if (idleMs > idleLimit) return
+
+      await refreshToken({ force: true })
+    }, refreshIn)
+  }, [refreshToken])
+
   useEffect(() => {
+    const onActivity = () => {
+      lastActivityRef.current = Date.now()
+      refreshToken()
+    }
+
+    const onForceRefresh = () => {
+      refreshToken({ force: true })
+    }
+
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll']
-    const onActivity = () => { lastActivityRef.current = Date.now() }
-    events.forEach(e => window.addEventListener(e, onActivity, { passive: true }))
-    return () => events.forEach(e => window.removeEventListener(e, onActivity))
-  }, [])
+    events.forEach((eventName) => window.addEventListener(eventName, onActivity, { passive: true }))
+    window.addEventListener('auth:activity-refresh', onForceRefresh)
 
-  // ── 초기화 ─────────────────────────────────────────────────────────────────
+    return () => {
+      events.forEach((eventName) => window.removeEventListener(eventName, onActivity))
+      window.removeEventListener('auth:activity-refresh', onForceRefresh)
+    }
+  }, [refreshToken])
+
   useEffect(() => {
-    const token     = localStorage.getItem('token')
+    const token = localStorage.getItem('token')
     const savedUser = localStorage.getItem('user')
+
     if (token && savedUser) {
       const expMs = parseJwtExp(token)
       if (expMs && Date.now() < expMs) {
         setUser(JSON.parse(savedUser))
-        scheduleExpiry(expMs)
+        scheduleExpiry(expMs, sessionMinutesRef.current)
+        scheduleRefresh(expMs, sessionMinutesRef.current)
       } else {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
       }
     }
+
     setLoading(false)
     return clearTimers
-  }, [scheduleExpiry])
+  }, [clearTimers, scheduleExpiry, scheduleRefresh])
 
-  // ── 로그인 ─────────────────────────────────────────────────────────────────
   const login = async (username, password) => {
     const form = new URLSearchParams()
     form.append('username', username)
@@ -159,11 +208,16 @@ export function AuthProvider({ children }) {
     const data = await res.json()
     localStorage.setItem('token', data.access_token)
     localStorage.setItem('user', JSON.stringify({ username: data.username, role: data.role }))
+
     setUser({ username: data.username, role: data.role })
     lastActivityRef.current = Date.now()
+    sessionMinutesRef.current = data.expire_minutes
 
     const expMs = parseJwtExp(data.access_token)
-    if (expMs) scheduleExpiry(expMs, data.expire_minutes)
+    if (expMs) {
+      scheduleExpiry(expMs, data.expire_minutes)
+      scheduleRefresh(expMs, data.expire_minutes)
+    }
   }
 
   return (
@@ -185,7 +239,7 @@ export function authFetch(url, options = {}) {
       ...options.headers,
       Authorization: `Bearer ${token}`,
     },
-  }).then(res => {
+  }).then((res) => {
     if (res.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')

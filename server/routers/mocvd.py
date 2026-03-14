@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from database import get_db
 from models import MocvdSource, MocvdMachine, SourceType
 from auth import get_current_user
-from source_status import get_source_status_snapshot
+from source_status import filter_source_status_snapshot, get_source_status_snapshot
 
 router = APIRouter(prefix="/api/mocvd", tags=["mocvd"])
 
@@ -100,8 +100,17 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
 
 
 @router.get("/source-status")
-def get_source_status(_=Depends(get_current_user)):
+def get_source_status(db: Session = Depends(get_db), _=Depends(get_current_user)):
     try:
-        return get_source_status_snapshot()
+        snapshot = get_source_status_snapshot()
+        active_machine_nos = {
+            row.machine_no
+            for row in db.query(MocvdMachine).filter(MocvdMachine.is_active == True).all()
+        }
+        active_source_names = {
+            row.name
+            for row in db.query(SourceType).filter(SourceType.is_active == True).all()
+        }
+        return filter_source_status_snapshot(snapshot, active_machine_nos, active_source_names)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

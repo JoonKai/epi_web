@@ -12,6 +12,7 @@ import Admin from './pages/Admin'
 import Login from './pages/Login'
 import WaferMap from './pages/WaferMap'
 import Measurement from './pages/epi/Measurement'
+import MocvdMasterData from './pages/epi/mocvd/MasterData'
 import MocvdSource from './pages/epi/mocvd/Source'
 import Simulator from './pages/epi/Simulator'
 
@@ -88,6 +89,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/epi/mocvd/source" element={<MocvdSource />} />
+          {user.role === 'admin' && <Route path="/epi/mocvd/master-data" element={<MocvdMasterData />} />}
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />
           <Route path="/wafermap" element={<WaferMap />} />
