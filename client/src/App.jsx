@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ConfigProvider, Spin, theme as antTheme } from 'antd'
+import koKR from 'antd/locale/ko_KR'
+import dayjs from 'dayjs'
+import 'dayjs/locale/ko'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -101,12 +104,14 @@ function App() {
   const [isDark, setIsDark] = useState(true)
 
   useEffect(() => {
+    dayjs.locale('ko')
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
   }, [isDark])
 
   return (
     <ConfigProvider
+      locale={koKR}
       theme={{
         algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
         token: isDark ? DARK_TOKENS : LIGHT_TOKENS,

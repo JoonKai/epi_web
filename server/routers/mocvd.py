@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import get_db
 from models import MocvdSource, MocvdMachine, SourceType
 from auth import get_current_user
+from source_status import get_source_status_snapshot
 
 router = APIRouter(prefix="/api/mocvd", tags=["mocvd"])
 
@@ -96,3 +97,11 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
         result.append(row)
 
     return {"source_names": source_names, "rows": result}
+
+
+@router.get("/source-status")
+def get_source_status(_=Depends(get_current_user)):
+    try:
+        return get_source_status_snapshot()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
