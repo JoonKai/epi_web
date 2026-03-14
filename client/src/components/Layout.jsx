@@ -10,7 +10,9 @@ import {
   BuildOutlined,
   ControlOutlined,
   DashboardOutlined,
+  DollarOutlined,
   HeatMapOutlined,
+  SwapOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -40,11 +42,12 @@ function buildMenuItems(isAdmin) {
           icon: <ControlOutlined />,
           label: 'MOCVD',
           children: [
-            { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스' },
+            { key: '/epi/mocvd/management', icon: <ControlOutlined />, label: 'MOCVD 관리' },
+            { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스관리' },
             { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보관리' },
           ],
         },
-        { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
+        { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정장비' },
       ],
     },
     {
@@ -63,9 +66,19 @@ function buildMenuItems(isAdmin) {
       key: 'analysis',
       icon: <BarChartOutlined />,
       label: '분석',
-      children: [{ key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼맵' }],
+      children: [
+        { key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼맵' },
+        { key: '/run-comparison', icon: <SwapOutlined />, label: '런 비교' },
+      ],
+    },
+    {
+      key: 'cost',
+      icon: <DollarOutlined />,
+      label: '비용',
+      children: [{ key: 'cost-ready', label: '추가 예정', disabled: true }],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
+    { key: '/epi/mocvd/personnel', icon: <UserOutlined />, label: '인원 관리' },
     { key: '/grid', icon: <TableOutlined />, label: '데이터 조회' },
   ]
 
@@ -91,6 +104,8 @@ function findPath(items, pathname, trail = []) {
 const PAGE_COLOR = {
   '/dashboard': '#6366f1',
   '/epi/mocvd/source': '#14b8a6',
+  '/epi/mocvd/management': '#0ea5e9',
+  '/epi/mocvd/personnel': '#f97316',
   '/epi/mocvd/master-data': '#8b5cf6',
   '/epi/measurement': '#3b82f6',
   '/epi/simulator': '#f59e0b',
@@ -183,7 +198,7 @@ function Layout({ children, isDark, onThemeToggle }) {
 
         {!collapsed && (
           <div style={{ padding: '16px 16px 4px', color: 'var(--nowa-text-muted)', fontSize: 10, fontWeight: 700, letterSpacing: 1.6, textTransform: 'uppercase' }}>
-            메인 메뉴
+            Main Menu
           </div>
         )}
 
@@ -193,7 +208,7 @@ function Layout({ children, isDark, onThemeToggle }) {
             mode="inline"
             theme={isDark ? 'dark' : 'light'}
             selectedKeys={[location.pathname]}
-            defaultOpenKeys={['equipment', 'epi-mocvd', 'analysis']}
+            defaultOpenKeys={[]}
             items={menuItems}
             onClick={({ key }) => navigate(key)}
             style={{ background: 'transparent', border: 'none' }}

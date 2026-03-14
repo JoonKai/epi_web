@@ -11,8 +11,11 @@ import DataGrid from './pages/DataGrid'
 import Admin from './pages/Admin'
 import Login from './pages/Login'
 import WaferMap from './pages/WaferMap'
+import RunComparison from './pages/RunComparison'
 import Measurement from './pages/epi/Measurement'
 import MocvdMasterData from './pages/epi/mocvd/MasterData'
+import MocvdManagement from './pages/epi/mocvd/MocvdManagement'
+import PersonnelManagement from './pages/epi/mocvd/PersonnelManagement'
 import MocvdSource from './pages/epi/mocvd/Source'
 import Simulator from './pages/epi/Simulator'
 
@@ -89,10 +92,13 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/epi/mocvd/source" element={<MocvdSource />} />
+          <Route path="/epi/mocvd/management" element={<MocvdManagement />} />
+          <Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
           {user.role === 'admin' && <Route path="/epi/mocvd/master-data" element={<MocvdMasterData />} />}
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />
           <Route path="/wafermap" element={<WaferMap />} />
+          <Route path="/run-comparison" element={<RunComparison />} />
           <Route path="/grid" element={<DataGrid />} />
           {user.role === 'admin' && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

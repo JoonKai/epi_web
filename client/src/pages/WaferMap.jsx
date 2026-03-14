@@ -126,7 +126,7 @@ export default function WaferMapPage() {
   const [rangeStart,    setRangeStart]    = useState(0)
   const [rangeEnd,      setRangeEnd]      = useState(1)
   const [useAutoRange,  setUseAutoRange]  = useState(true)
-  const [colors,        setColors]        = useState(PALETTES.jet)
+  const [colors,        setColors]        = useState(PALETTES.palette1)
   const [useDistribution, setUseDistribution] = useState(false)
 
   // 파라미터 / 데이터 변경 시 auto range 계산

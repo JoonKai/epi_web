@@ -46,5 +46,6 @@ class MocvdSource(Base):
     machine_no = Column(Integer, nullable=False)
     source_name = Column(String(20), nullable=False)
     remaining = Column(Float, default=0.0)
+    daily_usage = Column(Float, default=0.0)
     unit = Column(String(10), default="kg")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

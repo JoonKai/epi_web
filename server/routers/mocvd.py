@@ -15,6 +15,14 @@ class SourceUpdate(BaseModel):
     unit: str
 
 
+class BulkSourceUpdate(BaseModel):
+    machine_no: int
+    source_name: str
+    remaining: float
+    daily_usage: float = 0.0
+    unit: str
+
+
 @router.get("/machines")
 def get_machines(db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
@@ -66,6 +74,31 @@ def update_sources(machine_no: int, items: list[SourceUpdate], db: Session = Dep
     return {"result": "ok"}
 
 
+@router.put("/sources/all")
+def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_db), _=Depends(get_current_user)):
+    for item in items:
+        row = db.query(MocvdSource).filter(
+            MocvdSource.machine_no == item.machine_no,
+            MocvdSource.source_name == item.source_name,
+        ).first()
+        if row:
+            row.remaining = item.remaining
+            row.daily_usage = item.daily_usage
+            row.unit = item.unit
+        else:
+            db.add(
+                MocvdSource(
+                    machine_no=item.machine_no,
+                    source_name=item.source_name,
+                    remaining=item.remaining,
+                    daily_usage=item.daily_usage,
+                    unit=item.unit,
+                )
+            )
+    db.commit()
+    return {"result": "ok", "updated": len(items)}
+
+
 @router.get("/sources/all")
 def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
     """전 호기 × 전 소스 현황 (DataGrid용)"""
@@ -77,7 +110,12 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
     all_rows = db.query(MocvdSource).all()
     data_map = {}
     for r in all_rows:
-        data_map[(r.machine_no, r.source_name)] = {"remaining": r.remaining, "unit": r.unit, "updated_at": r.updated_at}
+        data_map[(r.machine_no, r.source_name)] = {
+            "remaining": r.remaining,
+            "daily_usage": r.daily_usage if r.daily_usage is not None else 0.0,
+            "unit": r.unit,
+            "updated_at": r.updated_at,
+        }
 
     result = []
     for m in machines:
@@ -87,11 +125,13 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
             key = (m.machine_no, sname)
             if key in data_map:
                 row[sname] = data_map[key]["remaining"]
+                row[f"{sname}_daily_usage"] = data_map[key]["daily_usage"]
                 row[f"{sname}_unit"] = data_map[key]["unit"]
                 if data_map[key]["updated_at"] and (latest_at is None or data_map[key]["updated_at"] > latest_at):
                     latest_at = data_map[key]["updated_at"]
             else:
                 row[sname] = None
+                row[f"{sname}_daily_usage"] = 0.0
                 row[f"{sname}_unit"] = "kg"
         row["updated_at"] = latest_at.strftime("%Y-%m-%d %H:%M") if latest_at else None
         result.append(row)

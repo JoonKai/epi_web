@@ -309,21 +309,28 @@ function SourceStatusBoard() {
           height: '100%',
           padding: 8,
           borderRadius: 14,
-          border: isSelected ? '1px solid rgba(99,102,241,0.65)' : '1px solid var(--nowa-border)',
+          border: isSelected
+            ? '1px solid rgba(99,102,241,0.65)'
+            : isCurrentMonth
+              ? '1px solid var(--nowa-border)'
+              : '1px solid rgba(255,255,255,0.03)',
           background: isSelected
             ? 'rgba(99,102,241,0.12)'
             : isCurrentMonth
               ? 'rgba(255,255,255,0.02)'
-              : 'rgba(255,255,255,0.01)',
+              : 'transparent',
           boxShadow: isSelected ? 'inset 0 0 0 1px rgba(99,102,241,0.12)' : 'none',
-          opacity: isCurrentMonth ? 1 : 0.5,
         }}
       >
         <div
           style={{
-            color: isToday ? '#a5b4fc' : 'var(--nowa-text)',
+            color: isToday
+              ? '#a5b4fc'
+              : isCurrentMonth
+                ? 'var(--nowa-text)'
+                : 'rgba(255,255,255,0.2)',
             fontSize: 13,
-            fontWeight: 800,
+            fontWeight: isCurrentMonth ? 800 : 500,
             marginBottom: 8,
           }}
         >
@@ -485,7 +492,7 @@ function SourceStatusBoard() {
                     fontSize: 14,
                   }}
                 >
-                  {formatMachineLabel(item.machine_no)} {item.source_label} / {formatDate(item.projected_replacement_date)}
+                  {formatMachineLabel(item.machine_no)} {item.source_label}
                 </Tag>
               )
             })}
@@ -528,29 +535,68 @@ function SourceStatusBoard() {
                     return { value: year, label: `${year}년` }
                   })
 
+                  const goPrev = () => {
+                    const next = viewMode === 'month' ? value.subtract(1, 'month') : value.subtract(1, 'year')
+                    onChange(next); setSelectedDate(next)
+                  }
+                  const goNext = () => {
+                    const next = viewMode === 'month' ? value.add(1, 'month') : value.add(1, 'year')
+                    onChange(next); setSelectedDate(next)
+                  }
+                  const goToday = () => {
+                    const next = dayjs()
+                    onChange(next); setSelectedDate(next)
+                  }
+
                   return (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-                      <Select
-                        value={value.year()}
-                        style={{ width: 120 }}
-                        options={yearOptions}
-                        onChange={(year) => {
-                          const next = value.year(year)
-                          onChange(next)
-                          setSelectedDate(next)
-                        }}
-                      />
-                      <Segmented
-                        value={viewMode}
-                        onChange={(nextMode) => {
-                          onTypeChange(nextMode)
-                          setViewMode(nextMode)
-                        }}
-                        options={[
-                          { label: '월간', value: 'month' },
-                          { label: '연간', value: 'year' },
-                        ]}
-                      />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
+                      {/* 현재 월 표시 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Button
+                          type="text"
+                          icon={<LeftOutlined />}
+                          onClick={goPrev}
+                          style={{ color: 'var(--nowa-text-muted)', border: '1px solid var(--nowa-border)' }}
+                        />
+                        <div style={{ minWidth: 130, textAlign: 'center' }}>
+                          <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--nowa-text)', letterSpacing: -0.5 }}>
+                            {value.year()}년 {value.month() + 1}월
+                          </span>
+                        </div>
+                        <Button
+                          type="text"
+                          icon={<RightOutlined />}
+                          onClick={goNext}
+                          style={{ color: 'var(--nowa-text-muted)', border: '1px solid var(--nowa-border)' }}
+                        />
+                        <Button onClick={goToday} size="small" style={{ marginLeft: 4 }}>
+                          이번 달
+                        </Button>
+                      </div>
+
+                      {/* 오른쪽 컨트롤 */}
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Select
+                          value={value.year()}
+                          style={{ width: 110 }}
+                          options={yearOptions}
+                          onChange={(year) => {
+                            const next = value.year(year)
+                            onChange(next); setSelectedDate(next)
+                          }}
+                        />
+                        <Segmented
+                          value={viewMode}
+                          onChange={(nextMode) => {
+                            onTypeChange(nextMode)
+                            setViewMode(nextMode)
+                          }}
+                          options={[
+                            { label: '월간', value: 'month' },
+                            { label: '연간', value: 'year' },
+                          ]}
+                        />
+                      </div>
                     </div>
                   )
                 }}

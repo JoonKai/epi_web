@@ -520,6 +520,39 @@ a { color: inherit; }
 }
 .login-dark-input .ant-input-prefix { color: rgba(255,255,255,0.35); }
 .login-dark-input .ant-form-item-explain-error { color: #f87171; }
+.login-dark-input .ant-input-affix-wrapper .ant-input,
+.login-dark-input .ant-input-password .ant-input,
+.login-dark-input .ant-input {
+  background: transparent !important;
+}
+.login-dark-input .ant-input:hover,
+.login-dark-input .ant-input:focus,
+.login-dark-input .ant-input-affix-wrapper:hover,
+.login-dark-input .ant-input-affix-wrapper:focus,
+.login-dark-input .ant-input-affix-wrapper:focus-within,
+.login-dark-input .ant-input-password:hover,
+.login-dark-input .ant-input-password:focus,
+.login-dark-input .ant-input-password:focus-within {
+  background: rgba(99, 102, 241, 0.06) !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  box-shadow: none !important;
+}
+.login-dark-input .ant-input-affix-wrapper input,
+.login-dark-input .ant-input-affix-wrapper input:hover,
+.login-dark-input .ant-input-affix-wrapper input:focus {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.login-dark-input input:-webkit-autofill,
+.login-dark-input input:-webkit-autofill:hover,
+.login-dark-input input:-webkit-autofill:focus,
+.login-dark-input input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  transition: background-color 9999s ease-out 0s !important;
+  caret-color: #fff !important;
+}
 
 /* ── AG Grid ────────────────────────────────────────────────────── */
 .ag-theme-quartz {
