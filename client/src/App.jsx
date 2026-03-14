@@ -12,48 +12,51 @@ import Measurement from './pages/epi/Measurement'
 import MocvdSource from './pages/epi/mocvd/Source'
 import Simulator from './pages/epi/Simulator'
 
+// ── Nowa-TS Design Tokens ──────────────────────────────────────────
 const DARK_TOKENS = {
-  colorPrimary: '#ff6a3d',
-  colorSuccess: '#35d07f',
-  colorWarning: '#ffb648',
-  colorError: '#ff5b6e',
-  colorInfo: '#4aa3ff',
-  colorTextBase: '#edf3ff',
-  colorBgBase: '#050b16',
-  colorBgLayout: '#050b16',
-  colorBgContainer: '#0f1828',
-  colorBgElevated: '#131f31',
-  colorBorder: 'rgba(120,145,180,0.18)',
-  colorBorderSecondary: 'rgba(120,145,180,0.12)',
-  colorFillAlter: 'rgba(255,255,255,0.03)',
-  colorFillContent: 'rgba(255,255,255,0.05)',
-  colorTextSecondary: 'rgba(220,232,255,0.72)',
-  colorTextTertiary: 'rgba(163,184,217,0.48)',
-  colorTextQuaternary: 'rgba(163,184,217,0.36)',
-  borderRadius: 14,
-  fontFamily: "'Pretendard', 'Segoe UI', -apple-system, sans-serif",
+  colorPrimary: '#6366f1',
+  colorSuccess: '#22c55e',
+  colorWarning: '#eab308',
+  colorError: '#f43f5e',
+  colorInfo: '#3b82f6',
+  colorTextBase: '#e2e8f0',
+  colorBgBase: '#0b0f1a',
+  colorBgLayout: '#0b0f1a',
+  colorBgContainer: '#111827',
+  colorBgElevated: '#1a2235',
+  colorBorder: 'rgba(99,102,241,0.12)',
+  colorBorderSecondary: 'rgba(99,102,241,0.08)',
+  colorFillAlter: 'rgba(99,102,241,0.05)',
+  colorFillContent: 'rgba(255,255,255,0.04)',
+  colorTextSecondary: 'rgba(226,232,240,0.78)',
+  colorTextTertiary: 'rgba(148,163,184,0.6)',
+  colorTextQuaternary: 'rgba(148,163,184,0.4)',
+  borderRadius: 12,
+  fontFamily: "'Pretendard', 'Inter', 'Segoe UI', -apple-system, sans-serif",
+  fontSize: 14,
 }
 
 const LIGHT_TOKENS = {
-  colorPrimary: '#d85a34',
-  colorSuccess: '#1f9d61',
-  colorWarning: '#c8891d',
-  colorError: '#d4485d',
-  colorInfo: '#2f74db',
-  colorTextBase: '#102033',
-  colorBgBase: '#eef3fa',
-  colorBgLayout: '#eef3fa',
+  colorPrimary: '#6366f1',
+  colorSuccess: '#16a34a',
+  colorWarning: '#ca8a04',
+  colorError: '#e11d48',
+  colorInfo: '#2563eb',
+  colorTextBase: '#0f172a',
+  colorBgBase: '#f1f5f9',
+  colorBgLayout: '#f1f5f9',
   colorBgContainer: '#ffffff',
-  colorBgElevated: '#f7f9fc',
-  colorBorder: 'rgba(35,58,92,0.12)',
-  colorBorderSecondary: 'rgba(35,58,92,0.08)',
-  colorFillAlter: 'rgba(16,32,51,0.035)',
-  colorFillContent: 'rgba(16,32,51,0.05)',
-  colorTextSecondary: 'rgba(16,32,51,0.72)',
-  colorTextTertiary: 'rgba(16,32,51,0.5)',
-  colorTextQuaternary: 'rgba(16,32,51,0.36)',
-  borderRadius: 14,
-  fontFamily: "'Pretendard', 'Segoe UI', -apple-system, sans-serif",
+  colorBgElevated: '#f8fafc',
+  colorBorder: 'rgba(99,102,241,0.1)',
+  colorBorderSecondary: 'rgba(99,102,241,0.07)',
+  colorFillAlter: 'rgba(99,102,241,0.04)',
+  colorFillContent: 'rgba(15,23,42,0.04)',
+  colorTextSecondary: 'rgba(15,23,42,0.75)',
+  colorTextTertiary: 'rgba(100,116,139,0.75)',
+  colorTextQuaternary: 'rgba(100,116,139,0.5)',
+  borderRadius: 12,
+  fontFamily: "'Pretendard', 'Inter', 'Segoe UI', -apple-system, sans-serif",
+  fontSize: 14,
 }
 
 function AppRoutes({ isDark, onThemeToggle }) {
@@ -67,7 +70,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0b0f1a' }}>
         <Spin size="large" />
       </div>
     )
@@ -116,33 +119,39 @@ function App() {
           Menu: {
             darkItemBg: 'transparent',
             darkSubMenuItemBg: 'transparent',
-            darkItemColor: isDark ? 'rgba(220,232,255,0.72)' : 'rgba(16,32,51,0.72)',
-            darkItemHoverColor: isDark ? '#ffffff' : '#102033',
-            darkItemSelectedColor: isDark ? '#ffffff' : '#102033',
-            darkItemSelectedBg: 'transparent',
+            darkItemColor: isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.8)',
+            darkItemHoverColor: isDark ? '#e2e8f0' : '#0f172a',
+            darkItemSelectedColor: isDark ? '#6366f1' : '#6366f1',
+            darkItemSelectedBg: 'rgba(99,102,241,0.12)',
+            itemSelectedBg: 'rgba(99,102,241,0.1)',
+            itemSelectedColor: '#6366f1',
           },
           Card: {
-            colorBgContainer: isDark ? '#0f1828' : '#ffffff',
+            colorBgContainer: isDark ? '#111827' : '#ffffff',
             headerBg: 'transparent',
+            borderRadiusLG: 16,
           },
           Tabs: {
-            itemColor: isDark ? 'rgba(163,184,217,0.48)' : 'rgba(16,32,51,0.48)',
-            itemSelectedColor: isDark ? '#ff6a3d' : '#d85a34',
-            itemHoverColor: isDark ? '#ffffff' : '#102033',
-            inkBarColor: isDark ? '#ff6a3d' : '#d85a34',
+            itemColor: isDark ? 'rgba(148,163,184,0.6)' : 'rgba(100,116,139,0.75)',
+            itemSelectedColor: '#6366f1',
+            itemHoverColor: isDark ? '#e2e8f0' : '#0f172a',
+            inkBarColor: '#6366f1',
           },
           Table: {
-            headerBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(16,32,51,0.03)',
-            headerColor: isDark ? 'rgba(163,184,217,0.48)' : 'rgba(16,32,51,0.48)',
-            rowHoverBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(16,32,51,0.03)',
-            borderColor: isDark ? 'rgba(120,145,180,0.12)' : 'rgba(35,58,92,0.12)',
+            headerBg: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.04)',
+            headerColor: isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.8)',
+            rowHoverBg: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)',
+            borderColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.1)',
           },
           Input: {
-            activeBorderColor: isDark ? 'rgba(255,106,61,0.48)' : 'rgba(216,90,52,0.48)',
-            hoverBorderColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(16,32,51,0.14)',
+            activeBorderColor: 'rgba(99,102,241,0.5)',
+            hoverBorderColor: isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.25)',
           },
           Select: {
-            optionSelectedBg: isDark ? 'rgba(255,106,61,0.12)' : 'rgba(216,90,52,0.12)',
+            optionSelectedBg: 'rgba(99,102,241,0.12)',
+          },
+          Button: {
+            borderRadius: 10,
           },
         },
       }}

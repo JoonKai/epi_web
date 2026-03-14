@@ -1,162 +1,341 @@
+/* ── Nowa-TS inspired Design System ────────────────────────────── */
 :root {
   color-scheme: dark;
-  --console-bg: #050b16;
-  --console-bg-raised: #0a1222;
-  --console-panel: #0f1828;
-  --console-panel-alt: #111d31;
-  --console-border: rgba(120, 145, 180, 0.18);
-  --console-border-strong: rgba(255, 119, 61, 0.38);
-  --console-text: #edf3ff;
-  --console-text-soft: rgba(220, 232, 255, 0.72);
-  --console-text-muted: rgba(163, 184, 217, 0.48);
-  --console-accent: #ff6a3d;
-  --console-accent-soft: rgba(255, 106, 61, 0.16);
-  --console-success: #35d07f;
-  --console-danger: #ff5b6e;
-  --console-warning: #ffb648;
-  --console-sider-bg: linear-gradient(180deg, rgba(5,11,22,0.96), rgba(8,14,24,0.94));
-  --console-header-bg: linear-gradient(180deg, rgba(7,15,28,0.92), rgba(7,13,24,0.9));
-  --console-content-bg: linear-gradient(180deg, rgba(6,12,23,0.84), rgba(8,13,23,0.92));
-  --console-shell-border: rgba(120,145,180,0.12);
-  --console-button-bg: rgba(255,255,255,0.03);
-  --console-brand-highlight: #ffb648;
-  --console-brand-deep: #d9472c;
-  --console-brand-glow: rgba(255,106,61,0.35);
-  --console-shadow-strong: 0 20px 40px rgba(0,0,0,0.36);
-  --console-shadow-medium: 0 22px 44px rgba(0,0,0,0.28);
+
+  /* Base */
+  --nowa-bg: #0b0f1a;
+  --nowa-bg-raised: #111827;
+  --nowa-panel: #111827;
+  --nowa-panel-alt: #1a2235;
+  --nowa-panel-hover: #1e2a40;
+
+  /* Border */
+  --nowa-border: rgba(99, 102, 241, 0.12);
+  --nowa-border-strong: rgba(99, 102, 241, 0.35);
+
+  /* Text */
+  --nowa-text: #e2e8f0;
+  --nowa-text-soft: rgba(226, 232, 240, 0.82);
+  --nowa-text-muted: rgba(148, 163, 184, 0.65);
+
+  /* Brand / Primary */
+  --nowa-primary: #6366f1;
+  --nowa-primary-soft: rgba(99, 102, 241, 0.15);
+  --nowa-primary-glow: rgba(99, 102, 241, 0.3);
+
+  /* Semantic */
+  --nowa-success: #22c55e;
+  --nowa-success-soft: rgba(34, 197, 94, 0.14);
+  --nowa-danger: #f43f5e;
+  --nowa-danger-soft: rgba(244, 63, 94, 0.14);
+  --nowa-warning: #eab308;
+  --nowa-warning-soft: rgba(234, 179, 8, 0.14);
+  --nowa-info: #3b82f6;
+  --nowa-info-soft: rgba(59, 130, 246, 0.14);
+  --nowa-teal: #14b8a6;
+  --nowa-teal-soft: rgba(20, 184, 166, 0.14);
+
+  /* KPI Card Gradients */
+  --grad-violet: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --grad-teal:   linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%);
+  --grad-rose:   linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+  --grad-amber:  linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  --grad-indigo: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  --grad-green:  linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
+
+  /* Layout */
+  --nowa-sider-bg: #111827;
+  --nowa-header-bg: rgba(11, 15, 26, 0.85);
+  --nowa-content-bg: #0b0f1a;
+  --nowa-shell-border: rgba(99, 102, 241, 0.1);
+  --nowa-button-bg: rgba(255, 255, 255, 0.04);
+
+  /* Shadows */
+  --nowa-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255,255,255,0.04) inset;
+  --nowa-shadow-strong: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --nowa-shadow-medium: 0 8px 28px rgba(0, 0, 0, 0.32);
+  --nowa-shadow-primary: 0 8px 24px rgba(99, 102, 241, 0.35);
+
+  /* ── legacy aliases so old references still resolve ── */
+  --console-bg: var(--nowa-bg);
+  --console-bg-raised: var(--nowa-bg-raised);
+  --console-panel: var(--nowa-panel);
+  --console-panel-alt: var(--nowa-panel-alt);
+  --console-border: var(--nowa-border);
+  --console-border-strong: var(--nowa-border-strong);
+  --console-text: var(--nowa-text);
+  --console-text-soft: var(--nowa-text-soft);
+  --console-text-muted: var(--nowa-text-muted);
+  --console-accent: var(--nowa-primary);
+  --console-accent-soft: var(--nowa-primary-soft);
+  --console-success: var(--nowa-success);
+  --console-danger: var(--nowa-danger);
+  --console-warning: var(--nowa-warning);
+  --console-sider-bg: var(--nowa-sider-bg);
+  --console-header-bg: var(--nowa-header-bg);
+  --console-content-bg: var(--nowa-content-bg);
+  --console-shell-border: var(--nowa-shell-border);
+  --console-button-bg: var(--nowa-button-bg);
+  --console-brand-highlight: #818cf8;
+  --console-brand-deep: #4f46e5;
+  --console-brand-glow: var(--nowa-primary-glow);
+  --console-shadow-strong: var(--nowa-shadow-strong);
+  --console-shadow-medium: var(--nowa-shadow-medium);
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --console-bg: #eef3fa;
-  --console-bg-raised: #f5f8fc;
-  --console-panel: #ffffff;
-  --console-panel-alt: #f7f9fc;
-  --console-border: rgba(35, 58, 92, 0.12);
-  --console-border-strong: rgba(216, 90, 52, 0.3);
-  --console-text: #102033;
-  --console-text-soft: rgba(16, 32, 51, 0.78);
-  --console-text-muted: rgba(16, 32, 51, 0.5);
-  --console-accent: #d85a34;
-  --console-accent-soft: rgba(216, 90, 52, 0.1);
-  --console-success: #1f9d61;
-  --console-danger: #d4485d;
-  --console-warning: #c8891d;
-  --console-sider-bg: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,247,252,0.96));
-  --console-header-bg: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,253,0.96));
-  --console-content-bg: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,249,252,0.95));
-  --console-shell-border: rgba(35,58,92,0.1);
-  --console-button-bg: rgba(16,32,51,0.03);
-  --console-brand-highlight: #f5a13c;
-  --console-brand-deep: #d85a34;
-  --console-brand-glow: rgba(216,90,52,0.18);
-  --console-shadow-strong: 0 16px 34px rgba(24,39,75,0.12);
-  --console-shadow-medium: 0 18px 36px rgba(24,39,75,0.1);
+
+  --nowa-bg: #f1f5f9;
+  --nowa-bg-raised: #ffffff;
+  --nowa-panel: #ffffff;
+  --nowa-panel-alt: #f8fafc;
+  --nowa-panel-hover: #f1f5f9;
+  --nowa-border: rgba(99, 102, 241, 0.1);
+  --nowa-border-strong: rgba(99, 102, 241, 0.3);
+  --nowa-text: #0f172a;
+  --nowa-text-soft: rgba(15, 23, 42, 0.8);
+  --nowa-text-muted: rgba(100, 116, 139, 0.8);
+  --nowa-primary: #6366f1;
+  --nowa-primary-soft: rgba(99, 102, 241, 0.1);
+  --nowa-primary-glow: rgba(99, 102, 241, 0.2);
+  --nowa-success: #16a34a;
+  --nowa-success-soft: rgba(22, 163, 74, 0.1);
+  --nowa-danger: #e11d48;
+  --nowa-danger-soft: rgba(225, 29, 72, 0.1);
+  --nowa-warning: #ca8a04;
+  --nowa-warning-soft: rgba(202, 138, 4, 0.1);
+  --nowa-info: #2563eb;
+  --nowa-info-soft: rgba(37, 99, 235, 0.1);
+  --nowa-teal: #0d9488;
+  --nowa-teal-soft: rgba(13, 148, 136, 0.1);
+  --nowa-sider-bg: #ffffff;
+  --nowa-header-bg: rgba(255, 255, 255, 0.9);
+  --nowa-content-bg: #f1f5f9;
+  --nowa-shell-border: rgba(99, 102, 241, 0.1);
+  --nowa-button-bg: rgba(15, 23, 42, 0.04);
+  --nowa-shadow-card: 0 2px 12px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255,255,255,0.8) inset;
+  --nowa-shadow-strong: 0 16px 40px rgba(15, 23, 42, 0.12);
+  --nowa-shadow-medium: 0 6px 20px rgba(15, 23, 42, 0.08);
+  --nowa-shadow-primary: 0 8px 20px rgba(99, 102, 241, 0.25);
+
+  /* legacy aliases */
+  --console-bg: var(--nowa-bg);
+  --console-bg-raised: var(--nowa-bg-raised);
+  --console-panel: var(--nowa-panel);
+  --console-panel-alt: var(--nowa-panel-alt);
+  --console-border: var(--nowa-border);
+  --console-border-strong: var(--nowa-border-strong);
+  --console-text: var(--nowa-text);
+  --console-text-soft: var(--nowa-text-soft);
+  --console-text-muted: var(--nowa-text-muted);
+  --console-accent: var(--nowa-primary);
+  --console-accent-soft: var(--nowa-primary-soft);
+  --console-success: var(--nowa-success);
+  --console-danger: var(--nowa-danger);
+  --console-warning: var(--nowa-warning);
+  --console-sider-bg: var(--nowa-sider-bg);
+  --console-header-bg: var(--nowa-header-bg);
+  --console-content-bg: var(--nowa-content-bg);
+  --console-shell-border: var(--nowa-shell-border);
+  --console-button-bg: var(--nowa-button-bg);
+  --console-brand-highlight: #818cf8;
+  --console-brand-deep: #4f46e5;
+  --console-brand-glow: var(--nowa-primary-glow);
+  --console-shadow-strong: var(--nowa-shadow-strong);
+  --console-shadow-medium: var(--nowa-shadow-medium);
 }
 
+/* ── Reset ──────────────────────────────────────────────────────── */
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
-html,
-body,
-#root {
+html, body, #root {
   margin: 0;
   min-height: 100%;
 }
 
 body {
-  font-family: 'Pretendard', 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(circle at top, rgba(255, 106, 61, 0.09), transparent 24%),
-    radial-gradient(circle at 80% 20%, rgba(54, 92, 180, 0.14), transparent 30%),
-    linear-gradient(180deg, var(--console-bg) 0%, color-mix(in srgb, var(--console-bg) 92%, #16325e 8%) 52%, var(--console-bg) 100%);
-  color: var(--console-text);
-  transition: background-color 0.25s ease, color 0.25s ease;
+  font-family: 'Pretendard', 'Inter', 'Segoe UI', -apple-system, sans-serif;
+  background: var(--nowa-bg);
+  color: var(--nowa-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-a {
-  color: inherit;
-}
+a { color: inherit; }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(129, 153, 184, 0.22);
+  background: rgba(99, 102, 241, 0.2);
   border-radius: 999px;
 }
+::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.4); }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 106, 61, 0.34);
+/* ── Shell Layout ───────────────────────────────────────────────── */
+.nowa-shell .ant-layout { background: transparent; }
+.console-shell .ant-layout { background: transparent; }
+
+/* ── Sidebar Menu ───────────────────────────────────────────────── */
+.nowa-menu.ant-menu {
+  background: transparent !important;
+  border-inline-end: none !important;
+  color: var(--nowa-text-muted);
 }
 
-.console-shell .ant-layout {
-  background: transparent;
+.nowa-menu.ant-menu .ant-menu-item,
+.nowa-menu.ant-menu .ant-menu-submenu-title {
+  height: 42px;
+  line-height: 42px;
+  margin: 2px 10px;
+  width: calc(100% - 20px);
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
+.nowa-menu.ant-menu .ant-menu-item-selected {
+  background: var(--nowa-primary-soft) !important;
+  color: var(--nowa-primary) !important;
+  font-weight: 600 !important;
+  box-shadow: none;
+}
+
+.nowa-menu.ant-menu .ant-menu-item-selected .ant-menu-item-icon,
+.nowa-menu.ant-menu .ant-menu-item-selected .anticon {
+  color: var(--nowa-primary) !important;
+}
+
+.nowa-menu.ant-menu .ant-menu-item:hover,
+.nowa-menu.ant-menu .ant-menu-submenu-title:hover {
+  background: var(--nowa-button-bg) !important;
+  color: var(--nowa-text) !important;
+}
+
+.nowa-menu.ant-menu .ant-menu-submenu-arrow {
+  color: var(--nowa-text-muted);
+}
+
+.nowa-menu.ant-menu .ant-menu-sub {
+  background: transparent !important;
+}
+
+.nowa-menu.ant-menu .ant-menu-item-group-title {
+  color: var(--nowa-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 14px 20px 4px;
+}
+
+/* old console-menu alias */
 .console-menu.ant-menu {
   background: transparent !important;
-  color: var(--console-text-soft);
   border-inline-end: none !important;
+  color: var(--nowa-text-muted);
 }
-
 .console-menu.ant-menu .ant-menu-item,
 .console-menu.ant-menu .ant-menu-submenu-title {
   height: 42px;
   line-height: 42px;
-  margin-inline: 10px;
+  margin: 2px 10px;
   width: calc(100% - 20px);
   border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
-
 .console-menu.ant-menu .ant-menu-item-selected {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--console-accent) 18%, transparent), color-mix(in srgb, var(--console-accent) 5%, transparent)) !important;
-  color: var(--console-text) !important;
-  box-shadow: inset 3px 0 0 var(--console-accent);
+  background: var(--nowa-primary-soft) !important;
+  color: var(--nowa-primary) !important;
+  font-weight: 600 !important;
 }
-
+.console-menu.ant-menu .ant-menu-item-selected .anticon {
+  color: var(--nowa-primary) !important;
+}
 .console-menu.ant-menu .ant-menu-item:hover,
 .console-menu.ant-menu .ant-menu-submenu-title:hover {
-  background: var(--console-button-bg) !important;
-  color: var(--console-text) !important;
+  background: var(--nowa-button-bg) !important;
+  color: var(--nowa-text) !important;
 }
+.console-menu.ant-menu .ant-menu-sub { background: transparent !important; }
 
-.console-menu.ant-menu .ant-menu-sub {
-  background: color-mix(in srgb, var(--console-button-bg) 80%, transparent) !important;
-}
-
+/* ── Cards / Panels ─────────────────────────────────────────────── */
+.nowa-card.ant-card,
 .console-panel.ant-card {
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--console-accent) 8%, transparent), transparent 28%),
-    linear-gradient(180deg, color-mix(in srgb, var(--console-panel) 96%, white 4%), color-mix(in srgb, var(--console-panel-alt) 96%, white 4%));
-  border: 1px solid var(--console-border);
+  background: var(--nowa-panel);
+  border: 1px solid var(--nowa-border);
   border-radius: 16px;
-  box-shadow: var(--console-shadow-medium), inset 0 1px 0 color-mix(in srgb, var(--console-text) 3%, transparent);
+  box-shadow: var(--nowa-shadow-card);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+.nowa-card.ant-card:hover,
+.console-panel.ant-card:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.05) inset;
+}
+
+.nowa-card .ant-card-head,
 .console-panel .ant-card-head {
-  min-height: 46px;
-  border-bottom: 1px solid rgba(128, 153, 184, 0.12);
+  border-bottom: 1px solid var(--nowa-border);
+  min-height: 52px;
+  padding: 0 20px;
 }
 
+.nowa-card .ant-card-head-title,
 .console-panel .ant-card-head-title,
+.nowa-card .ant-card-extra,
 .console-panel .ant-card-extra {
-  color: var(--console-text);
+  color: var(--nowa-text);
+  font-weight: 600;
 }
 
-.console-metric-card.ant-card .ant-card-body {
-  padding: 18px 18px 16px;
+/* KPI gradient cards */
+.nowa-kpi-card {
+  border-radius: 16px;
+  padding: 20px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--nowa-shadow-medium);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.nowa-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--nowa-shadow-strong);
+}
+
+.nowa-kpi-card::after {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  pointer-events: none;
+}
+
+.nowa-kpi-card::before {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: 20px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────── */
 .console-toolbar {
   display: flex;
   align-items: center;
@@ -172,10 +351,25 @@ a {
   flex-wrap: wrap;
 }
 
+/* ── Pill / Badge ───────────────────────────────────────────────── */
+.console-pill, .nowa-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--nowa-border);
+  background: var(--nowa-primary-soft);
+  color: var(--nowa-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Stat Grids ─────────────────────────────────────────────────── */
 .console-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .console-summary-grid {
@@ -184,174 +378,192 @@ a {
   gap: 12px;
 }
 
-.console-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--console-text-soft);
-  font-size: 12px;
+.nowa-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.console-label {
-  color: var(--console-text-muted);
+/* ── Section Labels ─────────────────────────────────────────────── */
+.console-label, .nowa-label {
+  color: var(--nowa-text-muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
-.console-number {
-  color: var(--console-text);
+.nowa-section-title {
+  color: var(--nowa-text-muted);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
 }
 
+/* ── Buttons ────────────────────────────────────────────────────── */
 .console-button.ant-btn,
 .console-button.ant-btn:hover,
-.console-button.ant-btn:focus {
-  border-color: var(--console-shell-border);
-  background: var(--console-button-bg);
-  color: var(--console-text);
+.console-button.ant-btn:focus,
+.nowa-btn.ant-btn,
+.nowa-btn.ant-btn:hover {
+  border-color: var(--nowa-border);
+  background: var(--nowa-button-bg);
+  color: var(--nowa-text);
   box-shadow: none;
+  border-radius: 10px;
 }
 
 .console-button.ant-btn-primary,
-.console-button.ant-btn-primary:hover,
-.console-button.ant-btn-primary:focus {
-  background: linear-gradient(90deg, var(--console-accent), color-mix(in srgb, var(--console-accent) 72%, white 28%));
-  border-color: var(--console-accent);
-  color: #fff;
+.nowa-btn-primary.ant-btn {
+  background: var(--nowa-primary) !important;
+  border-color: var(--nowa-primary) !important;
+  color: #fff !important;
+  box-shadow: var(--nowa-shadow-primary) !important;
 }
 
+/* ── Tabs ───────────────────────────────────────────────────────── */
 .console-tabs.ant-tabs .ant-tabs-nav::before {
-  border-bottom-color: rgba(128, 153, 184, 0.14);
+  border-bottom-color: var(--nowa-border);
 }
-
 .console-tabs.ant-tabs .ant-tabs-tab {
-  color: var(--console-text-muted);
+  color: var(--nowa-text-muted);
 }
-
 .console-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--console-accent);
+  color: var(--nowa-primary);
 }
-
 .console-tabs.ant-tabs .ant-tabs-ink-bar {
-  background: var(--console-accent);
+  background: var(--nowa-primary);
 }
 
+/* ── Table ──────────────────────────────────────────────────────── */
 .console-table.ant-table-wrapper .ant-table {
   background: transparent;
-  color: var(--console-text);
+  color: var(--nowa-text);
 }
-
 .console-table.ant-table-wrapper .ant-table-thead > tr > th {
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--console-text-muted);
-  border-bottom: 1px solid rgba(128, 153, 184, 0.14);
+  background: rgba(99, 102, 241, 0.05);
+  color: var(--nowa-text-muted);
+  border-bottom: 1px solid var(--nowa-border);
   font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
-
 .console-table.ant-table-wrapper .ant-table-tbody > tr > td {
   background: transparent;
-  border-bottom: 1px solid rgba(128, 153, 184, 0.1);
-  color: var(--console-text-soft);
+  border-bottom: 1px solid var(--nowa-border);
+  color: var(--nowa-text-soft);
 }
-
 .console-table.ant-table-wrapper .ant-table-tbody > tr:hover > td {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--nowa-primary-soft) !important;
 }
 
+/* ── Form inputs ────────────────────────────────────────────────── */
 .console-form .ant-form-item-label > label,
 .console-form .ant-input-number-group-addon,
 .console-form .ant-input-group-addon {
-  color: var(--console-text-muted);
+  color: var(--nowa-text-muted);
 }
 
-.console-form.ant-input,
-.console-form.ant-input-number,
-.console-form.ant-select .ant-select-selector,
-.console-form.ant-input-affix-wrapper,
 .console-form .ant-input,
 .console-form .ant-input-number,
 .console-form .ant-input-number-group-addon,
 .console-form .ant-select-selector,
 .console-form .ant-input-affix-wrapper {
-  background: var(--console-button-bg) !important;
-  border-color: var(--console-shell-border) !important;
-  color: var(--console-text) !important;
+  background: var(--nowa-button-bg) !important;
+  border-color: var(--nowa-border) !important;
+  color: var(--nowa-text) !important;
   box-shadow: none !important;
 }
 
-.console-form.ant-input::placeholder,
-.console-form .ant-input::placeholder {
-  color: var(--console-text-muted);
-}
-
-.console-form.ant-input-number .ant-input-number-input,
-.console-form.ant-select .ant-select-selection-item,
-.console-form.ant-select .ant-select-selection-placeholder,
+.console-form .ant-input::placeholder { color: var(--nowa-text-muted); }
 .console-form .ant-input-number-input,
 .console-form .ant-select-selection-item,
 .console-form .ant-select-selection-placeholder {
-  color: var(--console-text) !important;
+  color: var(--nowa-text) !important;
 }
-
-.console-form.ant-select .ant-select-arrow,
-.console-form.ant-input-number .ant-input-number-handler-wrap,
 .console-form .ant-select-arrow,
 .console-form .ant-input-number-handler-wrap {
-  color: var(--console-text-muted);
+  color: var(--nowa-text-muted);
 }
 
+/* ── Surface / KPI helpers ──────────────────────────────────────── */
 .console-surface {
   padding: 14px;
   border-radius: 14px;
-  border: 1px solid var(--console-shell-border);
-  background: var(--console-button-bg);
+  border: 1px solid var(--nowa-border);
+  background: var(--nowa-button-bg);
 }
 
 .console-kpi {
   padding: 14px;
   border-radius: 14px;
-  border: 1px solid var(--console-shell-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--console-button-bg) 100%, transparent), color-mix(in srgb, var(--console-button-bg) 72%, transparent));
+  border: 1px solid var(--nowa-border);
+  background: var(--nowa-panel);
 }
 
-.console-kpi strong {
-  color: var(--console-text);
-}
+.console-kpi strong { color: var(--nowa-text); }
 
+/* ── Login ──────────────────────────────────────────────────────── */
+.login-dark-input .ant-input,
+.login-dark-input .ant-input-affix-wrapper,
+.login-dark-input .ant-input-password {
+  background: rgba(99, 102, 241, 0.06) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+}
+.login-dark-input .ant-input::placeholder,
+.login-dark-input .ant-input-affix-wrapper input::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+.login-dark-input .ant-input-prefix { color: rgba(255,255,255,0.35); }
+.login-dark-input .ant-form-item-explain-error { color: #f87171; }
+
+/* ── AG Grid ────────────────────────────────────────────────────── */
 .ag-theme-quartz {
   --ag-background-color: transparent;
-  --ag-foreground-color: var(--console-text-soft);
-  --ag-header-background-color: rgba(255, 255, 255, 0.03);
-  --ag-header-foreground-color: var(--console-text-muted);
-  --ag-odd-row-background-color: rgba(255, 255, 255, 0.02);
-  --ag-row-hover-color: rgba(255, 106, 61, 0.08);
-  --ag-selected-row-background-color: rgba(255, 106, 61, 0.12);
-  --ag-border-color: rgba(128, 153, 184, 0.12);
-  --ag-row-border-color: rgba(128, 153, 184, 0.1);
-  --ag-header-column-separator-color: rgba(128, 153, 184, 0.12);
-  --ag-input-focus-border-color: rgba(255, 106, 61, 0.48);
+  --ag-foreground-color: var(--nowa-text-soft);
+  --ag-header-background-color: rgba(99, 102, 241, 0.05);
+  --ag-header-foreground-color: var(--nowa-text-muted);
+  --ag-odd-row-background-color: rgba(255, 255, 255, 0.015);
+  --ag-row-hover-color: var(--nowa-primary-soft);
+  --ag-selected-row-background-color: rgba(99, 102, 241, 0.12);
+  --ag-border-color: var(--nowa-border);
+  --ag-row-border-color: var(--nowa-border);
+  --ag-header-column-separator-color: var(--nowa-border);
+  --ag-input-focus-border-color: rgba(99, 102, 241, 0.5);
   --ag-font-size: 12px;
 }
 
+/* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .console-stat-grid,
-  .console-summary-grid {
+  .nowa-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .console-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .console-stat-grid,
-  .console-summary-grid {
+  .console-summary-grid,
+  .nowa-kpi-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Ant Design token overrides ─────────────────────────────────── */
+.ant-menu-dark { background: transparent !important; }
+
+/* Notification/message */
+.ant-message-notice-content {
+  background: var(--nowa-panel) !important;
+  border: 1px solid var(--nowa-border) !important;
+  color: var(--nowa-text) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--nowa-shadow-medium) !important;
 }
