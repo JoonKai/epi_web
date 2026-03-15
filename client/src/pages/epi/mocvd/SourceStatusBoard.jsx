@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import {
@@ -19,16 +20,21 @@ import {
   Typography,
 } from 'antd'
 import {
+  AlertOutlined,
   CalendarOutlined,
   FilterOutlined,
   LeftOutlined,
+  NodeIndexOutlined,
   ReloadOutlined,
   RightOutlined,
   SearchOutlined,
+  ToolOutlined,
   UnorderedListOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { useThemeMode } from '../../../theme/useThemeMode'
 
 const STATUS_META = {
   overdue: { color: '#f87171', bg: 'rgba(248,113,113,0.12)', label: '부족' },
@@ -50,17 +56,51 @@ function getRiskOrder(status) {
   return 3
 }
 
-function SummaryCard({ label, value, suffix }) {
+function SummaryCard({ label, value, suffix, icon, gradient, sub }) {
+  const { isLight: light } = useThemeMode()
   return (
-    <Card className="nowa-card" styles={{ body: { padding: 24 } }}>
-      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 15, fontWeight: 600, marginBottom: 10 }}>
+    <div style={{
+      borderRadius: 20,
+      padding: '22px 24px',
+      background: light ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)' : gradient,
+      border: light ? '1px solid var(--nowa-border)' : 'none',
+      boxShadow: 'var(--nowa-shadow-card)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+      minHeight: 140,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* 배경 원형 장식 */}
+      <div style={{
+        position: 'absolute', right: -16, top: -16,
+        width: 90, height: 90, borderRadius: '50%',
+        background: light ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.1)',
+      }} />
+      <div style={{
+        position: 'absolute', right: 16, top: 16,
+        width: 44, height: 44, borderRadius: 14,
+        background: light ? 'var(--nowa-primary-soft)' : 'rgba(255,255,255,0.18)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 20, color: light ? 'var(--nowa-primary)' : '#fff',
+      }}>
+        {icon}
+      </div>
+
+      <div style={{ color: light ? 'var(--nowa-text-muted)' : 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
         {label}
       </div>
-      <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800 }}>
-        <span style={{ fontSize: 42, lineHeight: 1 }}>{value}</span>
-        {suffix && <span style={{ marginLeft: 6, fontSize: 18, color: 'var(--nowa-text-soft)' }}>{suffix}</span>}
+      <div style={{ color: light ? 'var(--nowa-text)' : '#fff', fontWeight: 900, lineHeight: 1, marginTop: 4 }}>
+        <span style={{ fontSize: 46 }}>{value}</span>
+        {suffix && <span style={{ fontSize: 18, marginLeft: 5, fontWeight: 700, opacity: 0.85 }}>{suffix}</span>}
       </div>
-    </Card>
+      {sub && (
+        <div style={{ color: light ? 'var(--nowa-text-soft)' : 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 }}>
+          ↑ {sub}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -78,6 +118,7 @@ function SectionCard({ title, extra, children, bodyStyle }) {
 }
 
 function SourceStatusBoard() {
+  const { isLight: light } = useThemeMode()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
@@ -422,7 +463,9 @@ function SourceStatusBoard() {
           padding: 24,
           borderRadius: 22,
           border: '1px solid var(--nowa-border)',
-          background: 'linear-gradient(180deg, rgba(38,57,93,0.92) 0%, rgba(34,49,79,0.92) 100%)',
+          background: light
+            ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.96) 100%)'
+            : 'linear-gradient(180deg, rgba(38,57,93,0.92) 0%, rgba(34,49,79,0.92) 100%)',
           boxShadow: 'var(--nowa-shadow-card)',
         }}
       >
@@ -443,16 +486,145 @@ function SourceStatusBoard() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} xl={6}>
-          <SummaryCard label="대상 호기" value={totalMachines} suffix="대" />
+          <SummaryCard
+            label="대상 호기"
+            value={totalMachines}
+            suffix="대"
+            icon={<ToolOutlined />}
+            gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+            sub="현재 운영 중인 장비"
+          />
         </Col>
         <Col xs={24} md={12} xl={6}>
-          <SummaryCard label="소스 항목" value={events.length} suffix="건" />
+          <SummaryCard
+            label="소스 항목"
+            value={events.length}
+            suffix="건"
+            icon={<NodeIndexOutlined />}
+            gradient="linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)"
+            sub="등록된 교체 일정"
+          />
         </Col>
         <Col xs={24} md={12} xl={6}>
-          <SummaryCard label="교체 임박/초과" value={overdueCount + urgentCount} suffix="건" />
+          <SummaryCard
+            label="교체 임박/초과"
+            value={overdueCount + urgentCount}
+            suffix="건"
+            icon={<WarningOutlined />}
+            gradient="linear-gradient(135deg, #f97316 0%, #fb923c 100%)"
+            sub="즉시 확인 필요"
+          />
         </Col>
         <Col xs={24} md={12} xl={6}>
-          <SummaryCard label="잔량 부족" value={overdueCount} suffix="건" />
+          <SummaryCard
+            label="잔량 부족"
+            value={overdueCount}
+            suffix="건"
+            icon={<AlertOutlined />}
+            gradient="linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)"
+            sub="소스 교체 초과"
+          />
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <SectionCard title="설비별 위험 현황" bodyStyle={{ padding: '8px 12px 4px' }}>
+            {(() => {
+              const machineMap = new Map()
+              events.forEach(item => {
+                const c = machineMap.get(item.machine_no) ?? { machine_no: item.machine_no, overdue: 0, urgent: 0 }
+                if (item.status === 'overdue') c.overdue++
+                if (item.status === 'urgent') c.urgent++
+                machineMap.set(item.machine_no, c)
+              })
+              const list = [...machineMap.values()]
+                .filter(m => m.overdue > 0 || m.urgent > 0)
+                .sort((a, b) => (b.overdue + b.urgent) - (a.overdue + a.urgent))
+                .slice(0, 20)
+              return (
+                <ReactECharts
+                  theme={light ? undefined : 'dark'}
+                  style={{ height: 220 }}
+                  option={{
+                    backgroundColor: 'transparent',
+                    grid: { top: 16, bottom: 44, left: 36, right: 16 },
+                    tooltip: { trigger: 'axis' },
+                    legend: { bottom: 4, textStyle: { color: '#94a3b8', fontSize: 11 } },
+                    xAxis: {
+                      type: 'category',
+                      data: list.map(m => `${m.machine_no}`),
+                      axisLabel: { color: '#64748b', fontSize: 10, rotate: 30 },
+                      axisLine: { lineStyle: { color: '#1e2a3c' } },
+                    },
+                    yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
+                    series: [
+                      {
+                        name: '부족',
+                        type: 'bar',
+                        stack: 'risk',
+                        data: list.map(m => m.overdue),
+                        itemStyle: { color: '#f87171' },
+                        barMaxWidth: 28,
+                      },
+                      {
+                        name: '임박',
+                        type: 'bar',
+                        stack: 'risk',
+                        data: list.map(m => m.urgent),
+                        itemStyle: { color: '#fbbf24', borderRadius: [4, 4, 0, 0] },
+                        barMaxWidth: 28,
+                      },
+                    ],
+                  }}
+                />
+              )
+            })()}
+          </SectionCard>
+        </Col>
+        <Col xs={24} md={12}>
+          <SectionCard title="교체 예정 시기 분포" bodyStyle={{ padding: '8px 12px 4px' }}>
+            <ReactECharts
+              theme={light ? undefined : 'dark'}
+              style={{ height: 220 }}
+              option={(() => {
+                const today = dayjs()
+                const buckets = [
+                  { label: '7일 이내', max: 7, color: '#f87171' },
+                  { label: '14일 이내', max: 14, color: '#fb923c' },
+                  { label: '30일 이내', max: 30, color: '#fbbf24' },
+                  { label: '60일 이내', max: 60, color: '#60a5fa' },
+                  { label: '60일 초과', max: Infinity, color: '#34d399' },
+                ]
+                const counts = buckets.map(() => 0)
+                events.forEach(item => {
+                  if (!item.projected_replacement_date) return
+                  const diff = dayjs(item.projected_replacement_date).diff(today, 'day')
+                  for (let i = 0; i < buckets.length; i++) {
+                    if (diff <= buckets[i].max) { counts[i]++; break }
+                  }
+                })
+                return {
+                  backgroundColor: 'transparent',
+                  grid: { top: 16, bottom: 44, left: 48, right: 16 },
+                  tooltip: { trigger: 'axis' },
+                  xAxis: {
+                    type: 'category',
+                    data: buckets.map(b => b.label),
+                    axisLabel: { color: '#64748b', fontSize: 11, rotate: 20 },
+                    axisLine: { lineStyle: { color: '#1e2a3c' } },
+                  },
+                  yAxis: { type: 'value', axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
+                  series: [{
+                    type: 'bar',
+                    data: counts.map((v, i) => ({ value: v, itemStyle: { color: buckets[i].color, borderRadius: [4, 4, 0, 0] } })),
+                    barMaxWidth: 48,
+                    label: { show: true, position: 'top', color: '#94a3b8', fontSize: 11 },
+                  }],
+                }
+              })()}
+            />
+          </SectionCard>
         </Col>
       </Row>
 
@@ -517,7 +689,30 @@ function SourceStatusBoard() {
             )}
           >
             {visibleListEvents.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 일정 데이터가 없습니다." style={{ padding: '36px 0 18px' }} />
+              <div style={{ padding: '18px 0 28px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+                  <Button
+                    className="nowa-btn"
+                    icon={<LeftOutlined />}
+                    onClick={() => setSelectedDate((prev) => prev.subtract(1, 'month'))}
+                  >
+                    이전달
+                  </Button>
+                  <span style={{ minWidth: 120, textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--nowa-text)' }}>
+                    {selectedDate.year()}년 {selectedDate.month() + 1}월
+                  </span>
+                  <Button
+                    className="nowa-btn"
+                    icon={<RightOutlined />}
+                    iconPosition="end"
+                    onClick={() => setSelectedDate((prev) => prev.add(1, 'month'))}
+                  >
+                    다음달
+                  </Button>
+                  <Button onClick={() => setSelectedDate(dayjs())} size="small">이번 달</Button>
+                </div>
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 일정 데이터가 없습니다." />
+              </div>
             ) : displayMode === 'calendar' ? (
               <Calendar
                 value={selectedDate}

@@ -3,6 +3,7 @@ import { Alert, Button, Card, Input, Space, Spin, Tabs } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import SourceStatusBoard from './SourceStatusBoard'
+import SourceMachineBoard from './SourceMachineBoard'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
 // ─── 스타일 상수 ───────────────────────────────────────────────
@@ -457,7 +458,8 @@ function Source() {
       defaultActiveKey="status-board"
       items={[
         { key: 'status-board', label: '소스교체 현황판', children: <SourceStatusBoard /> },
-        { key: 'input',        label: '소스 입력',       children: <SourceInputTab /> },
+        { key: 'machine-board', label: '설비별 소스현황', children: <SourceMachineBoard /> },
+        { key: 'input', label: '소스 입력', children: <SourceInputTab /> },
       ]}
     />
   )

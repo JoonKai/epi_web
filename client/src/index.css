@@ -55,6 +55,12 @@
   --nowa-shadow-strong: 0 20px 48px rgba(0, 0, 0, 0.5);
   --nowa-shadow-medium: 0 8px 28px rgba(0, 0, 0, 0.32);
   --nowa-shadow-primary: 0 8px 24px rgba(99, 102, 241, 0.35);
+  --nowa-hero-bg: linear-gradient(180deg, rgba(38,57,93,0.92) 0%, rgba(34,49,79,0.92) 100%);
+  --nowa-soft-fill: rgba(255,255,255,0.02);
+  --nowa-soft-fill-strong: rgba(255,255,255,0.06);
+  --nowa-contrast-text: #ffffff;
+  --nowa-contrast-text-soft: rgba(255,255,255,0.75);
+  --nowa-contrast-text-muted: rgba(255,255,255,0.6);
 
   /* ── legacy aliases so old references still resolve ── */
   --console-bg: var(--nowa-bg);
@@ -118,6 +124,12 @@
   --nowa-shadow-strong: 0 16px 40px rgba(15, 23, 42, 0.12);
   --nowa-shadow-medium: 0 6px 20px rgba(15, 23, 42, 0.08);
   --nowa-shadow-primary: 0 8px 20px rgba(99, 102, 241, 0.25);
+  --nowa-hero-bg: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.96) 100%);
+  --nowa-soft-fill: rgba(15,23,42,0.03);
+  --nowa-soft-fill-strong: rgba(148,163,184,0.18);
+  --nowa-contrast-text: #ffffff;
+  --nowa-contrast-text-soft: rgba(255,255,255,0.78);
+  --nowa-contrast-text-muted: rgba(255,255,255,0.64);
 
   /* legacy aliases */
   --console-bg: var(--nowa-bg);

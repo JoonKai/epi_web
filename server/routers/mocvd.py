@@ -26,7 +26,7 @@ class BulkSourceUpdate(BaseModel):
 @router.get("/machines")
 def get_machines(db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
-    return [{"machine_no": r.machine_no, "description": r.description} for r in rows]
+    return [{"machine_no": r.machine_no, "description": r.description, "is_active": r.is_active} for r in rows]
 
 
 @router.get("/source/{machine_no}")

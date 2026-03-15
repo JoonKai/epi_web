@@ -17,6 +17,7 @@ import MocvdMasterData from './pages/epi/mocvd/MasterData'
 import MocvdManagement from './pages/epi/mocvd/MocvdManagement'
 import PersonnelManagement from './pages/epi/mocvd/PersonnelManagement'
 import MocvdSource from './pages/epi/mocvd/Source'
+import WorkLog from './pages/epi/mocvd/WorkLog'
 import Simulator from './pages/epi/Simulator'
 
 // ── Nowa-TS Design Tokens ──────────────────────────────────────────
@@ -94,6 +95,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/epi/mocvd/source" element={<MocvdSource />} />
           <Route path="/epi/mocvd/management" element={<MocvdManagement />} />
           <Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
+          <Route path="/epi/mocvd/work-log" element={<WorkLog />} />
           {user.role === 'admin' && <Route path="/epi/mocvd/master-data" element={<MocvdMasterData />} />}
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />

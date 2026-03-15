@@ -10,6 +10,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="user", comment="admin / user")
     is_active = Column(Boolean, default=True)
+    session_expire_minutes = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
 
@@ -49,3 +50,32 @@ class MocvdSource(Base):
     daily_usage = Column(Float, default=0.0)
     unit = Column(String(10), default="kg")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class PersonnelVendor(Base):
+    __tablename__ = "personnel_vendor"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+    contact_name = Column(String(50), default="")
+    contact_phone = Column(String(50), default="")
+    note = Column(String(200), default="")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+
+
+class PersonnelMember(Base):
+    __tablename__ = "personnel_member"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendor_id = Column(Integer, nullable=False, index=True)
+    employee_no = Column(String(50), default="")
+    name = Column(String(50), nullable=False)
+    department = Column(String(100), default="")
+    position = Column(String(100), default="")
+    phone = Column(String(50), default="")
+    shift = Column(String(50), default="")
+    training_due_date = Column(String(20), default="")
+    note = Column(String(200), default="")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())

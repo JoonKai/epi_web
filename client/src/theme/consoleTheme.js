@@ -65,11 +65,24 @@ export function getMetricTone(value) {
   return consoleColors.text
 }
 
+function readThemeVar(name, fallback) {
+  if (typeof window === 'undefined') return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name)?.trim()
+  return value || fallback
+}
+
 export function makeChartBase(title) {
+  const text = readThemeVar('--nowa-text', consoleColors.text)
+  const textSoft = readThemeVar('--nowa-text-soft', consoleColors.textSoft)
+  const textMuted = readThemeVar('--nowa-text-muted', consoleColors.textMuted)
+  const border = readThemeVar('--nowa-border', 'rgba(99,102,241,0.15)')
+  const borderStrong = readThemeVar('--nowa-border-strong', 'rgba(99,102,241,0.24)')
+  const tooltipBg = readThemeVar('--nowa-panel-alt', '#1a2235')
+
   return {
     backgroundColor: 'transparent',
     textStyle: {
-      color: consoleColors.textSoft,
+      color: textSoft,
       fontFamily: 'Pretendard, Inter, Segoe UI, sans-serif',
     },
     title: title
@@ -78,7 +91,7 @@ export function makeChartBase(title) {
           left: 12,
           top: 8,
           textStyle: {
-            color: consoleColors.textSoft,
+            color: textSoft,
             fontSize: 13,
             fontWeight: 600,
           },
@@ -86,13 +99,13 @@ export function makeChartBase(title) {
       : undefined,
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#1a2235',
-      borderColor: 'rgba(99,102,241,0.3)',
-      textStyle: { color: consoleColors.text },
+      backgroundColor: tooltipBg,
+      borderColor: borderStrong,
+      textStyle: { color: text },
       extraCssText: 'box-shadow: 0 12px 30px rgba(0,0,0,0.5); border-radius: 12px;',
     },
     legend: {
-      textStyle: { color: consoleColors.textMuted, fontSize: 11 },
+      textStyle: { color: textMuted, fontSize: 11 },
       icon: 'roundRect',
       itemWidth: 12,
       itemHeight: 8,
@@ -105,15 +118,15 @@ export function makeChartBase(title) {
       containLabel: true,
     },
     xAxis: {
-      axisLine: { lineStyle: { color: 'rgba(99,102,241,0.15)' } },
-      axisLabel: { color: consoleColors.textMuted, fontSize: 11 },
+      axisLine: { lineStyle: { color: border } },
+      axisLabel: { color: textMuted, fontSize: 11 },
       splitLine: { show: false },
       axisTick: { show: false },
     },
     yAxis: {
       axisLine: { show: false },
-      axisLabel: { color: consoleColors.textMuted, fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(99,102,241,0.08)', type: 'dashed' } },
+      axisLabel: { color: textMuted, fontSize: 11 },
+      splitLine: { lineStyle: { color: border, type: 'dashed' } },
       axisTick: { show: false },
     },
   }

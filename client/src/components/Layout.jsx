@@ -7,6 +7,7 @@ import {
   AppstoreAddOutlined,
   BarChartOutlined,
   BellOutlined,
+  BookOutlined,
   BuildOutlined,
   ControlOutlined,
   DashboardOutlined,
@@ -44,6 +45,7 @@ function buildMenuItems(isAdmin) {
           children: [
             { key: '/epi/mocvd/management', icon: <ControlOutlined />, label: 'MOCVD 관리' },
             { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스관리' },
+            { key: '/epi/mocvd/work-log', icon: <BookOutlined />, label: '업무 일지' },
             { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보관리' },
           ],
         },
