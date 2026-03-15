@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Card, Input, Space, Spin, Tabs } from 'antd'
+import { Alert, Button, Card, Input, Select, Space, Spin, Tabs } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
+import SourceChangeLogTab from './SourceChangeLogTab'
 import SourceStatusBoard from './SourceStatusBoard'
 import SourceMachineBoard from './SourceMachineBoard'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
-// ─── 스타일 상수 ───────────────────────────────────────────────
 const LABEL_W = 72
-const CELL_W  = 78
-const ROW_H   = 30
+const CELL_W = 78
+const ROW_H = 30
 const HEAD1_H = 36
 const HEAD2_H = 26
 const BASE_BG = '#0d1420'
-const BORDER  = '1px solid #1e2a3c'
+const BORDER = '1px solid #1e2a3c'
 const GROUP_BORDER = '2px solid #2d4060'
+const DEFAULT_THRESHOLD_RATIO = 15
 
 const th1Base = {
   position: 'sticky',
@@ -27,6 +29,7 @@ const th1Base = {
   height: HEAD1_H,
   zIndex: 9,
 }
+
 const th2Base = {
   position: 'sticky',
   top: HEAD1_H,
@@ -39,6 +42,7 @@ const th2Base = {
   height: HEAD2_H,
   zIndex: 9,
 }
+
 const tdLabelBase = {
   position: 'sticky',
   left: 0,
@@ -51,6 +55,7 @@ const tdLabelBase = {
   fontSize: 12,
   textAlign: 'center',
 }
+
 const tdCellBase = {
   border: BORDER,
   padding: 0,
@@ -58,19 +63,43 @@ const tdCellBase = {
   verticalAlign: 'middle',
 }
 
-// ─── 숫자 포맷 ─────────────────────────────────────────────────
+function toNumber(value, fallback = 0) {
+  const next = Number(value)
+  return Number.isFinite(next) ? next : fallback
+}
+
 function fmt(v) {
   if (v == null || Number.isNaN(v)) return '-'
-  if (v >= 10000) return (v / 1000).toFixed(1) + 'k'
-  if (v >= 1000)  return v.toFixed(0)
-  if (v >= 100)   return v.toFixed(1)
+  if (v >= 10000) return `${(v / 1000).toFixed(1)}k`
+  if (v >= 1000) return v.toFixed(0)
+  if (v >= 100) return v.toFixed(1)
   return v.toFixed(2)
 }
 
-// ─── 인라인 수정 가능한 셀 ─────────────────────────────────────
+function buildDerivedCell(cell) {
+  const initialAmount = toNumber(cell.initial_amount)
+  const thresholdRatio = toNumber(cell.threshold_ratio, DEFAULT_THRESHOLD_RATIO)
+  const dailyUsage = toNumber(cell.daily_usage)
+  const remaining = toNumber(cell.remaining)
+  const thresholdAmount = initialAmount > 0 ? (initialAmount * thresholdRatio) / 100 : 0
+
+  let daysLeft = null
+  let replacementDate = '-'
+  if (dailyUsage > 0) {
+    daysLeft = Math.ceil((remaining - thresholdAmount) / dailyUsage)
+    replacementDate = dayjs().add(Math.max(daysLeft, 0), 'day').format('YYYY-MM-DD')
+  }
+
+  return {
+    threshold_amount: thresholdAmount,
+    days_left: daysLeft,
+    replacement_date: replacementDate,
+  }
+}
+
 function EditCell({ value, onChange, color, bg, pending }) {
   const [editing, setEditing] = useState(false)
-  const [local, setLocal]     = useState(String(value ?? 0))
+  const [local, setLocal] = useState(String(value ?? 0))
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -88,9 +117,12 @@ function EditCell({ value, onChange, color, bg, pending }) {
       <input
         ref={inputRef}
         value={local}
-        onChange={e => setLocal(e.target.value)}
+        onChange={(event) => setLocal(event.target.value)}
         onBlur={commit}
-        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commit()
+          if (event.key === 'Escape') setEditing(false)
+        }}
         autoFocus
         style={{
           width: '100%',
@@ -130,45 +162,44 @@ function EditCell({ value, onChange, color, bg, pending }) {
   )
 }
 
-// ─── 엑셀 테이블 ───────────────────────────────────────────────
 function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, onChange }) {
   const colCount = machines.length * sourceNames.length
 
-  if (colCount === 0) return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>데이터가 없습니다.</div>
-  )
+  if (colCount === 0) {
+    return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>데이터가 없습니다.</div>
+  }
 
   return (
     <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 400px)', position: 'relative' }}>
       <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 12 }}>
         <colgroup>
           <col style={{ width: LABEL_W, minWidth: LABEL_W }} />
-          {machines.map(m => sourceNames.map(s => (
-            <col key={`${m.machine_no}:${s}`} style={{ width: CELL_W, minWidth: CELL_W }} />
-          )))}
+          {machines.map((machine) =>
+            sourceNames.map((sourceName) => (
+              <col key={`${machine.machine_no}:${sourceName}`} style={{ width: CELL_W, minWidth: CELL_W }} />
+            )),
+          )}
         </colgroup>
 
         <thead>
-          {/* ── 호기 번호 행 ── */}
           <tr>
             <th
+              rowSpan={2}
               style={{
                 ...th1Base,
                 left: 0,
                 zIndex: 12,
                 background: '#0d1420',
                 width: LABEL_W,
-                rowSpan: 2,
                 fontSize: 11,
                 color: '#64748b',
               }}
-              rowSpan={2}
             >
               구분
             </th>
-            {machines.map(m => (
+            {machines.map((machine) => (
               <th
-                key={m.machine_no}
+                key={machine.machine_no}
                 colSpan={sourceNames.length}
                 style={{
                   ...th1Base,
@@ -179,102 +210,229 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                   letterSpacing: 1,
                 }}
               >
-                {m.machine_no}
+                {machine.machine_no}
               </th>
             ))}
           </tr>
-
-          {/* ── 소스명 행 ── */}
           <tr>
-            {machines.map(m => sourceNames.map((s, si) => (
-              <th
-                key={`${m.machine_no}:${s}`}
-                style={{
-                  ...th2Base,
-                  borderLeft: si === 0 ? GROUP_BORDER : BORDER,
-                  color: '#94a3b8',
-                }}
-              >
-                {s}
-              </th>
-            )))}
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => (
+                <th
+                  key={`${machine.machine_no}:${sourceName}`}
+                  style={{
+                    ...th2Base,
+                    borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                    color: '#94a3b8',
+                  }}
+                >
+                  {sourceName}
+                </th>
+              )),
+            )}
           </tr>
         </thead>
 
         <tbody>
-          {/* ── 일사용량 행 ── */}
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1c1400', color: '#fbbf24', borderRight: GROUP_BORDER }}>
-              일사용량
-            </td>
-            {machines.map(m => sourceNames.map((s, si) => {
-              const key = `${m.machine_no}:${s}`
-              return (
-                <td key={key} style={{ ...tdCellBase, borderLeft: si === 0 ? GROUP_BORDER : BORDER, background: '#110d00' }}>
-                  <EditCell
-                    value={cellData[key]?.daily_usage ?? 0}
-                    color="#fbbf24"
-                    bg="#110d00"
-                    pending={pendingKeys.has(key)}
-                    onChange={v => onChange(m.machine_no, s, 'daily_usage', v)}
-                  />
-                </td>
-              )
-            }))}
+            <td style={{ ...tdLabelBase, background: '#081521', color: '#38bdf8', borderRight: GROUP_BORDER }}>초기량</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                return (
+                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#07111b' }}>
+                    <EditCell
+                      value={cellData[key]?.initial_amount ?? 0}
+                      color="#38bdf8"
+                      bg="#07111b"
+                      pending={pendingKeys.has(key)}
+                      onChange={(value) => onChange(machine.machine_no, sourceName, 'initial_amount', value)}
+                    />
+                  </td>
+                )
+              }),
+            )}
           </tr>
 
-          {/* ── 잔량 행 ── */}
           <tr>
-            <td style={{ ...tdLabelBase, background: '#0c1a0c', color: '#86efac', borderRight: GROUP_BORDER }}>
-              잔량
-            </td>
-            {machines.map(m => sourceNames.map((s, si) => {
-              const key = `${m.machine_no}:${s}`
-              return (
-                <td key={key} style={{ ...tdCellBase, borderLeft: si === 0 ? GROUP_BORDER : BORDER, background: '#070f07' }}>
-                  <EditCell
-                    value={cellData[key]?.remaining ?? 0}
-                    color="#86efac"
-                    bg="#070f07"
-                    pending={pendingKeys.has(key)}
-                    onChange={v => onChange(m.machine_no, s, 'remaining', v)}
-                  />
-                </td>
-              )
-            }))}
+            <td style={{ ...tdLabelBase, background: '#1d1200', color: '#f59e0b', borderRight: GROUP_BORDER }}>교체기준(%)</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                return (
+                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#130d00' }}>
+                    <EditCell
+                      value={cellData[key]?.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO}
+                      color="#f59e0b"
+                      bg="#130d00"
+                      pending={pendingKeys.has(key)}
+                      onChange={(value) => onChange(machine.machine_no, sourceName, 'threshold_ratio', value)}
+                    />
+                  </td>
+                )
+              }),
+            )}
           </tr>
 
-          {/* ── 날짜별 예측 행 ── */}
-          {dateRows.map(({ label, daysAhead }, ri) => (
-            <tr key={label} style={{ background: ri % 2 === 0 ? BASE_BG : '#0a1120' }}>
-              <td style={{ ...tdLabelBase, background: ri % 2 === 0 ? BASE_BG : '#0a1120', color: '#64748b', borderRight: GROUP_BORDER }}>
-                {label}
-              </td>
-              {machines.map(m => sourceNames.map((s, si) => {
-                const key = `${m.machine_no}:${s}`
-                const remaining = cellData[key]?.remaining ?? 0
-                const daily     = cellData[key]?.daily_usage ?? 0
-                const projected = daily === 0 ? null : Math.max(0, remaining - daysAhead * daily)
-                const isCritical = projected !== null && projected <= 0
-                const isLow      = projected !== null && projected > 0 && remaining > 0 && projected < remaining * 0.15
+          <tr>
+            <td style={{ ...tdLabelBase, background: '#1c1400', color: '#fbbf24', borderRight: GROUP_BORDER }}>일사용량</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                return (
+                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#110d00' }}>
+                    <EditCell
+                      value={cellData[key]?.daily_usage ?? 0}
+                      color="#fbbf24"
+                      bg="#110d00"
+                      pending={pendingKeys.has(key)}
+                      onChange={(value) => onChange(machine.machine_no, sourceName, 'daily_usage', value)}
+                    />
+                  </td>
+                )
+              }),
+            )}
+          </tr>
 
+          <tr>
+            <td style={{ ...tdLabelBase, background: '#0c1a0c', color: '#86efac', borderRight: GROUP_BORDER }}>잔량</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                return (
+                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#070f07' }}>
+                    <EditCell
+                      value={cellData[key]?.remaining ?? 0}
+                      color="#86efac"
+                      bg="#070f07"
+                      pending={pendingKeys.has(key)}
+                      onChange={(value) => onChange(machine.machine_no, sourceName, 'remaining', value)}
+                    />
+                  </td>
+                )
+              }),
+            )}
+          </tr>
+
+          <tr>
+            <td style={{ ...tdLabelBase, background: '#1e0e00', color: '#f97316', borderRight: GROUP_BORDER }}>교체기준량</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                const derived = buildDerivedCell(cellData[key] ?? {})
                 return (
                   <td
-                    key={key}
+                    key={`${key}:threshold_amount`}
                     style={{
                       ...tdCellBase,
-                      borderLeft: si === 0 ? GROUP_BORDER : BORDER,
-                      background: isCritical ? 'rgba(239,68,68,0.12)' : isLow ? 'rgba(251,191,36,0.07)' : undefined,
-                      color: isCritical ? '#f87171' : isLow ? '#fbbf24' : '#475569',
+                      borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                      background: '#130907',
+                      color: '#f97316',
                       textAlign: 'right',
                       paddingRight: 5,
                       fontSize: 11,
+                      fontWeight: 700,
                     }}
                   >
-                    {projected === null ? '-' : fmt(projected)}
+                    {fmt(derived.threshold_amount)}
                   </td>
                 )
-              }))}
+              }),
+            )}
+          </tr>
+
+          <tr>
+            <td style={{ ...tdLabelBase, background: '#181400', color: '#facc15', borderRight: GROUP_BORDER }}>예상 잔여일</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                const derived = buildDerivedCell(cellData[key] ?? {})
+                return (
+                  <td
+                    key={`${key}:days_left`}
+                    style={{
+                      ...tdCellBase,
+                      borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                      background: '#110d00',
+                      color: derived.days_left != null && derived.days_left <= 7 ? '#f87171' : '#facc15',
+                      textAlign: 'right',
+                      paddingRight: 5,
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {derived.days_left == null ? '-' : `${derived.days_left}일`}
+                  </td>
+                )
+              }),
+            )}
+          </tr>
+
+          <tr>
+            <td style={{ ...tdLabelBase, background: '#081320', color: '#60a5fa', borderRight: GROUP_BORDER }}>예상 교체일</td>
+            {machines.map((machine) =>
+              sourceNames.map((sourceName, index) => {
+                const key = `${machine.machine_no}:${sourceName}`
+                const derived = buildDerivedCell(cellData[key] ?? {})
+                return (
+                  <td
+                    key={`${key}:replacement_date`}
+                    style={{
+                      ...tdCellBase,
+                      borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                      background: '#06111b',
+                      color: '#60a5fa',
+                      textAlign: 'right',
+                      paddingRight: 5,
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {derived.replacement_date}
+                  </td>
+                )
+              }),
+            )}
+          </tr>
+
+          {dateRows.map(({ label, daysAhead }, rowIndex) => (
+            <tr key={label} style={{ background: rowIndex % 2 === 0 ? BASE_BG : '#0a1120' }}>
+              <td
+                style={{
+                  ...tdLabelBase,
+                  background: rowIndex % 2 === 0 ? BASE_BG : '#0a1120',
+                  color: '#64748b',
+                  borderRight: GROUP_BORDER,
+                }}
+              >
+                {label}
+              </td>
+              {machines.map((machine) =>
+                sourceNames.map((sourceName, index) => {
+                  const key = `${machine.machine_no}:${sourceName}`
+                  const remaining = cellData[key]?.remaining ?? 0
+                  const dailyUsage = cellData[key]?.daily_usage ?? 0
+                  const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
+                  const isCritical = projected !== null && projected <= 0
+                  const isLow = projected !== null && projected > 0 && remaining > 0 && projected < remaining * 0.15
+
+                  return (
+                    <td
+                      key={`${key}:${label}`}
+                      style={{
+                        ...tdCellBase,
+                        borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                        background: isCritical ? 'rgba(239,68,68,0.12)' : isLow ? 'rgba(251,191,36,0.07)' : undefined,
+                        color: isCritical ? '#f87171' : isLow ? '#fbbf24' : '#475569',
+                        textAlign: 'right',
+                        paddingRight: 5,
+                        fontSize: 11,
+                      }}
+                    >
+                      {projected === null ? '-' : fmt(projected)}
+                    </td>
+                  )
+                }),
+              )}
             </tr>
           ))}
         </tbody>
@@ -283,50 +441,56 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
   )
 }
 
-// ─── 수기 입력 탭 ──────────────────────────────────────────────
 function SourceInputTab() {
-  const [loading,        setLoading]        = useState(true)
-  const [saving,         setSaving]         = useState(false)
-  const [error,          setError]          = useState(null)
-  const [machines,       setMachines]       = useState([])
-  const [sourceNames,    setSourceNames]    = useState([])
-  const [cellData,       setCellData]       = useState({})
-  const [pendingKeys,    setPendingKeys]    = useState(new Set())
-  const [quickFilter,    setQuickFilter]    = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [machines, setMachines] = useState([])
+  const [sourceNames, setSourceNames] = useState([])
+  const [cellData, setCellData] = useState({})
+  const [pendingKeys, setPendingKeys] = useState(new Set())
+  const [quickFilter, setQuickFilter] = useState('')
+  const [forecastDays, setForecastDays] = useState(15)
 
   const fetchData = useCallback(() => {
     setLoading(true)
     setError(null)
     authFetch('/api/mocvd/sources/all')
-      .then(res => res.ok ? res.json() : res.json().then(j => Promise.reject(j.detail || res.status)))
-      .then(json => {
-        const rows  = json.rows ?? []
+      .then((res) => (res.ok ? res.json() : res.json().then((json) => Promise.reject(json.detail || res.status))))
+      .then((json) => {
+        const rows = json.rows ?? []
         const names = json.source_names ?? []
-        setMachines(rows.map(r => ({ machine_no: r.machine_no, description: r.description })))
+        setMachines(rows.map((row) => ({ machine_no: row.machine_no, description: row.description })))
         setSourceNames(names)
-        const data = {}
-        rows.forEach(row => {
-          names.forEach(name => {
+
+        const nextCellData = {}
+        rows.forEach((row) => {
+          names.forEach((name) => {
             const key = `${row.machine_no}:${name}`
-            data[key] = {
-              remaining:   row[name] ?? 0,
+            nextCellData[key] = {
+              remaining: row[name] ?? 0,
               daily_usage: row[`${name}_daily_usage`] ?? 0,
+              initial_amount: row[`${name}_initial_amount`] ?? 0,
+              threshold_ratio: row[`${name}_threshold_ratio`] ?? DEFAULT_THRESHOLD_RATIO,
             }
           })
         })
-        setCellData(data)
+
+        setCellData(nextCellData)
         setPendingKeys(new Set())
       })
-      .catch(err => setError(typeof err === 'string' ? err : '전체 소스 데이터를 불러오지 못했습니다.'))
+      .catch((err) => setError(typeof err === 'string' ? err : '전체 소스 데이터를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleChange = useCallback((machineNo, sourceName, field, value) => {
     const key = `${machineNo}:${sourceName}`
-    setCellData(prev => ({ ...prev, [key]: { ...prev[key], [field]: Number(value ?? 0) } }))
-    setPendingKeys(prev => new Set([...prev, key]))
+    setCellData((prev) => ({ ...prev, [key]: { ...prev[key], [field]: Number(value ?? 0) } }))
+    setPendingKeys((prev) => new Set([...prev, key]))
   }, [])
 
   const handleSave = async () => {
@@ -334,14 +498,23 @@ function SourceInputTab() {
     setSaving(true)
     setError(null)
     try {
-      const changes = [...pendingKeys].map(key => {
-        const colonIdx   = key.indexOf(':')
-        const machine_no = Number(key.slice(0, colonIdx))
-        const source_name = key.slice(colonIdx + 1)
+      const changes = [...pendingKeys].map((key) => {
+        const colonIndex = key.indexOf(':')
+        const machine_no = Number(key.slice(0, colonIndex))
+        const source_name = key.slice(colonIndex + 1)
         const cell = cellData[key] ?? {}
-        return { machine_no, source_name, remaining: cell.remaining ?? 0, daily_usage: cell.daily_usage ?? 0, unit: 'kg' }
+        return {
+          machine_no,
+          source_name,
+          remaining: cell.remaining ?? 0,
+          daily_usage: cell.daily_usage ?? 0,
+          initial_amount: cell.initial_amount ?? 0,
+          threshold_ratio: cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO,
+          unit: 'kg',
+        }
       })
-      const res  = await authFetch('/api/mocvd/sources/all', {
+
+      const res = await authFetch('/api/mocvd/sources/all', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(changes),
@@ -357,24 +530,21 @@ function SourceInputTab() {
   }
 
   const filteredMachines = useMemo(() => {
-    const kw = quickFilter.trim().toLowerCase()
-    if (!kw) return machines
-    return machines.filter(m =>
-      String(m.machine_no).includes(kw) || `mo#${m.machine_no}호기`.includes(kw)
+    const keyword = quickFilter.trim().toLowerCase()
+    if (!keyword) return machines
+    return machines.filter(
+      (machine) => String(machine.machine_no).includes(keyword) || `mo#${machine.machine_no}호기`.includes(keyword),
     )
   }, [machines, quickFilter])
 
-  // 오늘부터 14일치 예측 날짜
   const dateRows = useMemo(() => {
     const today = new Date()
-    return Array.from({ length: 14 }, (_, i) => {
-      const d = new Date(today)
-      d.setDate(d.getDate() + i + 1)
-      return { label: `${d.getMonth() + 1}/${d.getDate()}`, daysAhead: i + 1 }
+    return Array.from({ length: forecastDays }, (_, index) => {
+      const next = new Date(today)
+      next.setDate(next.getDate() + index + 1)
+      return { label: `${next.getMonth() + 1}/${next.getDate()}`, daysAhead: index + 1 }
     })
-  }, [])
-
-  const pendingCount = pendingKeys.size
+  }, [forecastDays])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
@@ -385,19 +555,19 @@ function SourceInputTab() {
             MOCVD 전체 소스 입력
           </div>
           <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>
-            일사용량과 잔량을 입력하면 아래에 일별 예상 잔량이 자동 계산됩니다.
+            초기량, 교체기준, 일사용량, 잔량을 한 화면에서 입력하고 아래 예측값을 바로 확인합니다.
           </div>
         </div>
         <div className="console-toolbar-group">
           <div className="console-pill">{machines.length}대</div>
           <div className="console-pill">{sourceNames.length}종류</div>
-          <div className="console-pill" style={{ color: pendingCount > 0 ? '#c4b5fd' : undefined }}>
-            변경 {pendingCount}건
+          <div className="console-pill" style={{ color: pendingKeys.size > 0 ? '#c4b5fd' : undefined }}>
+            변경 {pendingKeys.size}건
           </div>
         </div>
       </div>
 
-      {error && <Alert type="error" message={error} />}
+      {error ? <Alert type="error" message={error} /> : null}
 
       <Card
         className="console-panel"
@@ -408,29 +578,33 @@ function SourceInputTab() {
           <Space wrap>
             <Input
               value={quickFilter}
-              onChange={e => setQuickFilter(e.target.value)}
+              onChange={(event) => setQuickFilter(event.target.value)}
               placeholder="호기 검색"
               style={{ width: 150 }}
               allowClear
             />
+            <Select
+              value={forecastDays}
+              onChange={setForecastDays}
+              style={{ width: 120 }}
+              options={[
+                { value: 15, label: '15일' },
+                { value: 30, label: '30일' },
+                { value: 60, label: '60일' },
+                { value: 90, label: '90일' },
+              ]}
+            />
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
               새로고침
             </Button>
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              onClick={handleSave}
-              loading={saving}
-              disabled={pendingCount === 0}
-            >
+            <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>
               전체 저장
             </Button>
           </Space>
         )}
       >
         <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 12 }}>
-          셀을 클릭하면 바로 수정됩니다. 가로 스크롤로 전체 설비를 볼 수 있습니다.
-          날짜 행은 일사용량 기준 잔량 예측입니다.
+          기존 소스 입력 표에 교체 기준 입력을 통합했습니다. 초기량, 교체기준(%), 일사용량, 잔량을 입력하면 교체기준량과 예상 교체일이 자동 계산되며 예측 기간은 15/30/60/90일로 바꿔 볼 수 있습니다.
         </div>
         {loading ? (
           <div style={{ display: 'grid', placeItems: 'center', minHeight: 420 }}>
@@ -451,8 +625,7 @@ function SourceInputTab() {
   )
 }
 
-// ─── 탭 루트 ──────────────────────────────────────────────────
-function Source() {
+export default function Source() {
   return (
     <Tabs
       defaultActiveKey="status-board"
@@ -460,9 +633,8 @@ function Source() {
         { key: 'status-board', label: '소스교체 현황판', children: <SourceStatusBoard /> },
         { key: 'machine-board', label: '설비별 소스현황', children: <SourceMachineBoard /> },
         { key: 'input', label: '소스 입력', children: <SourceInputTab /> },
+        { key: 'change-log', label: '소스교체 작업 일지', children: <SourceChangeLogTab /> },
       ]}
     />
   )
 }
-
-export default Source

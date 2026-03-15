@@ -9,6 +9,7 @@ import {
   BellOutlined,
   BookOutlined,
   BuildOutlined,
+  CalendarOutlined,
   ControlOutlined,
   DashboardOutlined,
   DollarOutlined,
@@ -45,6 +46,7 @@ function buildMenuItems(isAdmin) {
           children: [
             { key: '/epi/mocvd/management', icon: <ControlOutlined />, label: 'MOCVD 관리' },
             { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스관리' },
+            { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM주기 계획' },
             { key: '/epi/mocvd/work-log', icon: <BookOutlined />, label: '업무 일지' },
             { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보관리' },
           ],
@@ -106,6 +108,7 @@ function findPath(items, pathname, trail = []) {
 const PAGE_COLOR = {
   '/dashboard': '#6366f1',
   '/epi/mocvd/source': '#14b8a6',
+  '/epi/mocvd/pm-plan': '#06b6d4',
   '/epi/mocvd/management': '#0ea5e9',
   '/epi/mocvd/personnel': '#f97316',
   '/epi/mocvd/master-data': '#8b5cf6',

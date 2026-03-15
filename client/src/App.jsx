@@ -16,6 +16,7 @@ import Measurement from './pages/epi/Measurement'
 import MocvdMasterData from './pages/epi/mocvd/MasterData'
 import MocvdManagement from './pages/epi/mocvd/MocvdManagement'
 import PersonnelManagement from './pages/epi/mocvd/PersonnelManagement'
+import PmPlan from './pages/epi/mocvd/PmPlan'
 import MocvdSource from './pages/epi/mocvd/Source'
 import WorkLog from './pages/epi/mocvd/WorkLog'
 import Simulator from './pages/epi/Simulator'
@@ -93,6 +94,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/epi/mocvd/source" element={<MocvdSource />} />
+          <Route path="/epi/mocvd/pm-plan" element={<PmPlan />} />
           <Route path="/epi/mocvd/management" element={<MocvdManagement />} />
           <Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
           <Route path="/epi/mocvd/work-log" element={<WorkLog />} />

@@ -46,10 +46,43 @@ class MocvdSource(Base):
     id = Column(Integer, primary_key=True, index=True)
     machine_no = Column(Integer, nullable=False)
     source_name = Column(String(20), nullable=False)
+    initial_amount = Column(Float, default=0.0)
+    threshold_ratio = Column(Float, default=15.0)
     remaining = Column(Float, default=0.0)
     daily_usage = Column(Float, default=0.0)
     unit = Column(String(10), default="kg")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class SourceChangeLog(Base):
+    __tablename__ = "source_change_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    install_date = Column(String(20), nullable=False)
+    removal_date = Column(String(20), default="")
+    machine_no = Column(Integer, nullable=False, index=True)
+    source_name = Column(String(20), nullable=False)
+    work_type = Column(String(50), default="교체")
+    zone = Column(String(50), default="")
+    line_name = Column(String(50), default="")
+    production_group = Column(String(50), default="")
+    source_slot = Column(String(20), default="")
+    source_number = Column(String(20), default="")
+    vendor_name = Column(String(100), default="")
+    cylinder_no = Column(String(100), default="")
+    lot_no = Column(String(100), default="")
+    net_weight = Column(Float, default=0.0)
+    reset_weight = Column(Float, default=0.0)
+    before_value = Column(Float, default=0.0)
+    after_value = Column(Float, default=0.0)
+    used_amount = Column(Float, default=0.0)
+    used_percent = Column(Float, default=0.0)
+    runtime_hours = Column(Float, default=0.0)
+    sql_value = Column(Float, default=0.0)
+    ctc_value = Column(Float, default=0.0)
+    worker_name = Column(String(50), default="")
+    note = Column(String(500), default="")
+    created_at = Column(DateTime, default=func.now())
 
 
 class PersonnelVendor(Base):

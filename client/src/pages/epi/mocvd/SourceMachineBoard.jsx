@@ -11,21 +11,31 @@ const STATUS_META = {
   normal: { label: '정상', color: '#34d399', bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.22)' },
 }
 
-function getSourceStatus(remaining, dailyUsage) {
+function getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio) {
   const remain = Number(remaining ?? 0)
   const usage = Number(dailyUsage ?? 0)
+  const initial = Number(initialAmount ?? 0)
+  const ratio = Number(thresholdRatio ?? 15)
+  const thresholdAmount = initial > 0 ? (initial * ratio) / 100 : 0
+
+  if (initial > 0 && remain <= thresholdAmount) return { key: 'overdue', daysLeft: 0 }
   if (remain <= 0) return { key: 'overdue', daysLeft: 0 }
   if (usage <= 0) return { key: 'normal', daysLeft: null }
-  const daysLeft = Math.floor(remain / usage)
+
+  const daysLeft = Math.ceil((remain - thresholdAmount) / usage)
   if (daysLeft <= 7) return { key: 'overdue', daysLeft }
   if (daysLeft <= 15) return { key: 'urgent', daysLeft }
   return { key: 'normal', daysLeft }
 }
 
-function getBarPercent(value, values) {
-  const numeric = Number(value ?? 0)
-  const max = Math.max(...values.map((item) => Number(item ?? 0)), 1)
-  return Math.max(4, Math.min(100, (numeric / max) * 100))
+function getBarPercent(remaining, initialAmount, fallbackValues) {
+  const current = Number(remaining ?? 0)
+  const initial = Number(initialAmount ?? 0)
+  if (initial > 0) {
+    return Math.max(4, Math.min(100, (current / initial) * 100))
+  }
+  const max = Math.max(...fallbackValues.map((value) => Number(value ?? 0)), 1)
+  return Math.max(4, Math.min(100, (current / max) * 100))
 }
 
 function getCardSurface(light) {
@@ -43,50 +53,63 @@ export default function SourceMachineBoard() {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
-    authFetch('/api/mocvd/sources/all')
-      .then((res) => (res.ok ? res.json() : res.json().then((json) => Promise.reject(json.detail || res.status))))
-      .then((json) => {
-        setRows(json.rows ?? [])
-        setSourceNames(json.source_names ?? [])
-      })
-      .catch((err) => setError(typeof err === 'string' ? err : '설비별 소스 현황을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
+    try {
+      const res = await authFetch('/api/mocvd/sources/all')
+      const json = await res.json()
+      if (!res.ok) {
+        throw new Error(json.detail || '설비별 소스현황을 불러오지 못했습니다.')
+      }
+      setRows(json.rows ?? [])
+      setSourceNames(json.source_names ?? [])
+    } catch (err) {
+      setError(err.message || '설비별 소스현황을 불러오지 못했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  const cards = useMemo(() => rows.map((row) => {
-    const sources = sourceNames.map((sourceName) => {
-      const remaining = Number(row[sourceName] ?? 0)
-      const dailyUsage = Number(row[`${sourceName}_daily_usage`] ?? 0)
-      return {
-        sourceName,
-        remaining,
-        dailyUsage,
-        ...getSourceStatus(remaining, dailyUsage),
-      }
-    })
+  const cards = useMemo(
+    () =>
+      rows.map((row) => {
+        const sources = sourceNames.map((sourceName) => {
+          const remaining = Number(row[sourceName] ?? 0)
+          const dailyUsage = Number(row[`${sourceName}_daily_usage`] ?? 0)
+          const initialAmount = Number(row[`${sourceName}_initial_amount`] ?? 0)
+          const thresholdRatio = Number(row[`${sourceName}_threshold_ratio`] ?? 15)
+          return {
+            sourceName,
+            remaining,
+            dailyUsage,
+            initialAmount,
+            thresholdRatio,
+            ...getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio),
+          }
+        })
 
-    const highest = sources.reduce((current, item) => {
-      if (item.key === 'overdue') return 'overdue'
-      if (item.key === 'urgent' && current !== 'overdue') return 'urgent'
-      return current
-    }, 'normal')
+        const highest = sources.reduce((current, item) => {
+          if (item.key === 'overdue') return 'overdue'
+          if (item.key === 'urgent' && current !== 'overdue') return 'urgent'
+          return current
+        }, 'normal')
 
-    return {
-      key: row.machine_no,
-      machine_no: row.machine_no,
-      description: row.description,
-      highest,
-      sources,
-      alertSources: sources.filter((item) => item.key !== 'normal'),
-    }
-  }), [rows, sourceNames])
+        return {
+          key: row.machine_no,
+          machine_no: row.machine_no,
+          description: row.description,
+          highest,
+          sources,
+          alertSources: sources.filter((item) => item.key !== 'normal'),
+        }
+      }),
+    [rows, sourceNames],
+  )
 
   const filteredCards = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
@@ -94,8 +117,8 @@ export default function SourceMachineBoard() {
       if (statusFilter !== 'all' && card.highest !== statusFilter) return false
       if (!keyword) return true
       return (
-        formatMachineLabel(card.machine_no).toLowerCase().includes(keyword)
-        || String(card.description ?? '').toLowerCase().includes(keyword)
+        formatMachineLabel(card.machine_no).toLowerCase().includes(keyword) ||
+        String(card.description ?? '').toLowerCase().includes(keyword)
       )
     })
   }, [cards, searchText, statusFilter])
@@ -129,13 +152,15 @@ export default function SourceMachineBoard() {
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>{filteredCards.length}대 표시</span>
-            <Button icon={<ReloadOutlined />} onClick={fetchData}>새로고침</Button>
+            <Button icon={<ReloadOutlined />} onClick={fetchData}>
+              새로고침
+            </Button>
           </div>
         </div>
       </Card>
 
       {filteredCards.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 설비별 소스 현황이 없습니다." />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 설비별 소스현황이 없습니다." />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
           {filteredCards.map((card) => {
@@ -196,7 +221,11 @@ export default function SourceMachineBoard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {card.sources.map((item) => {
                     const itemMeta = STATUS_META[item.key]
-                    const percent = getBarPercent(item.remaining, card.sources.map((source) => source.remaining))
+                    const percent = getBarPercent(
+                      item.remaining,
+                      item.initialAmount,
+                      card.sources.map((source) => source.remaining),
+                    )
                     return (
                       <div key={item.sourceName}>
                         <div
@@ -210,7 +239,12 @@ export default function SourceMachineBoard() {
                           }}
                         >
                           <span style={{ fontWeight: item.key === 'normal' ? 500 : 700 }}>{item.sourceName}</span>
-                          <span style={{ color: item.key === 'normal' ? 'var(--nowa-text-soft)' : itemMeta.color, fontWeight: item.key === 'normal' ? 500 : 700 }}>
+                          <span
+                            style={{
+                              color: item.key === 'normal' ? 'var(--nowa-text-soft)' : itemMeta.color,
+                              fontWeight: item.key === 'normal' ? 500 : 700,
+                            }}
+                          >
                             {item.daysLeft == null ? '-' : `${item.daysLeft}일`}
                           </span>
                         </div>

@@ -334,7 +334,7 @@ function SourceStatusBoard() {
       ),
     },
     { title: '다음 교체', dataIndex: 'nextDate', width: 120, render: formatDate },
-    { title: '일정표 반영', dataIndex: 'reflected', width: 110, render: (value) => `${value}건` },
+    { title: '입력 반영', dataIndex: 'reflected', width: 110, render: (value) => `${value}건` },
   ]
 
   const renderDateCell = (current) => {
@@ -475,7 +475,7 @@ function SourceStatusBoard() {
               MOCVD 소스교체 현황판
             </div>
             <div style={{ color: 'var(--nowa-text-muted)', fontSize: 15 }}>
-              엑셀 앞 3개 시트(일정표, TABLE, 잔량기입) 기준으로 요약했습니다.
+              소스 입력에서 저장한 기준값과 현재 잔량 기준으로 교체 일정을 자동 계산합니다.
             </div>
           </div>
           <Button className="nowa-btn" icon={<ReloadOutlined />} onClick={fetchStatus}>
@@ -899,47 +899,6 @@ function SourceStatusBoard() {
         </Col>
       </Row>
 
-      <SectionCard title="호기별 상태">
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-          <Input
-            allowClear
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
-            prefix={<SearchOutlined />}
-            placeholder="호기 번호 또는 라인 검색"
-            style={{ width: 220 }}
-          />
-          <Select
-            value={statusFilter}
-            onChange={setStatusFilter}
-            suffixIcon={<FilterOutlined />}
-            style={{ width: 150 }}
-            options={[
-              { value: 'all', label: '전체 위험도' },
-              { value: 'overdue', label: '부족' },
-              { value: 'urgent', label: '임박' },
-              { value: 'upcoming', label: '예정' },
-              { value: 'normal', label: '정상' },
-            ]}
-          />
-          <Select
-            value={sourceFilter}
-            onChange={setSourceFilter}
-            style={{ width: 150 }}
-            options={[{ value: 'all', label: '전체 소스' }, ...sourceOptions]}
-          />
-        </div>
-
-        <Table
-          className="console-table"
-          rowKey="key"
-          columns={machineColumns}
-          dataSource={machineSummary}
-          pagination={{ pageSize: 8, hideOnSinglePage: true }}
-          locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 호기 상태가 없습니다." /> }}
-          scroll={{ x: 960 }}
-        />
-      </SectionCard>
     </div>
   )
 }
