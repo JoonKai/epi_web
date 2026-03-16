@@ -80,7 +80,10 @@ function buildMenuItems(isAdmin) {
       key: 'cost',
       icon: <DollarOutlined />,
       label: '비용',
-      children: [{ key: 'cost-ready', label: '추가 예정', disabled: true }],
+      children: [
+        { key: '/cost/purchase-request', label: '구매요청' },
+        { key: '/cost/master-data', label: '기준정보등록' },
+      ],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
     { key: '/epi/mocvd/personnel', icon: <UserOutlined />, label: '인원 관리' },
@@ -92,6 +95,17 @@ function buildMenuItems(isAdmin) {
   }
 
   return items
+}
+
+function attachPopupClass(items) {
+  return items.map((item) => {
+    if (!item.children) return item
+    return {
+      ...item,
+      popupClassName: 'console-menu-popup',
+      children: attachPopupClass(item.children),
+    }
+  })
 }
 
 function findPath(items, pathname, trail = []) {
@@ -119,6 +133,8 @@ const PAGE_COLOR = {
   '/epi/simulator': '#f59e0b',
   '/wafermap': '#ec4899',
   '/run-comparison': '#f43f5e',
+  '/cost/purchase-request': '#f59e0b',
+  '/cost/master-data': '#8b5cf6',
   '/grid': '#22c55e',
   '/admin': '#f43f5e',
 }
@@ -131,7 +147,7 @@ function Layout({ children, isDark, onThemeToggle }) {
   const isDashboardPage = location.pathname === '/dashboard'
 
   const isAdmin = user?.role === 'admin'
-  const menuItems = useMemo(() => buildMenuItems(isAdmin), [isAdmin])
+  const menuItems = useMemo(() => attachPopupClass(buildMenuItems(isAdmin)), [isAdmin])
   const breadcrumbs = findPath(menuItems, location.pathname) ?? ['EPI']
   const title = breadcrumbs[breadcrumbs.length - 1]
   const pageColor = PAGE_COLOR[location.pathname] ?? '#6366f1'
@@ -201,7 +217,7 @@ function Layout({ children, isDark, onThemeToggle }) {
           {!collapsed && (
             <div style={{ overflow: 'hidden' }}>
               <div style={{ color: '#c7d2fe', fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap', textShadow: '0 0 20px rgba(129,140,248,0.4)' }}>
-                EPI Web
+                EPI
               </div>
               <div style={{ color: 'rgba(165,180,252,0.5)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
                 운영 시스템

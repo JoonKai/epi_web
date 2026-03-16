@@ -292,6 +292,67 @@ a { color: inherit; }
 .console-menu.ant-menu .ant-menu-sub { background: transparent !important; }
 .console-menu.ant-menu .ant-menu-submenu-arrow { color: rgba(148,163,184,0.5) !important; }
 
+.console-menu-popup.ant-menu-submenu-popup .ant-menu {
+  background: linear-gradient(180deg, rgba(9, 18, 38, 0.98) 0%, rgba(5, 15, 32, 0.98) 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(99, 102, 241, 0.08) !important;
+  padding: 10px 0 !important;
+  backdrop-filter: blur(16px);
+}
+
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-item,
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-submenu-title {
+  height: 44px !important;
+  line-height: 44px !important;
+  margin: 4px 10px !important;
+  width: calc(100% - 20px) !important;
+  border-radius: 14px !important;
+  color: rgba(226, 232, 240, 0.78) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+}
+
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-item:hover,
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #e2e8f0 !important;
+}
+
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-item-selected {
+  background: linear-gradient(90deg, rgba(99,102,241,0.22) 0%, rgba(139,92,246,0.12) 100%) !important;
+  color: #818cf8 !important;
+  box-shadow: inset 3px 0 0 #6366f1;
+}
+
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-item-selected .anticon,
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-item-selected .ant-menu-title-content {
+  color: #818cf8 !important;
+}
+
+.console-menu-popup.ant-menu-submenu-popup .ant-menu-submenu-arrow,
+.console-menu-popup.ant-menu-submenu-popup .anticon {
+  color: rgba(148, 163, 184, 0.72) !important;
+}
+
+.ant-tooltip.console-collapsed-tooltip .ant-tooltip-inner,
+.ant-menu-inline-collapsed-tooltip .ant-tooltip-inner {
+  background: linear-gradient(135deg, rgba(49, 70, 168, 0.96) 0%, rgba(76, 99, 214, 0.96) 100%) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(129, 140, 248, 0.28) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 18px 42px rgba(7, 12, 26, 0.42), 0 0 0 1px rgba(129, 140, 248, 0.08) !important;
+  padding: 10px 16px !important;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ant-tooltip.console-collapsed-tooltip .ant-tooltip-arrow::before,
+.ant-menu-inline-collapsed-tooltip .ant-tooltip-arrow::before {
+  background: rgba(60, 83, 190, 0.98) !important;
+  border: 1px solid rgba(129, 140, 248, 0.24) !important;
+}
+
 /* ── Cards / Panels ─────────────────────────────────────────────── */
 .nowa-card.ant-card,
 .console-panel.ant-card {

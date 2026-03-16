@@ -21,6 +21,8 @@ import PmPlan from './pages/epi/mocvd/PmPlan'
 import MocvdSource from './pages/epi/mocvd/Source'
 import WorkLog from './pages/epi/mocvd/WorkLog'
 import Simulator from './pages/epi/Simulator'
+import PurchaseRequest from './pages/cost/PurchaseRequest'
+import CostMasterData from './pages/cost/CostMasterData'
 
 // ── Nowa-TS Design Tokens ──────────────────────────────────────────
 const DARK_TOKENS = {
@@ -106,6 +108,8 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/wafermap" element={<WaferMap />} />
           <Route path="/run-comparison" element={<RunComparison />} />
           <Route path="/grid" element={<DataGrid />} />
+          <Route path="/cost/purchase-request" element={<PurchaseRequest />} />
+          <Route path="/cost/master-data" element={<CostMasterData />} />
           {user.role === 'admin' && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

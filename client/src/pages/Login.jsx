@@ -76,7 +76,7 @@ function Login() {
           >
             E
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#e2e8f0', letterSpacing: -0.5 }}>EPI Web</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: '#e2e8f0', letterSpacing: -0.5 }}>EPI</div>
           <div style={{ fontSize: 13, color: 'rgba(148,163,184,0.7)', marginTop: 6, letterSpacing: 0.3 }}>
             사내 EPI 공정 관리 시스템
           </div>
