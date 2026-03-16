@@ -46,8 +46,6 @@ def _build_event(machine, source_type, source_row, overdue_days: int, urgent_day
         status = "overdue"
     elif days_left is not None and days_left <= urgent_days:
         status = "urgent"
-    elif days_left is not None and days_left <= 30:
-        status = "upcoming"
     else:
         status = "normal"
 

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User, SystemSetting
 from auth import verify_password, create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES_DEFAULT
+from audit_log import write_audit_log
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -22,6 +23,15 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
         setting = db.query(SystemSetting).filter(SystemSetting.key == "session_expire_minutes").first()
         expire_minutes = int(setting.value) if setting else ACCESS_TOKEN_EXPIRE_MINUTES_DEFAULT
     token = create_access_token({"sub": user.username, "role": user.role}, expire_minutes=expire_minutes)
+    write_audit_log(
+        db,
+        log_type="activity",
+        actor=user.username,
+        category="접속",
+        action="로그인",
+        target=user.username,
+        detail=f"{user.username} 계정으로 로그인했습니다.",
+    )
     return {
         "access_token": token,
         "token_type": "bearer",

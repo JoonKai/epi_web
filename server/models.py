@@ -112,3 +112,41 @@ class PersonnelMember(Base):
     note = Column(String(200), default="")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
+
+
+class MocvdHandoverNote(Base):
+    __tablename__ = "mocvd_handover_note"
+
+    id = Column(Integer, primary_key=True, index=True)
+    handover_date = Column(String(20), nullable=False, index=True)
+    shift_type = Column(String(20), nullable=False, index=True)
+    title = Column(String(200), default="")
+    content = Column(String(2000), nullable=False)
+    author = Column(String(50), default="")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class MocvdNotice(Base):
+    __tablename__ = "mocvd_notice"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), default="")
+    content = Column(String(2000), nullable=False)
+    is_active = Column(Boolean, default=True, index=True)
+    author = Column(String(50), default="")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    log_type = Column(String(20), nullable=False, index=True, default="system")
+    actor = Column(String(50), default="")
+    category = Column(String(50), default="")
+    action = Column(String(100), default="")
+    target = Column(String(100), default="")
+    detail = Column(String(500), default="")
+    created_at = Column(DateTime, default=func.now(), index=True)

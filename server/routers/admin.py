@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from auth import hash_password, require_admin
+from audit_log import write_audit_log
 from database import get_db
 from models import (
+    AuditLog,
     MocvdMachine,
     PersonnelMember,
     PersonnelVendor,
@@ -105,6 +107,15 @@ def update_user(user_id: int, body: UserUpdate, db: Session = Depends(get_db), _
     user.is_active = body.is_active
     user.session_expire_minutes = body.session_expire_minutes
     db.commit()
+    write_audit_log(
+        db,
+        log_type="system",
+        actor="admin",
+        category="계정",
+        action="사용자 생성",
+        target=body.username,
+        detail=f"관리자 권한으로 {body.username} 계정을 추가했습니다.",
+    )
     return {"result": "ok"}
 
 
@@ -422,3 +433,24 @@ def update_settings(body: dict, db: Session = Depends(get_db), _=Depends(require
             db.add(SystemSetting(key=key, value=str(value)))
     db.commit()
     return {"result": "ok"}
+
+
+@router.get("/logs")
+def list_logs(log_type: str = "system", db: Session = Depends(get_db), _=Depends(require_admin)):
+    query = db.query(AuditLog).order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+    if log_type in {"system", "activity"}:
+        query = query.filter(AuditLog.log_type == log_type)
+    rows = query.limit(200).all()
+    return [
+        {
+            "id": row.id,
+            "log_type": row.log_type,
+            "occurred_at": row.created_at.strftime("%Y-%m-%d %H:%M") if row.created_at else None,
+            "actor": row.actor,
+            "category": row.category,
+            "action": row.action,
+            "target": row.target,
+            "detail": row.detail,
+        }
+        for row in rows
+    ]

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Tabs } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { authFetch } from '../../../context/AuthContext'
 import SourceChangeLogTab from './SourceChangeLogTab'
 import SourceStatusBoard from './SourceStatusBoard'
@@ -687,9 +688,18 @@ function SourceInputTab() {
 }
 
 export default function Source() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = useMemo(() => {
+    const tab = new URLSearchParams(location.search).get('tab')
+    const allowed = ['status-board', 'machine-board', 'input', 'change-log']
+    return allowed.includes(tab) ? tab : 'status-board'
+  }, [location.search])
+
   return (
     <Tabs
-      defaultActiveKey="status-board"
+      activeKey={activeTab}
+      onChange={(key) => navigate(`/epi/mocvd/source?tab=${key}`)}
       items={[
         { key: 'status-board', label: '소스교체 현황판', children: <SourceStatusBoard /> },
         { key: 'machine-board', label: '설비별 소스현황', children: <SourceMachineBoard /> },

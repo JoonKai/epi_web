@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import {
+  BookOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons'
 import { Button, Card, DatePicker, Form, Input, Select, Space, Table, Tag, message } from 'antd'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
@@ -15,8 +21,7 @@ const INITIAL_ROWS = [
     start_date: '2026-04-18 09:10',
     end_date: '',
     situation: '15step에서 Inner PID CTRL overtemp alarm 발생',
-    action:
-      'Chamber 내부 확인 중 Water leak 확인. Filament 분리 및 inner filament 단선 확인 후 Chamber open 점검 대기 중.',
+    action: 'Chamber 내부 확인 중 Water leak 확인. Filament 분리 및 inner filament 단선 확인 후 Chamber open 점검 대기 중.',
   },
   {
     key: 2,
@@ -108,7 +113,11 @@ export default function WorkLog() {
     })
   }
 
-  const handleAdd = async () => {
+  useEffect(() => {
+    setDefaultFormValues()
+  }, [])
+
+  const handleSave = async () => {
     try {
       const values = await form.validateFields()
       const nextRow = {
@@ -120,6 +129,7 @@ export default function WorkLog() {
         situation: values.situation.trim(),
         action: values.action.trim(),
       }
+
       if (editingKey != null) {
         setRows((prev) => prev.map((row) => (row.key === editingKey ? nextRow : row)))
         message.success('업무일지를 수정했습니다.')
@@ -127,6 +137,7 @@ export default function WorkLog() {
         setRows((prev) => [nextRow, ...prev])
         message.success('업무일지를 추가했습니다.')
       }
+
       setEditingKey(null)
       form.resetFields()
       setDefaultFormValues()
@@ -141,10 +152,6 @@ export default function WorkLog() {
     form.resetFields()
     setDefaultFormValues()
   }
-
-  useEffect(() => {
-    setDefaultFormValues()
-  }, [])
 
   const handleDelete = (key) => {
     setRows((prev) => prev.filter((row) => row.key !== key))
@@ -178,27 +185,27 @@ export default function WorkLog() {
     {
       title: '호기',
       dataIndex: 'machine_no',
-      width: 120,
+      width: 140,
       align: 'center',
       render: (value) => <span style={{ fontWeight: 800, color: 'var(--nowa-primary)' }}>{formatMachineLabel(value)}</span>,
     },
     {
       title: '시작날짜',
       dataIndex: 'start_date',
-      width: 160,
+      width: 170,
       align: 'center',
     },
     {
       title: '종료날짜',
       dataIndex: 'end_date',
-      width: 160,
+      width: 170,
       align: 'center',
       render: (value) => value || '-',
     },
     {
       title: '상황',
       dataIndex: 'situation',
-      width: 520,
+      width: 620,
       render: (value) => <span style={{ color: 'var(--nowa-text)' }}>상황 : {value}</span>,
     },
     {
@@ -256,7 +263,7 @@ export default function WorkLog() {
             <Button icon={<ReloadOutlined />} onClick={handleReset}>
               샘플 복원
             </Button>
-            <Button type="primary" icon={editingKey != null ? <EditOutlined /> : <PlusOutlined />} onClick={handleAdd}>
+            <Button type="primary" icon={editingKey != null ? <EditOutlined /> : <PlusOutlined />} onClick={handleSave}>
               {editingKey != null ? '수정 저장' : '일지 추가'}
             </Button>
           </Space>
@@ -319,7 +326,7 @@ export default function WorkLog() {
           columns={columns}
           dataSource={rows}
           pagination={{ pageSize: 8, showSizeChanger: false }}
-          scroll={{ x: 1900 }}
+          scroll={{ x: 2100 }}
         />
       </Card>
     </div>

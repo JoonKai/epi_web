@@ -113,10 +113,12 @@ const PAGE_COLOR = {
   '/epi/mocvd/pm-plan': '#06b6d4',
   '/epi/mocvd/management': '#0ea5e9',
   '/epi/mocvd/personnel': '#f97316',
+  '/epi/mocvd/work-log': '#a78bfa',
   '/epi/mocvd/master-data': '#8b5cf6',
   '/epi/measurement': '#3b82f6',
   '/epi/simulator': '#f59e0b',
   '/wafermap': '#ec4899',
+  '/run-comparison': '#f43f5e',
   '/grid': '#22c55e',
   '/admin': '#f43f5e',
 }
@@ -126,6 +128,7 @@ function Layout({ children, isDark, onThemeToggle }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const isDashboardPage = location.pathname === '/dashboard'
 
   const isAdmin = user?.role === 'admin'
   const menuItems = useMemo(() => buildMenuItems(isAdmin), [isAdmin])
@@ -148,8 +151,10 @@ function Layout({ children, isDark, onThemeToggle }) {
         collapsed={collapsed}
         trigger={null}
         style={{
-          background: 'var(--nowa-sider-bg)',
-          borderRight: '1px solid var(--nowa-border)',
+          background: isDark
+            ? 'linear-gradient(180deg, #0a0e1c 0%, #0d1428 60%, #0a1020 100%)'
+            : 'linear-gradient(180deg, #1e1f3b 0%, #1a1c38 60%, #161830 100%)',
+          borderRight: '1px solid rgba(99,102,241,0.2)',
           display: 'flex',
           flexDirection: 'column',
           position: 'fixed',
@@ -158,6 +163,7 @@ function Layout({ children, isDark, onThemeToggle }) {
           bottom: 0,
           zIndex: 100,
           overflow: 'hidden',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.5)',
         }}
       >
         <div
@@ -168,9 +174,10 @@ function Layout({ children, isDark, onThemeToggle }) {
             alignItems: 'center',
             gap: 12,
             padding: '0 20px',
-            borderBottom: '1px solid var(--nowa-border)',
+            borderBottom: '1px solid rgba(99,102,241,0.18)',
             cursor: 'pointer',
             flexShrink: 0,
+            background: 'linear-gradient(90deg, rgba(99,102,241,0.08) 0%, transparent 100%)',
           }}
         >
           <div
@@ -186,17 +193,17 @@ function Layout({ children, isDark, onThemeToggle }) {
               fontWeight: 900,
               color: '#fff',
               flexShrink: 0,
-              boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+              boxShadow: '0 4px 16px rgba(99,102,241,0.55)',
             }}
           >
             E
           </div>
           {!collapsed && (
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ color: 'var(--nowa-text)', fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap' }}>
+              <div style={{ color: '#c7d2fe', fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap', textShadow: '0 0 20px rgba(129,140,248,0.4)' }}>
                 EPI Web
               </div>
-              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'rgba(165,180,252,0.5)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
                 운영 시스템
               </div>
             </div>
@@ -204,12 +211,20 @@ function Layout({ children, isDark, onThemeToggle }) {
         </div>
 
         {!collapsed && (
-          <div style={{ padding: '16px 16px 4px', color: 'var(--nowa-text-muted)', fontSize: 10, fontWeight: 700, letterSpacing: 1.6, textTransform: 'uppercase' }}>
+          <div style={{ padding: '16px 20px 4px', color: 'rgba(129,140,248,0.5)', fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
             Main Menu
           </div>
         )}
 
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            paddingBottom: 24,
+          }}
+        >
           <Menu
             className="console-menu"
             mode="inline"
@@ -218,7 +233,7 @@ function Layout({ children, isDark, onThemeToggle }) {
             defaultOpenKeys={[]}
             items={menuItems}
             onClick={({ key }) => navigate(key)}
-            style={{ background: 'transparent', border: 'none' }}
+            style={{ background: 'transparent', border: 'none', paddingBottom: 88 }}
           />
         </div>
       </Sider>
@@ -240,9 +255,12 @@ function Layout({ children, isDark, onThemeToggle }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'var(--nowa-header-bg)',
-            borderBottom: `3px solid ${pageColor}`,
-            backdropFilter: 'blur(12px)',
+            background: isDark ? 'var(--nowa-header-bg)' : 'rgba(248,249,255,0.95)',
+            borderBottom: `2px solid ${pageColor}`,
+            boxShadow: isDark
+              ? `0 2px 20px ${pageColor}28, 0 1px 0 rgba(255,255,255,0.04)`
+              : `0 2px 16px ${pageColor}22, 0 1px 0 rgba(255,255,255,0.8)`,
+            backdropFilter: 'blur(16px)',
             position: 'sticky',
             top: 0,
             zIndex: 99,
@@ -335,7 +353,7 @@ function Layout({ children, isDark, onThemeToggle }) {
         </Header>
 
         <Content style={{ flex: 1, padding: 24, background: 'var(--nowa-bg)', minHeight: 0 }}>
-          {children}
+          <div className={isDashboardPage ? 'page-frame' : 'page-frame page-scale-compact'}>{children}</div>
         </Content>
       </AntLayout>
     </AntLayout>

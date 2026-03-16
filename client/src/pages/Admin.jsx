@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Button,
+  Empty,
   Form,
   Input,
   Modal,
@@ -13,12 +14,7 @@ import {
   Tag,
   message,
 } from 'antd'
-import {
-  DeleteOutlined,
-  HistoryOutlined,
-  KeyOutlined,
-  PlusOutlined,
-} from '@ant-design/icons'
+import { DeleteOutlined, HistoryOutlined, KeyOutlined, PlusOutlined } from '@ant-design/icons'
 import { authFetch } from '../context/AuthContext'
 
 const SESSION_OPTIONS = [
@@ -31,9 +27,9 @@ const SESSION_OPTIONS = [
   { value: 480, label: '8시간' },
 ]
 
-const LOG_ROWS = [
+const SYSTEM_LOG_FALLBACK = [
   {
-    key: 1,
+    id: 'sample-1',
     occurred_at: '2026-03-16 08:42',
     actor: 'admin',
     category: '계정',
@@ -42,31 +38,22 @@ const LOG_ROWS = [
     detail: '관리자 권한으로 계정을 추가했습니다.',
   },
   {
-    key: 2,
+    id: 'sample-2',
     occurred_at: '2026-03-16 09:15',
     actor: 'admin',
-    category: '권한',
+    category: '세션',
     action: '세션 만료 변경',
     target: '403790',
     detail: '세션 만료 시간을 30분으로 변경했습니다.',
   },
   {
-    key: 3,
-    occurred_at: '2026-03-16 10:05',
-    actor: 'admin',
-    category: '접속',
-    action: '로그인',
-    target: 'admin',
-    detail: '관리자 계정으로 로그인했습니다.',
-  },
-  {
-    key: 4,
+    id: 'sample-3',
     occurred_at: '2026-03-16 11:23',
     actor: 'admin',
     category: '계정',
     action: '비밀번호 변경',
     target: '403790',
-    detail: '사용자 비밀번호를 초기화했습니다.',
+    detail: '사용자 비밀번호를 변경했습니다.',
   },
 ]
 
@@ -85,7 +72,11 @@ function UserTab() {
     setLoading(true)
     try {
       const res = await authFetch('/api/admin/users')
-      setData(await res.json())
+      const json = await res.json().catch(() => [])
+      if (!res.ok) throw new Error(json.detail || '사용자 목록을 불러오지 못했습니다.')
+      setData(Array.isArray(json) ? json : [])
+    } catch (err) {
+      message.error(err.message || '사용자 목록을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -101,15 +92,15 @@ function UserTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     })
-    if (res.ok) {
-      message.success('계정을 생성했습니다.')
-      setModalOpen(false)
-      form.resetFields()
-      fetchData()
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      message.error(json.detail || '계정을 생성하지 못했습니다.')
       return
     }
-    const err = await res.json().catch(() => ({}))
-    message.error(err.detail || '계정을 생성하지 못했습니다.')
+    message.success('계정을 생성했습니다.')
+    setModalOpen(false)
+    form.resetFields()
+    fetchData()
   }
 
   const handleUpdate = async (id, values) => {
@@ -125,24 +116,24 @@ function UserTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (res.ok) {
-      message.success('사용자 정보를 수정했습니다.')
-      fetchData()
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      message.error(json.detail || '사용자 정보를 수정하지 못했습니다.')
       return
     }
-    const err = await res.json().catch(() => ({}))
-    message.error(err.detail || '사용자 정보를 수정하지 못했습니다.')
+    message.success('사용자 정보를 수정했습니다.')
+    fetchData()
   }
 
   const handleDelete = async (id) => {
     const res = await authFetch(`/api/admin/users/${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      message.success('계정을 삭제했습니다.')
-      fetchData()
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      message.error(json.detail || '계정을 삭제하지 못했습니다.')
       return
     }
-    const err = await res.json().catch(() => ({}))
-    message.error(err.detail || '계정을 삭제하지 못했습니다.')
+    message.success('계정을 삭제했습니다.')
+    fetchData()
   }
 
   const handleResetPw = async (values) => {
@@ -151,14 +142,14 @@ function UserTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: values.password }),
     })
-    if (res.ok) {
-      message.success('비밀번호를 변경했습니다.')
-      setPwModalOpen(false)
-      pwForm.resetFields()
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      message.error(json.detail || '비밀번호를 변경하지 못했습니다.')
       return
     }
-    const err = await res.json().catch(() => ({}))
-    message.error(err.detail || '비밀번호를 변경하지 못했습니다.')
+    message.success('비밀번호를 변경했습니다.')
+    setPwModalOpen(false)
+    pwForm.resetFields()
   }
 
   const columns = [
@@ -228,11 +219,7 @@ function UserTab() {
               setPwModalOpen(true)
             }}
           />
-          <Popconfirm
-            title="계정을 삭제하시겠습니까?"
-            onConfirm={() => handleDelete(row.id)}
-            disabled={isProtectedAdmin(row)}
-          >
+          <Popconfirm title="계정을 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)} disabled={isProtectedAdmin(row)}>
             <Button size="small" danger icon={<DeleteOutlined />} disabled={isProtectedAdmin(row)} />
           </Popconfirm>
         </div>
@@ -281,7 +268,7 @@ function UserTab() {
   )
 }
 
-function LogTab() {
+function LogTable({ rows, loading }) {
   const columns = [
     { title: '발생시각', dataIndex: 'occurred_at', width: 170 },
     { title: '사용자', dataIndex: 'actor', width: 120 },
@@ -289,12 +276,64 @@ function LogTab() {
       title: '분류',
       dataIndex: 'category',
       width: 110,
-      render: (value) => <Tag color="processing">{value}</Tag>,
+      render: (value) => <Tag color="processing">{value || '-'}</Tag>,
     },
     { title: '동작', dataIndex: 'action', width: 160 },
     { title: '대상', dataIndex: 'target', width: 140 },
     { title: '상세 내용', dataIndex: 'detail' },
   ]
+
+  return (
+    <Table
+      rowKey={(row) => row.id ?? `${row.occurred_at}-${row.actor}-${row.action}`}
+      columns={columns}
+      dataSource={rows}
+      loading={loading}
+      locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 로그가 없습니다." /> }}
+      pagination={{ pageSize: 10, showSizeChanger: false }}
+      size="middle"
+      bordered
+    />
+  )
+}
+
+function LogTab() {
+  const [systemLogs, setSystemLogs] = useState([])
+  const [activityLogs, setActivityLogs] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const fetchLogs = async () => {
+    setLoading(true)
+    try {
+      const [systemRes, activityRes] = await Promise.all([
+        authFetch('/api/admin/logs?log_type=system'),
+        authFetch('/api/admin/logs?log_type=activity'),
+      ])
+      const [systemJson, activityJson] = await Promise.all([
+        systemRes.json().catch(() => []),
+        activityRes.json().catch(() => []),
+      ])
+      setSystemLogs(systemRes.ok ? (systemJson.length ? systemJson : SYSTEM_LOG_FALLBACK) : SYSTEM_LOG_FALLBACK)
+      setActivityLogs(activityRes.ok ? activityJson : [])
+    } catch {
+      setSystemLogs(SYSTEM_LOG_FALLBACK)
+      setActivityLogs([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+  }, [])
+
+  const items = useMemo(
+    () => [
+      { key: 'system', label: '시스템 로그', children: <LogTable rows={systemLogs} loading={loading} /> },
+      { key: 'activity', label: '활동 로그', children: <LogTable rows={activityLogs} loading={loading} /> },
+    ],
+    [activityLogs, loading, systemLogs],
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -312,18 +351,11 @@ function LogTab() {
           <span>관리자 Log</span>
         </div>
         <div style={{ marginTop: 6, color: 'var(--nowa-text-muted)', fontSize: 13 }}>
-          계정 생성, 권한 변경, 세션 설정, 비밀번호 초기화 같은 관리자 작업 이력을 확인합니다.
+          시스템 로그와 사용자 활동 로그를 구분해서 확인합니다.
         </div>
       </div>
 
-      <Table
-        rowKey="key"
-        columns={columns}
-        dataSource={LOG_ROWS}
-        pagination={{ pageSize: 10, showSizeChanger: false }}
-        size="middle"
-        bordered
-      />
+      <Tabs items={items} />
     </div>
   )
 }

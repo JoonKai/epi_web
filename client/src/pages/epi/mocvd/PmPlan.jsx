@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button, Card, Col, Input, Row, Segmented, Space, Table, Tabs, Tag } from 'antd'
 import { CalendarOutlined, ReloadOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -317,9 +318,18 @@ function PmInputTab() {
 }
 
 export default function PmPlan() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = useMemo(() => {
+    const tab = new URLSearchParams(location.search).get('tab')
+    const allowed = ['status', 'machine', 'input']
+    return allowed.includes(tab) ? tab : 'status'
+  }, [location.search])
+
   return (
     <Tabs
-      defaultActiveKey="status"
+      activeKey={activeTab}
+      onChange={(key) => navigate(`/epi/mocvd/pm-plan?tab=${key}`)}
       items={[
         { key: 'status', label: 'PM주기 현황판', children: <PmStatusBoard /> },
         { key: 'machine', label: '설비별 PM현황', children: <PmMachineBoard /> },

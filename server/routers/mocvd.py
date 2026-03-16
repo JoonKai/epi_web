@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from models import MocvdMachine, MocvdSource, SourceChangeLog, SourceType, SystemSetting
+from models import MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdSource, SourceChangeLog, SourceType, SystemSetting
 from source_status import (
     DEFAULT_OVERDUE_DAYS,
     DEFAULT_THRESHOLD_RATIO,
@@ -70,6 +70,36 @@ class SourceStatusSettingsUpdate(BaseModel):
     urgent_days: int = DEFAULT_URGENT_DAYS
 
 
+class HandoverNoteCreate(BaseModel):
+    handover_date: str
+    shift_type: str
+    title: str = ""
+    content: str
+
+
+class HandoverNoteUpdate(HandoverNoteCreate):
+    pass
+
+
+class NoticeCreate(BaseModel):
+    title: str = ""
+    content: str
+    is_active: bool = True
+
+
+class NoticeUpdate(NoticeCreate):
+    pass
+
+
+def _can_manage_handover_note(current_user, row: MocvdHandoverNote) -> bool:
+    return getattr(current_user, "role", "") == "admin" or row.author == getattr(current_user, "username", "")
+
+
+def _require_admin(current_user):
+    if getattr(current_user, "role", "") != "admin":
+        raise HTTPException(status_code=403, detail="관리자만 처리할 수 있습니다.")
+
+
 def _active_source_types(db: Session):
     return db.query(SourceType).filter(SourceType.is_active == True).order_by(SourceType.order_idx).all()
 
@@ -90,6 +120,8 @@ def _get_source_status_settings(db: Session) -> dict[str, int]:
     if urgent_days < overdue_days:
         urgent_days = overdue_days
     return {"overdue_days": overdue_days, "urgent_days": urgent_days}
+
+
 
 
 @router.get("/machines")
@@ -178,8 +210,6 @@ def update_sources(machine_no: int, items: list[SourceUpdate], db: Session = Dep
             )
     db.commit()
     return {"result": "ok"}
-
-
 @router.put("/sources/all")
 def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_db), _=Depends(get_current_user)):
     for item in items:
@@ -263,6 +293,158 @@ def get_source_status(db: Session = Depends(get_db), _=Depends(get_current_user)
         overdue_days=settings["overdue_days"],
         urgent_days=settings["urgent_days"],
     )
+
+
+@router.get("/notices")
+def list_notices(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    rows = (
+        db.query(MocvdNotice)
+        .filter(MocvdNotice.is_active == True)
+        .order_by(MocvdNotice.updated_at.desc(), MocvdNotice.id.desc())
+        .limit(20)
+        .all()
+    )
+    return [
+        {
+            "id": row.id,
+            "title": row.title,
+            "content": row.content,
+            "is_active": row.is_active,
+            "author": row.author,
+            "created_at": row.created_at.strftime("%Y-%m-%d %H:%M") if row.created_at else None,
+            "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M") if row.updated_at else None,
+        }
+        for row in rows
+    ]
+
+
+@router.post("/notices")
+def create_notice(
+    body: NoticeCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _require_admin(current_user)
+    db.add(
+        MocvdNotice(
+            title=body.title.strip(),
+            content=body.content.strip(),
+            is_active=body.is_active,
+            author=getattr(current_user, "username", ""),
+        )
+    )
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.put("/notices/{notice_id}")
+def update_notice(
+    notice_id: int,
+    body: NoticeUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _require_admin(current_user)
+    row = db.query(MocvdNotice).filter(MocvdNotice.id == notice_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="공지사항을 찾을 수 없습니다.")
+    row.title = body.title.strip()
+    row.content = body.content.strip()
+    row.is_active = body.is_active
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.delete("/notices/{notice_id}")
+def delete_notice(
+    notice_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _require_admin(current_user)
+    row = db.query(MocvdNotice).filter(MocvdNotice.id == notice_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="공지사항을 찾을 수 없습니다.")
+    db.delete(row)
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.get("/handover-notes")
+def list_handover_notes(
+    shift_type: str | None = None,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    query = db.query(MocvdHandoverNote).order_by(MocvdHandoverNote.handover_date.desc(), MocvdHandoverNote.updated_at.desc())
+    if shift_type in {"day", "night"}:
+        query = query.filter(MocvdHandoverNote.shift_type == shift_type)
+    rows = query.limit(50).all()
+    return [
+        {
+          "id": row.id,
+          "handover_date": row.handover_date,
+          "shift_type": row.shift_type,
+          "title": row.title,
+          "content": row.content,
+          "author": row.author,
+          "created_at": row.created_at.strftime("%Y-%m-%d %H:%M") if row.created_at else None,
+          "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M") if row.updated_at else None,
+        }
+        for row in rows
+    ]
+
+
+@router.post("/handover-notes")
+def create_handover_note(
+    body: HandoverNoteCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    shift_type = body.shift_type if body.shift_type in {"day", "night"} else "day"
+    db.add(
+        MocvdHandoverNote(
+            handover_date=body.handover_date,
+            shift_type=shift_type,
+            title=body.title,
+            content=body.content,
+            author=getattr(current_user, "username", ""),
+        )
+    )
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.put("/handover-notes/{note_id}")
+def update_handover_note(
+    note_id: int,
+    body: HandoverNoteUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    row = db.query(MocvdHandoverNote).filter(MocvdHandoverNote.id == note_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="인수인계 게시글을 찾을 수 없습니다.")
+    if not _can_manage_handover_note(current_user, row):
+        raise HTTPException(status_code=403, detail="관리자를 제외하고 본인이 작성한 인수인계일지만 수정할 수 있습니다.")
+    row.handover_date = body.handover_date
+    row.shift_type = body.shift_type if body.shift_type in {"day", "night"} else row.shift_type
+    row.title = body.title
+    row.content = body.content
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.delete("/handover-notes/{note_id}")
+def delete_handover_note(note_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    row = db.query(MocvdHandoverNote).filter(MocvdHandoverNote.id == note_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="인수인계 게시글을 찾을 수 없습니다.")
+    if not _can_manage_handover_note(current_user, row):
+        raise HTTPException(status_code=403, detail="관리자를 제외하고 본인이 작성한 인수인계일지만 삭제할 수 있습니다.")
+    db.delete(row)
+    db.commit()
+    return {"result": "ok"}
 
 
 @router.get("/source-change-logs")
