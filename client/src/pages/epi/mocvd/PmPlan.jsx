@@ -125,24 +125,31 @@ function statusTag(daysLeft) {
   return <Tag color="green">정상</Tag>
 }
 
-function SummaryCard({ label, value, suffix, sub }) {
+function SummaryCard({ label, value, suffix, sub, gradient = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)', icon = <CalendarOutlined /> }) {
   return (
-    <div
-      style={{
-        borderRadius: 20,
-        padding: '22px 24px',
-        background: 'var(--nowa-hero-bg)',
-        border: '1px solid var(--nowa-border)',
-        boxShadow: 'var(--nowa-shadow-card)',
-        minHeight: 140,
-      }}
-    >
-      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13, fontWeight: 700 }}>{label}</div>
-      <div style={{ color: 'var(--nowa-text)', fontWeight: 900, lineHeight: 1, marginTop: 10 }}>
-        <span style={{ fontSize: 44 }}>{value}</span>
-        {suffix ? <span style={{ fontSize: 18, marginLeft: 6 }}>{suffix}</span> : null}
+    <div className="nowa-kpi-card" style={{ background: gradient }}>
+      <div
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 12,
+          background: 'var(--nowa-soft-fill-strong)',
+          color: 'var(--nowa-contrast-text)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 18,
+          marginBottom: 12,
+        }}
+      >
+        {icon}
       </div>
-      <div style={{ color: 'var(--nowa-text-soft)', fontSize: 12, marginTop: 10 }}>{sub}</div>
+      <div style={{ color: 'var(--nowa-contrast-text-soft)', fontSize: 13, fontWeight: 700 }}>{label}</div>
+      <div style={{ marginTop: 10, color: 'var(--nowa-contrast-text)', fontWeight: 900, lineHeight: 1 }}>
+        {value}
+        {suffix ? <span style={{ fontSize: 15, marginLeft: 4, color: 'var(--nowa-contrast-text-soft)' }}>{suffix}</span> : null}
+      </div>
+      <div style={{ color: 'var(--nowa-contrast-text-muted)', fontSize: 12, marginTop: 8 }}>{sub}</div>
     </div>
   )
 }
@@ -171,11 +178,12 @@ function PmStatusBoard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ ...panelStyle, padding: 24, borderRadius: 22 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="nowa-page-intro">
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', width: '100%' }}>
           <div>
-            <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>MOCVD PM주기 현황판</div>
-            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
+            <div className="nowa-page-kicker">PM ??</div>
+            <div className="nowa-page-title" style={{ fontSize: 24, marginBottom: 0 }}>MOCVD PM주기 현황판</div>
+            <div className="nowa-page-desc" style={{ marginTop: 8 }}>
               `11111.xlsm`의 `PM 주기 계획(Run)`, `PM 주기 계획(Day)` 구조를 기준으로 화면을 구성했습니다.
             </div>
           </div>

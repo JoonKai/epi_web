@@ -233,20 +233,15 @@ export default function WorkLog() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div
-        style={{
-          padding: 24,
-          borderRadius: 22,
-          border: '1px solid var(--nowa-border)',
-          background: 'var(--nowa-hero-bg)',
-          boxShadow: 'var(--nowa-shadow-card)',
-        }}
-      >
-        <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginBottom: 4 }}>
+      <div className="nowa-page-intro">
+        <div>
+          <div className="nowa-page-kicker">?? ??</div>
+          <div className="nowa-page-title" style={{ fontSize: 24 }}>
           MOCVD 업무 일지
         </div>
-        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
+          <div className="nowa-page-desc">
           장비별 이상, 점검, 조치 내용을 현재 UI 스타일에 맞춰 바로 기록합니다.
+          </div>
         </div>
       </div>
 

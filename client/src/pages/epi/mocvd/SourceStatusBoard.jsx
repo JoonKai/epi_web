@@ -56,50 +56,31 @@ function getRiskOrder(status) {
   return 3
 }
 
-function SummaryCard({ label, value, suffix, icon, gradient, sub }) {
-  const { isLight: light } = useThemeMode()
+function SummaryCard({ label, value, suffix, icon, gradient = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)', sub }) {
   return (
-    <div style={{
-      borderRadius: 20,
-      padding: '22px 24px',
-      background: light ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)' : gradient,
-      border: light ? '1px solid var(--nowa-border)' : 'none',
-      boxShadow: 'var(--nowa-shadow-card)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6,
-      minHeight: 140,
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* 배경 원형 장식 */}
-      <div style={{
-        position: 'absolute', right: -16, top: -16,
-        width: 90, height: 90, borderRadius: '50%',
-        background: light ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.1)',
-      }} />
-      <div style={{
-        position: 'absolute', right: 16, top: 16,
-        width: 44, height: 44, borderRadius: 14,
-        background: light ? 'var(--nowa-primary-soft)' : 'rgba(255,255,255,0.18)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 20, color: light ? 'var(--nowa-primary)' : '#fff',
-      }}>
+    <div className="nowa-kpi-card" style={{ background: gradient }}>
+      <div
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 12,
+          background: 'var(--nowa-soft-fill-strong)',
+          color: 'var(--nowa-contrast-text)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 18,
+          marginBottom: 12,
+        }}
+      >
         {icon}
       </div>
-
-      <div style={{ color: light ? 'var(--nowa-text-muted)' : 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
-        {label}
+      <div style={{ color: 'var(--nowa-contrast-text-soft)', fontSize: 13, fontWeight: 700 }}>{label}</div>
+      <div style={{ marginTop: 10, color: 'var(--nowa-contrast-text)', fontWeight: 900, lineHeight: 1 }}>
+        {value}
+        {suffix ? <span style={{ fontSize: 15, marginLeft: 4, color: 'var(--nowa-contrast-text-soft)' }}>{suffix}</span> : null}
       </div>
-      <div style={{ color: light ? 'var(--nowa-text)' : '#fff', fontWeight: 900, lineHeight: 1, marginTop: 4 }}>
-        <span style={{ fontSize: 46 }}>{value}</span>
-        {suffix && <span style={{ fontSize: 18, marginLeft: 5, fontWeight: 700, opacity: 0.85 }}>{suffix}</span>}
-      </div>
-      {sub && (
-        <div style={{ color: light ? 'var(--nowa-text-soft)' : 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 }}>
-          ↑ {sub}
-        </div>
-      )}
+      {sub ? <div style={{ color: 'var(--nowa-contrast-text-muted)', fontSize: 12, marginTop: 8 }}>{sub}</div> : null}
     </div>
   )
 }
@@ -471,10 +452,11 @@ function SourceStatusBoard() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>
+            <div className="nowa-page-kicker">??? ??</div>
+            <div className="nowa-page-title" style={{ fontSize: 24, marginBottom: 0 }}>
               MOCVD 소스교체 현황판
             </div>
-            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 15 }}>
+            <div className="nowa-page-desc" style={{ marginTop: 8 }}>
               소스 입력에서 저장한 기준값과 현재 잔량 기준으로 교체 일정을 자동 계산합니다.
             </div>
           </div>
@@ -491,7 +473,7 @@ function SourceStatusBoard() {
             value={totalMachines}
             suffix="대"
             icon={<ToolOutlined />}
-            gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+            gradient="linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)"
             sub="현재 운영 중인 장비"
           />
         </Col>
@@ -501,7 +483,7 @@ function SourceStatusBoard() {
             value={events.length}
             suffix="건"
             icon={<NodeIndexOutlined />}
-            gradient="linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)"
+            gradient="linear-gradient(135deg,#14b8a6 0%,#0ea5e9 100%)"
             sub="등록된 교체 일정"
           />
         </Col>
@@ -511,7 +493,7 @@ function SourceStatusBoard() {
             value={overdueCount + urgentCount}
             suffix="건"
             icon={<WarningOutlined />}
-            gradient="linear-gradient(135deg, #f97316 0%, #fb923c 100%)"
+            gradient="linear-gradient(135deg,#f59e0b 0%,#f97316 100%)"
             sub="즉시 확인 필요"
           />
         </Col>
@@ -521,7 +503,7 @@ function SourceStatusBoard() {
             value={overdueCount}
             suffix="건"
             icon={<AlertOutlined />}
-            gradient="linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)"
+            gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)"
             sub="소스 교체 초과"
           />
         </Col>

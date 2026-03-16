@@ -1,158 +1,283 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Alert, Button, Card, Col, Input, Row, Skeleton, Tag, Tooltip } from 'antd'
-import { ReloadOutlined, SearchOutlined, ToolOutlined, WarningOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Input,
+  Row,
+  Skeleton,
+  Tag,
+  Tooltip,
+} from 'antd'
+import {
+  AlertOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  ToolOutlined,
+  WarningOutlined,
+} from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { useThemeMode } from '../../../theme/useThemeMode'
 
-// ─── 상태 계산 ─────────────────────────────────────────────────
-function getMachineStatus(sources) {
-  let critical = 0, warning = 0
+function getMachineRiskStatus(sources) {
+  let critical = 0
+  let warning = 0
+
   sources.forEach(({ remaining, daily_usage }) => {
     if (daily_usage <= 0) return
     const days = remaining / daily_usage
-    if (days <= 7)  critical++
-    else if (days <= 20) warning++
+    if (days <= 7) critical += 1
+    else if (days <= 20) warning += 1
   })
-  if (critical > 0) return 'critical'
-  if (warning  > 0) return 'warning'
+
+  if (critical > 0) return 'down'
+  if (warning > 0) return 'warning'
   return 'normal'
 }
 
 const STATUS_META = {
-  critical: { color: '#f87171', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.35)', label: '부족', icon: <WarningOutlined /> },
-  warning:  { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',   border: 'rgba(251,191,36,0.3)',   label: '임박', icon: <WarningOutlined /> },
-  normal:   { color: '#34d399', bg: 'rgba(52,211,153,0.06)',   border: 'rgba(52,211,153,0.2)',   label: '정상', icon: <CheckCircleOutlined /> },
+  down: {
+    color: '#f43f5e',
+    bg: 'rgba(244,63,94,0.08)',
+    border: 'rgba(244,63,94,0.28)',
+    label: '다운 위험',
+    icon: <AlertOutlined />,
+  },
+  warning: {
+    color: '#f59e0b',
+    bg: 'rgba(245,158,11,0.08)',
+    border: 'rgba(245,158,11,0.24)',
+    label: '주의',
+    icon: <WarningOutlined />,
+  },
+  normal: {
+    color: '#14b8a6',
+    bg: 'rgba(20,184,166,0.08)',
+    border: 'rgba(20,184,166,0.24)',
+    label: '정상',
+    icon: <CheckCircleOutlined />,
+  },
+  inactive: {
+    color: '#64748b',
+    bg: 'rgba(100,116,139,0.06)',
+    border: 'rgba(100,116,139,0.18)',
+    label: '비가동',
+    icon: <CloseCircleOutlined />,
+  },
 }
 
-// ─── 소스 레벨 바 ──────────────────────────────────────────────
-function SourceBar({ name, remaining, daily_usage }) {
-  const days = daily_usage > 0 ? remaining / daily_usage : null
-  const color = days === null ? '#475569' : days <= 7 ? '#f87171' : days <= 20 ? '#fbbf24' : '#34d399'
-  const pct   = days === null ? 50 : Math.min(100, (days / 60) * 100)
+function getRiskSources(sources) {
+  return sources
+    .map((source) => {
+      if (source.daily_usage <= 0) {
+        return { ...source, daysLeft: null, risk: 'idle' }
+      }
+
+      const daysLeft = source.remaining / source.daily_usage
+      if (daysLeft <= 7) return { ...source, daysLeft, risk: 'down' }
+      if (daysLeft <= 20) return { ...source, daysLeft, risk: 'warning' }
+      return { ...source, daysLeft, risk: 'normal' }
+    })
+    .sort((a, b) => {
+      const rank = { down: 0, warning: 1, normal: 2, idle: 3 }
+      if (rank[a.risk] !== rank[b.risk]) return rank[a.risk] - rank[b.risk]
+      if (a.daysLeft == null && b.daysLeft == null) return a.source_name.localeCompare(b.source_name)
+      if (a.daysLeft == null) return 1
+      if (b.daysLeft == null) return -1
+      return a.daysLeft - b.daysLeft
+    })
+}
+
+function RiskBar({ name, remaining, daily_usage }) {
+  const daysLeft = daily_usage > 0 ? remaining / daily_usage : null
+  const color = daysLeft == null ? '#475569' : daysLeft <= 7 ? '#f43f5e' : daysLeft <= 20 ? '#f59e0b' : '#14b8a6'
+  const pct = daysLeft == null ? 12 : Math.min(100, (daysLeft / 45) * 100)
 
   return (
-    <Tooltip title={days === null ? `${name}: ${remaining.toFixed(1)} (일사용량 미입력)` : `${name}: ${remaining.toFixed(1)} / ${days.toFixed(0)}일 후 소진`}>
-      <div style={{ marginBottom: 5 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#64748b', marginBottom: 2 }}>
+    <Tooltip
+      title={
+        daysLeft == null
+          ? `${name}: 사용량 미입력`
+          : `${name}: 약 ${Math.max(daysLeft, 0).toFixed(0)}일 후 임계`
+      }
+    >
+      <div style={{ marginBottom: 8 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 8,
+            fontSize: 11,
+            color: 'var(--nowa-text-muted)',
+            marginBottom: 4,
+          }}
+        >
           <span>{name}</span>
-          <span style={{ color }}>{days === null ? '-' : `${days.toFixed(0)}일`}</span>
+          <span style={{ color }}>
+            {daysLeft == null ? '-' : `${Math.max(daysLeft, 0).toFixed(0)}일`}
+          </span>
         </div>
-        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.4s' }} />
+        <div
+          style={{
+            height: 6,
+            borderRadius: 999,
+            background: 'rgba(148,163,184,0.14)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: `${pct}%`,
+              height: '100%',
+              background: color,
+              borderRadius: 999,
+              transition: 'width 0.25s ease',
+            }}
+          />
         </div>
       </div>
     </Tooltip>
   )
 }
 
-// ─── 호기 카드 ─────────────────────────────────────────────────
 function MachineCard({ machine_no, description, is_active, sources }) {
-  const { isLight: light } = useThemeMode()
-  const status = is_active ? getMachineStatus(sources) : 'off'
-  const meta   = STATUS_META[status] ?? STATUS_META.normal
+  const { isLight } = useThemeMode()
+  const status = is_active ? getMachineRiskStatus(sources) : 'inactive'
+  const meta = STATUS_META[status]
+  const riskySources = getRiskSources(sources)
+  const aggregateSource = riskySources.find((item) => item.daysLeft != null) ?? null
 
-  const criticalSources = sources.filter(s => s.daily_usage > 0 && s.remaining / s.daily_usage <= 7)
-  const warnSources     = sources.filter(s => s.daily_usage > 0 && s.remaining / s.daily_usage > 7 && s.remaining / s.daily_usage <= 20)
+  const chipStyle = aggregateSource == null
+    ? null
+    : {
+        fontSize: 10,
+        borderRadius: 999,
+        padding: '2px 8px',
+        fontWeight: 700,
+        background:
+          aggregateSource.risk === 'down'
+            ? 'rgba(244,63,94,0.12)'
+            : aggregateSource.risk === 'warning'
+              ? 'rgba(245,158,11,0.12)'
+              : 'rgba(20,184,166,0.12)',
+        color:
+          aggregateSource.risk === 'down'
+            ? '#f43f5e'
+            : aggregateSource.risk === 'warning'
+              ? '#f59e0b'
+              : '#14b8a6',
+        border:
+          aggregateSource.risk === 'down'
+            ? '1px solid rgba(244,63,94,0.22)'
+            : aggregateSource.risk === 'warning'
+              ? '1px solid rgba(245,158,11,0.22)'
+              : '1px solid rgba(20,184,166,0.22)',
+      }
 
   return (
-    <div style={{
-      borderRadius: 16,
-      border: `1px solid ${is_active ? meta.border : 'rgba(100,116,139,0.2)'}`,
-      background: is_active ? meta.bg : (light ? 'var(--nowa-soft-fill)' : 'rgba(255,255,255,0.01)'),
-      padding: '14px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-      opacity: is_active ? 1 : 0.45,
-      transition: 'all 0.2s',
-    }}>
-      {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div
+      style={{
+        borderRadius: 16,
+        border: `1px solid ${meta.border}`,
+        background: isLight ? 'var(--nowa-bg-raised)' : meta.bg,
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        minHeight: 248,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 15, color: is_active ? meta.color : 'var(--nowa-text-muted)' }}>
-            {formatMachineLabel(machine_no)}
+          <div style={{ fontWeight: 800, fontSize: 16, color: meta.color }}>{formatMachineLabel(machine_no)}</div>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, marginTop: 2 }}>
+            {description || '설비 설명 없음'}
           </div>
-          {description && (
-            <div style={{ fontSize: 11, color: 'var(--nowa-text-muted)', marginTop: 1 }}>{description}</div>
-          )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          {is_active ? (
-            <Tag style={{ margin: 0, fontSize: 10, padding: '0 6px', color: meta.color, background: 'transparent', border: `1px solid ${meta.border}` }}>
-              {meta.icon} {meta.label}
-            </Tag>
-          ) : (
-            <Tag style={{ margin: 0, fontSize: 10, padding: '0 6px', color: 'var(--nowa-text-muted)', background: 'transparent', border: '1px solid rgba(100,116,139,0.3)' }}>
-              <CloseCircleOutlined /> 비활성
-            </Tag>
-          )}
-        </div>
+        <Tag
+          style={{
+            margin: 0,
+            color: meta.color,
+            background: meta.bg,
+            border: `1px solid ${meta.border}`,
+            borderRadius: 999,
+            fontWeight: 700,
+          }}
+        >
+          {meta.icon} {meta.label}
+        </Tag>
       </div>
 
-      {/* 소스 바 */}
-      {sources.length > 0 && (
-        <div>
-          {sources.map(s => (
-            <SourceBar key={s.source_name} name={s.source_name} remaining={s.remaining} daily_usage={s.daily_usage} />
-          ))}
+      <div>
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, marginBottom: 8 }}>
+          다운 리스크 요인
         </div>
-      )}
+        {aggregateSource == null ? (
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12 }}>등록된 리스크 데이터가 없습니다.</div>
+        ) : (
+          <RiskBar
+            key={`${machine_no}:aggregate-source`}
+            name="소스"
+            remaining={aggregateSource.daysLeft}
+            daily_usage={1}
+          />
+        )}
+      </div>
 
-      {/* 경고 뱃지 */}
-      {(criticalSources.length > 0 || warnSources.length > 0) && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {criticalSources.map(s => (
-            <span key={s.source_name} style={{ fontSize: 10, background: 'rgba(248,113,113,0.15)', color: '#f87171', borderRadius: 6, padding: '1px 6px' }}>
-              {s.source_name}
-            </span>
-          ))}
-          {warnSources.map(s => (
-            <span key={s.source_name} style={{ fontSize: 10, background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderRadius: 6, padding: '1px 6px' }}>
-              {s.source_name}
-            </span>
-          ))}
+      {aggregateSource ? (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'auto' }}>
+          <span style={chipStyle}>소스</span>
+        </div>
+      ) : (
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 'auto' }}>
+          현재 다운 리스크 요인이 없습니다.
         </div>
       )}
     </div>
   )
 }
 
-// ─── 요약 카드 ─────────────────────────────────────────────────
-function SummaryCard({ label, value, suffix, gradient, icon }) {
-  const { isLight: light } = useThemeMode()
+function SummaryCard({ label, value, suffix, gradient, icon, sub }) {
   return (
-    <div style={{
-      borderRadius: 20, padding: '20px 22px',
-      background: light ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)' : gradient,
-      border: light ? '1px solid var(--nowa-border)' : 'none',
-      boxShadow: 'var(--nowa-shadow-card)',
-      display: 'flex', flexDirection: 'column', gap: 6,
-      minHeight: 120, position: 'relative', overflow: 'hidden',
-    }}>
-      <div style={{ position: 'absolute', right: -14, top: -14, width: 80, height: 80, borderRadius: '50%', background: light ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.1)' }} />
-      <div style={{ position: 'absolute', right: 14, top: 14, width: 40, height: 40, borderRadius: 12, background: light ? 'var(--nowa-primary-soft)' : 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: light ? 'var(--nowa-primary)' : '#fff' }}>
+    <div className="nowa-kpi-card" style={{ background: gradient }}>
+      <div
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 12,
+          background: 'var(--nowa-soft-fill-strong)',
+          color: 'var(--nowa-contrast-text)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 18,
+          marginBottom: 12,
+        }}
+      >
         {icon}
       </div>
-      <div style={{ color: light ? 'var(--nowa-text-muted)' : 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 700 }}>{label}</div>
-      <div style={{ color: light ? 'var(--nowa-text)' : '#fff', fontWeight: 900, lineHeight: 1 }}>
-        <span style={{ fontSize: 40 }}>{value}</span>
-        {suffix && <span style={{ fontSize: 16, marginLeft: 4, opacity: 0.85 }}>{suffix}</span>}
+      <div style={{ color: 'var(--nowa-contrast-text-soft)', fontSize: 13, fontWeight: 700 }}>{label}</div>
+      <div style={{ marginTop: 10, color: 'var(--nowa-contrast-text)', fontWeight: 900, lineHeight: 1 }}>
+        {value}
+        {suffix ? <span style={{ fontSize: 15, marginLeft: 4, color: 'var(--nowa-contrast-text-soft)' }}>{suffix}</span> : null}
       </div>
+      {sub ? <div style={{ color: 'var(--nowa-contrast-text-muted)', fontSize: 12, marginTop: 8 }}>{sub}</div> : null}
     </div>
   )
 }
 
-// ─── 메인 ──────────────────────────────────────────────────────
-function MocvdManagement() {
-  const { isLight: light } = useThemeMode()
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState(null)
-  const [machines,    setMachines]    = useState([])
-  const [sourceData,  setSourceData]  = useState({ rows: [], source_names: [] })
-  const [search,      setSearch]      = useState('')
-  const [filter,      setFilter]      = useState('all') // all | critical | warning | normal
+export default function MocvdManagement() {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [machines, setMachines] = useState([])
+  const [sourceData, setSourceData] = useState({ rows: [], source_names: [] })
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all')
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -162,233 +287,313 @@ function MocvdManagement() {
         authFetch('/api/mocvd/machines'),
         authFetch('/api/mocvd/sources/all'),
       ])
+
       const mJson = await mRes.json()
       const sJson = await sRes.json()
+
       setMachines(Array.isArray(mJson) ? mJson : [])
       setSourceData(sJson)
     } catch {
-      setError('데이터를 불러오지 못했습니다.')
+      setError('MOCVD 설비 데이터를 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
 
-  // 호기별 소스 목록 합치기
   const machineList = useMemo(() => {
-    const rows     = sourceData.rows ?? []
-    const srcNames = sourceData.source_names ?? []
-    const rowMap   = new Map(rows.map(r => [r.machine_no, r]))
+    const rows = sourceData.rows ?? []
+    const sourceNames = sourceData.source_names ?? []
+    const rowMap = new Map(rows.map((row) => [row.machine_no, row]))
 
-    return machines.map(m => {
-      const row  = rowMap.get(m.machine_no) ?? {}
-      const sources = srcNames.map(name => ({
+    return machines.map((machine) => {
+      const row = rowMap.get(machine.machine_no) ?? {}
+      const sources = sourceNames.map((name) => ({
         source_name: name,
-        remaining:   row[name] ?? 0,
+        remaining: row[name] ?? 0,
         daily_usage: row[`${name}_daily_usage`] ?? 0,
       }))
-      return { ...m, sources }
+
+      return {
+        ...machine,
+        sources,
+      }
     })
   }, [machines, sourceData])
 
   const statusMap = useMemo(() => {
-    const m = {}
-    machineList.forEach(machine => {
-      m[machine.machine_no] = machine.is_active ? getMachineStatus(machine.sources) : 'off'
+    const next = {}
+    machineList.forEach((machine) => {
+      next[machine.machine_no] = machine.is_active ? getMachineRiskStatus(machine.sources) : 'inactive'
     })
-    return m
+    return next
   }, [machineList])
 
   const filtered = useMemo(() => {
-    const kw = search.trim().toLowerCase()
-    return machineList.filter(m => {
-      if (kw && !`${m.machine_no}`.includes(kw) && !`mo#${m.machine_no}호기`.includes(kw) && !(m.description ?? '').toLowerCase().includes(kw)) return false
-      if (filter === 'critical' && statusMap[m.machine_no] !== 'critical') return false
-      if (filter === 'warning'  && statusMap[m.machine_no] !== 'warning')  return false
-      if (filter === 'normal'   && statusMap[m.machine_no] !== 'normal')   return false
+    const keyword = search.trim().toLowerCase()
+
+    return machineList.filter((machine) => {
+      if (
+        keyword &&
+        !`${machine.machine_no}`.includes(keyword) &&
+        !formatMachineLabel(machine.machine_no).toLowerCase().includes(keyword) &&
+        !(machine.description ?? '').toLowerCase().includes(keyword)
+      ) {
+        return false
+      }
+
+      if (filter !== 'all' && statusMap[machine.machine_no] !== filter) {
+        return false
+      }
+
       return true
     })
   }, [machineList, search, filter, statusMap])
 
-  const criticalCount = machineList.filter(m => statusMap[m.machine_no] === 'critical').length
-  const warningCount  = machineList.filter(m => statusMap[m.machine_no] === 'warning').length
-  const activeCount   = machineList.filter(m => m.is_active).length
+  const activeCount = machineList.filter((machine) => machine.is_active).length
+  const downCount = machineList.filter((machine) => statusMap[machine.machine_no] === 'down').length
+  const warningCount = machineList.filter((machine) => statusMap[machine.machine_no] === 'warning').length
 
   const FILTER_BTNS = [
-    { key: 'all',      label: '전체',   color: undefined },
-    { key: 'critical', label: '부족',   color: '#f87171' },
-    { key: 'warning',  label: '임박',   color: '#fbbf24' },
-    { key: 'normal',   label: '정상',   color: '#34d399' },
+    { key: 'all', label: '전체', color: undefined },
+    { key: 'down', label: '다운 위험', color: '#f43f5e' },
+    { key: 'warning', label: '주의', color: '#f59e0b' },
+    { key: 'normal', label: '정상', color: '#14b8a6' },
   ]
 
   if (loading) return <Skeleton active paragraph={{ rows: 10 }} />
-  if (error)   return <Alert type="error" showIcon message={error} />
+  if (error) return <Alert type="error" showIcon message={error} />
+
+  const riskChartRows = machineList
+    .map((machine) => {
+      const riskSources = getRiskSources(machine.sources)
+      return {
+        machine_no: machine.machine_no,
+        down: riskSources.filter((item) => item.risk === 'down').length,
+        warning: riskSources.filter((item) => item.risk === 'warning').length,
+      }
+    })
+    .filter((machine) => machine.down > 0 || machine.warning > 0)
+    .sort((a, b) => (b.down + b.warning) - (a.down + a.warning))
+    .slice(0, 20)
+
+  const distributionBuckets = [
+    { label: '7일 이내', max: 7, color: '#f43f5e' },
+    { label: '14일 이내', max: 14, color: '#fb7185' },
+    { label: '30일 이내', max: 30, color: '#f59e0b' },
+    { label: '60일 이내', max: 60, color: '#60a5fa' },
+    { label: '60일 초과', max: Number.POSITIVE_INFINITY, color: '#14b8a6' },
+  ]
+
+  const distributionCounts = distributionBuckets.map(() => 0)
+  machineList.forEach((machine) => {
+    machine.sources.forEach((source) => {
+      if (source.daily_usage <= 0) return
+      const daysLeft = source.remaining / source.daily_usage
+      for (let i = 0; i < distributionBuckets.length; i += 1) {
+        if (daysLeft <= distributionBuckets[i].max) {
+          distributionCounts[i] += 1
+          break
+        }
+      }
+    })
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* 헤더 */}
-      <div style={{
-        padding: 24, borderRadius: 22,
-        border: '1px solid var(--nowa-border)',
-        background: light ? 'var(--nowa-hero-bg)' : 'var(--nowa-hero-bg)',
-        boxShadow: 'var(--nowa-shadow-card)',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div className="nowa-page-intro">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, width: '100%' }}>
           <div>
-            <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginBottom: 4 }}>
-              MOCVD 현황판
+            <div className="nowa-page-kicker">설비 관리</div>
+            <div className="nowa-page-title" style={{ fontSize: 24 }}>
+              MOCVD 설비 다운 관리
             </div>
-            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
-              전체 설비의 소스 잔량 및 소진 예측을 한눈에 확인합니다.
+            <div className="nowa-page-desc">
+              현재 소스 사용 데이터를 기준으로 설비 다운 리스크와 주의 설비를 추정해서 보여줍니다.
             </div>
           </div>
-          <Button icon={<ReloadOutlined />} onClick={fetchAll} className="nowa-btn">현황 새로고침</Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchAll} className="nowa-btn">
+            현황 새로고침
+          </Button>
         </div>
       </div>
 
-      {/* 요약 카드 */}
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
-          <SummaryCard label="가동 중 설비" value={activeCount} suffix="대"
-            gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
-            icon={<ToolOutlined />} />
+          <SummaryCard
+            label="가동 설비"
+            value={activeCount}
+            suffix="대"
+            gradient="linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)"
+            icon={<ToolOutlined />}
+            sub="현재 운영 중인 설비"
+          />
         </Col>
         <Col xs={24} md={8}>
-          <SummaryCard label="소스 부족 설비" value={criticalCount} suffix="대"
-            gradient="linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)"
-            icon={<WarningOutlined />} />
+          <SummaryCard
+            label="다운 위험 설비"
+            value={downCount}
+            suffix="대"
+            gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)"
+            icon={<AlertOutlined />}
+            sub="즉시 조치 우선 대상"
+          />
         </Col>
         <Col xs={24} md={8}>
-          <SummaryCard label="교체 임박 설비" value={warningCount} suffix="대"
-            gradient="linear-gradient(135deg, #f97316 0%, #fb923c 100%)"
-            icon={<WarningOutlined />} />
+          <SummaryCard
+            label="주의 설비"
+            value={warningCount}
+            suffix="대"
+            gradient="linear-gradient(135deg,#f59e0b 0%,#f97316 100%)"
+            icon={<WarningOutlined />}
+            sub="단기 점검 필요 대상"
+          />
         </Col>
       </Row>
 
-      {/* 차트 */}
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <Card className="nowa-card" title={<span style={{ fontSize: 15, fontWeight: 800 }}>설비별 위험 현황</span>}
-            styles={{ body: { padding: '8px 12px 4px' }, header: { minHeight: 52 } }}>
-            {(() => {
-              const list = machineList
-                .map(m => {
-                  let critical = 0, warning = 0
-                  m.sources.forEach(({ remaining, daily_usage }) => {
-                    if (daily_usage <= 0) return
-                    const days = remaining / daily_usage
-                    if (days <= 7) critical++
-                    else if (days <= 20) warning++
-                  })
-                  return { machine_no: m.machine_no, critical, warning }
-                })
-                .filter(m => m.critical > 0 || m.warning > 0)
-                .sort((a, b) => (b.critical + b.warning) - (a.critical + a.warning))
-                .slice(0, 20)
-              if (list.length === 0) return (
-                <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                  위험 설비 없음
-                </div>
-              )
-              return (
-                <ReactECharts
-                  theme="dark"
-                  style={{ height: 220 }}
-                  option={{
-                    backgroundColor: 'transparent',
-                    grid: { top: 16, bottom: 44, left: 36, right: 16 },
-                    tooltip: { trigger: 'axis' },
-                    legend: { bottom: 4, textStyle: { color: '#94a3b8', fontSize: 11 } },
-                    xAxis: {
-                      type: 'category',
-                      data: list.map(m => `${m.machine_no}호`),
-                      axisLabel: { color: '#64748b', fontSize: 10, rotate: 30 },
-                      axisLine: { lineStyle: { color: '#1e2a3c' } },
+          <Card
+            className="nowa-card"
+            title={<span style={{ fontSize: 15, fontWeight: 800 }}>설비 다운 위험 현황</span>}
+            styles={{ body: { padding: '8px 12px 4px' }, header: { minHeight: 52 } }}
+          >
+            {riskChartRows.length === 0 ? (
+              <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Alert message="다운 위험 설비가 없습니다." type="success" showIcon />
+              </div>
+            ) : (
+              <ReactECharts
+                theme="dark"
+                style={{ height: 220 }}
+                option={{
+                  backgroundColor: 'transparent',
+                  grid: { top: 16, bottom: 44, left: 36, right: 16 },
+                  tooltip: { trigger: 'axis' },
+                  legend: { bottom: 4, textStyle: { color: '#94a3b8', fontSize: 11 } },
+                  xAxis: {
+                    type: 'category',
+                    data: riskChartRows.map((row) => `${row.machine_no}`),
+                    axisLabel: { color: '#64748b', fontSize: 10, rotate: 30 },
+                    axisLine: { lineStyle: { color: '#1e2a3c' } },
+                  },
+                  yAxis: {
+                    type: 'value',
+                    minInterval: 1,
+                    axisLabel: { color: '#64748b', fontSize: 11 },
+                    splitLine: { lineStyle: { color: '#1e2a3c' } },
+                  },
+                  series: [
+                    {
+                      name: '다운 위험',
+                      type: 'bar',
+                      stack: 'risk',
+                      data: riskChartRows.map((row) => row.down),
+                      itemStyle: { color: '#f43f5e' },
+                      barMaxWidth: 28,
                     },
-                    yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
-                    series: [
-                      { name: '부족(7일↓)', type: 'bar', stack: 'risk', data: list.map(m => m.critical), itemStyle: { color: '#f87171' }, barMaxWidth: 28 },
-                      { name: '임박(20일↓)', type: 'bar', stack: 'risk', data: list.map(m => m.warning), itemStyle: { color: '#fbbf24', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 28 },
-                    ],
-                  }}
-                />
-              )
-            })()}
+                    {
+                      name: '주의',
+                      type: 'bar',
+                      stack: 'risk',
+                      data: riskChartRows.map((row) => row.warning),
+                      itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] },
+                      barMaxWidth: 28,
+                    },
+                  ],
+                }}
+              />
+            )}
           </Card>
         </Col>
+
         <Col xs={24} md={12}>
-          <Card className="nowa-card" title={<span style={{ fontSize: 15, fontWeight: 800 }}>소진 예정 시기 분포</span>}
-            styles={{ body: { padding: '8px 12px 4px' }, header: { minHeight: 52 } }}>
+          <Card
+            className="nowa-card"
+            title={<span style={{ fontSize: 15, fontWeight: 800 }}>다운 예상 시기 분포</span>}
+            styles={{ body: { padding: '8px 12px 4px' }, header: { minHeight: 52 } }}
+          >
             <ReactECharts
               theme="dark"
               style={{ height: 220 }}
-              option={(() => {
-                const buckets = [
-                  { label: '7일 이내', max: 7, color: '#f87171' },
-                  { label: '14일 이내', max: 14, color: '#fb923c' },
-                  { label: '30일 이내', max: 30, color: '#fbbf24' },
-                  { label: '60일 이내', max: 60, color: '#60a5fa' },
-                  { label: '60일 초과', max: Infinity, color: '#34d399' },
-                ]
-                const counts = buckets.map(() => 0)
-                machineList.forEach(m => {
-                  m.sources.forEach(({ daily_usage, remaining }) => {
-                    if (daily_usage <= 0) return
-                    const days = remaining / daily_usage
-                    for (let i = 0; i < buckets.length; i++) {
-                      if (days <= buckets[i].max) { counts[i]++; break }
-                    }
-                  })
-                })
-                return {
-                  backgroundColor: 'transparent',
-                  grid: { top: 16, bottom: 44, left: 48, right: 16 },
-                  tooltip: { trigger: 'axis' },
-                  xAxis: {
-                    type: 'category',
-                    data: buckets.map(b => b.label),
-                    axisLabel: { color: '#64748b', fontSize: 11, rotate: 20 },
-                    axisLine: { lineStyle: { color: '#1e2a3c' } },
-                  },
-                  yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
-                  series: [{
+              option={{
+                backgroundColor: 'transparent',
+                grid: { top: 16, bottom: 44, left: 48, right: 16 },
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                  type: 'category',
+                  data: distributionBuckets.map((bucket) => bucket.label),
+                  axisLabel: { color: '#64748b', fontSize: 11, rotate: 20 },
+                  axisLine: { lineStyle: { color: '#1e2a3c' } },
+                },
+                yAxis: {
+                  type: 'value',
+                  minInterval: 1,
+                  axisLabel: { color: '#64748b', fontSize: 11 },
+                  splitLine: { lineStyle: { color: '#1e2a3c' } },
+                },
+                series: [
+                  {
                     type: 'bar',
-                    data: counts.map((v, i) => ({ value: v, itemStyle: { color: buckets[i].color, borderRadius: [4, 4, 0, 0] } })),
+                    data: distributionCounts.map((value, index) => ({
+                      value,
+                      itemStyle: {
+                        color: distributionBuckets[index].color,
+                        borderRadius: [4, 4, 0, 0],
+                      },
+                    })),
                     barMaxWidth: 48,
                     label: { show: true, position: 'top', color: '#94a3b8', fontSize: 11 },
-                  }],
-                }
-              })()}
+                  },
+                ],
+              }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* 필터 / 검색 */}
-      <Card className="nowa-card" styles={{ body: { padding: '14px 18px', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' } }}>
+      <Card
+        className="nowa-card"
+        styles={{ body: { padding: '14px 18px', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' } }}
+      >
         <Input
           prefix={<SearchOutlined style={{ color: '#64748b' }} />}
           placeholder="호기 검색"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           allowClear
           style={{ width: 180 }}
         />
         <div style={{ display: 'flex', gap: 6 }}>
-          {FILTER_BTNS.map(btn => (
+          {FILTER_BTNS.map((button) => (
             <button
-              key={btn.key}
-              onClick={() => setFilter(btn.key)}
+              key={button.key}
+              type="button"
+              onClick={() => setFilter(button.key)}
               style={{
-                padding: '4px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', fontWeight: 600,
-                border: filter === btn.key ? `1.5px solid ${btn.color ?? '#6366f1'}` : '1.5px solid rgba(100,116,139,0.25)',
-                background: filter === btn.key ? (btn.color ? `${btn.color}22` : 'rgba(99,102,241,0.12)') : 'transparent',
-                color: filter === btn.key ? (btn.color ?? '#a5b4fc') : '#64748b',
+                padding: '4px 14px',
+                borderRadius: 20,
+                fontSize: 13,
+                cursor: 'pointer',
+                fontWeight: 600,
+                border:
+                  filter === button.key
+                    ? `1.5px solid ${button.color ?? '#6366f1'}`
+                    : '1.5px solid rgba(100,116,139,0.25)',
+                background:
+                  filter === button.key
+                    ? button.color
+                      ? `${button.color}22`
+                      : 'rgba(99,102,241,0.12)'
+                    : 'transparent',
+                color: filter === button.key ? button.color ?? '#a5b4fc' : '#64748b',
                 transition: 'all 0.15s',
               }}
             >
-              {btn.label}
+              {button.label}
             </button>
           ))}
         </div>
@@ -397,20 +602,19 @@ function MocvdManagement() {
         </span>
       </Card>
 
-      {/* 호기 카드 그리드 */}
       <Row gutter={[12, 12]}>
-        {filtered.map(m => (
-          <Col key={m.machine_no} xs={24} sm={12} md={8} lg={6} xl={4}>
-            <MachineCard {...m} />
+        {filtered.map((machine) => (
+          <Col key={machine.machine_no} xs={24} sm={12} md={8} lg={6} xl={4}>
+            <MachineCard {...machine} />
           </Col>
         ))}
       </Row>
 
-      {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>조건에 맞는 설비가 없습니다.</div>
-      )}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>
+          조건에 맞는 설비가 없습니다.
+        </div>
+      ) : null}
     </div>
   )
 }
-
-export default MocvdManagement

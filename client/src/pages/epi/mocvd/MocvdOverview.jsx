@@ -32,7 +32,7 @@ import dayjs from 'dayjs'
 import { authFetch, useAuth } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 
-function SummaryTile({ title, value, suffix, icon, accent, onClick }) {
+function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) {
   return (
     <button
       type="button"
@@ -40,48 +40,35 @@ function SummaryTile({ title, value, suffix, icon, accent, onClick }) {
       style={{
         width: '100%',
         textAlign: 'left',
-        padding: 18,
-        borderRadius: 18,
-        border: '1px solid var(--nowa-border)',
-        background: 'var(--nowa-hero-bg)',
-        boxShadow: 'var(--nowa-shadow-card)',
-        minHeight: 118,
-        position: 'relative',
-        overflow: 'hidden',
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
         cursor: onClick ? 'pointer' : 'default',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          right: -10,
-          top: -10,
-          width: 82,
-          height: 82,
-          borderRadius: '50%',
-          background: `${accent}18`,
-        }}
-      />
-      <div
-        style={{
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          background: `${accent}16`,
-          color: accent,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 18,
-          marginBottom: 12,
-        }}
-      >
-        {icon}
-      </div>
-      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13, fontWeight: 700 }}>{title}</div>
-      <div style={{ marginTop: 8, color: 'var(--nowa-text)', fontWeight: 900, lineHeight: 1 }}>
-        <span style={{ fontSize: 38 }}>{value}</span>
-        {suffix ? <span style={{ marginLeft: 4, fontSize: 15 }}>{suffix}</span> : null}
+      <div className="nowa-kpi-card" style={{ background: gradient }}>
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            background: 'var(--nowa-soft-fill-strong)',
+            color: 'var(--nowa-contrast-text)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 18,
+            marginBottom: 12,
+          }}
+        >
+          {icon}
+        </div>
+        <div style={{ color: 'var(--nowa-contrast-text-soft)', fontSize: 13, fontWeight: 700 }}>{title}</div>
+        <div style={{ marginTop: 10, color: 'var(--nowa-contrast-text)', fontWeight: 900, lineHeight: 1 }}>
+          {value}
+          {suffix ? <span style={{ fontSize: 15, marginLeft: 4, color: 'var(--nowa-contrast-text-soft)' }}>{suffix}</span> : null}
+        </div>
+        <div style={{ color: 'var(--nowa-contrast-text-muted)', fontSize: 12, marginTop: 8 }}>관련 화면으로 바로 이동</div>
       </div>
     </button>
   )
@@ -433,6 +420,18 @@ function HandoverBoard() {
     [user],
   )
 
+  const timelineNotes = useMemo(
+    () =>
+      [...notes]
+        .sort((a, b) => {
+          const aTime = dayjs(a.updated_at || a.created_at || a.handover_date || '').valueOf()
+          const bTime = dayjs(b.updated_at || b.created_at || b.handover_date || '').valueOf()
+          return bTime - aTime
+        })
+        .slice(0, 8),
+    [notes],
+  )
+
   return (
     <SectionCard
       title="인수인계일지"
@@ -442,36 +441,81 @@ function HandoverBoard() {
         </Button>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: showForm ? 'minmax(320px, 400px) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 12 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: showForm
+            ? 'minmax(320px, 380px) minmax(0, 1.1fr) minmax(280px, 0.9fr)'
+            : 'minmax(0, 1.25fr) minmax(280px, 0.75fr)',
+          gap: 12,
+          alignItems: 'start',
+        }}
+      >
         {showForm ? (
-          <Card
-            className="nowa-card"
-            styles={{ body: { padding: 14 } }}
-            title={<span style={{ fontWeight: 800 }}>{editingId ? '인수인계 수정' : '인수인계 작성'}</span>}
-            extra={
+          <div
+            style={{
+              border: '1px solid var(--nowa-border)',
+              borderRadius: 16,
+              background: 'var(--nowa-soft-fill)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '14px 16px',
+                borderBottom: '1px solid var(--nowa-border)',
+              }}
+            >
+              <span style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>
+                {editingId ? '인수인계 수정' : '인수인계 작성'}
+              </span>
               <Space>
                 {editingId ? <Button onClick={resetForm}>취소</Button> : null}
                 <Button type="primary" onClick={submitNote} loading={saving}>
                   {editingId ? '수정 저장' : '등록'}
                 </Button>
               </Space>
-            }
-          >
-            <Form form={form} layout="vertical">
-              <Form.Item name="handover_date" label="기준일" rules={[{ required: true, message: '기준일을 선택하세요.' }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-              <Form.Item name="title" label="제목">
-                <Input placeholder="예: 106호기 Water leak 점검 인수" />
-              </Form.Item>
-              <Form.Item name="content" label="내용" rules={[{ required: true, message: '인수인계 내용을 입력하세요.' }]}>
-                <Input.TextArea rows={6} placeholder="다음 조가 꼭 알아야 할 설비 상태, 조치 결과, 후속 계획을 입력하세요." />
-              </Form.Item>
-            </Form>
-          </Card>
+            </div>
+
+            <div style={{ padding: 16 }}>
+              <Form form={form} layout="vertical">
+                <Form.Item name="handover_date" label="기준일" rules={[{ required: true, message: '기준일을 선택하세요.' }]}>
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item name="title" label="제목">
+                  <Input placeholder="예: 106호기 Water leak 점검 인수" />
+                </Form.Item>
+                <Form.Item name="content" label="내용" rules={[{ required: true, message: '인수인계 내용을 입력하세요.' }]}>
+                  <Input.TextArea rows={6} placeholder="다음 조가 꼭 알아야 할 설비 상태, 조치 결과, 후속 계획을 입력하세요." />
+                </Form.Item>
+              </Form>
+            </div>
+          </div>
         ) : null}
 
-        <Card className="nowa-card" styles={{ body: { padding: 10 } }} title="인수인계 목록">
+        <div
+          style={{
+            border: '1px solid var(--nowa-border)',
+            borderRadius: 16,
+            background: 'var(--nowa-soft-fill)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '14px 16px',
+              borderBottom: '1px solid var(--nowa-border)',
+              color: 'var(--nowa-text)',
+              fontWeight: 800,
+            }}
+          >
+            인수인계 목록
+          </div>
+          <div style={{ padding: 10 }}>
           {loading ? (
             <Skeleton active paragraph={{ rows: 5 }} />
           ) : notes.length === 0 ? (
@@ -485,8 +529,8 @@ function HandoverBoard() {
                   style={{
                     border: '1px solid var(--nowa-border)',
                     borderRadius: 12,
-                    padding: 10,
-                    background: 'var(--nowa-soft-fill)',
+                    padding: '10px 12px',
+                    background: 'var(--nowa-surface)',
                     cursor: 'pointer',
                   }}
                 >
@@ -534,7 +578,120 @@ function HandoverBoard() {
               ))}
             </div>
           )}
-        </Card>
+          </div>
+        </div>
+
+        <div
+          style={{
+            border: '1px solid var(--nowa-border)',
+            borderRadius: 16,
+            background: 'var(--nowa-soft-fill)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '14px 16px',
+              borderBottom: '1px solid var(--nowa-border)',
+              color: 'var(--nowa-text)',
+              fontWeight: 800,
+            }}
+          >
+            인수인계 타임라인
+          </div>
+          <div style={{ padding: '12px 14px' }}>
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 6 }} />
+            ) : timelineNotes.length === 0 ? (
+              <Empty description="표시할 인수인계가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 210, overflowY: 'auto', paddingRight: 4 }}>
+                {timelineNotes.map((note, index) => {
+                  const timeLabel = dayjs(note.updated_at || note.created_at || note.handover_date).isValid()
+                    ? dayjs(note.updated_at || note.created_at || note.handover_date).format('HH:mm')
+                    : '-'
+
+                  return (
+                    <button
+                      key={`timeline:${note.id}`}
+                      type="button"
+                      onClick={() => setPreviewNote(note)}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '54px 18px minmax(0, 1fr)',
+                        gap: 10,
+                        padding: '10px 0',
+                        border: 'none',
+                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid rgba(148,163,184,0.08)',
+                        background: 'transparent',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, fontWeight: 700, paddingTop: 1 }}>
+                        {timeLabel}
+                      </div>
+                      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 999,
+                            background: 'var(--ant-primary-color)',
+                            marginTop: 4,
+                            position: 'relative',
+                            zIndex: 1,
+                            boxShadow: '0 0 0 4px rgba(99,102,241,0.12)',
+                          }}
+                        />
+                        {index !== timelineNotes.length - 1 ? (
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: 14,
+                              bottom: -10,
+                              width: 2,
+                              borderRadius: 999,
+                              background: 'rgba(148,163,184,0.22)',
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            color: 'var(--nowa-text)',
+                            fontWeight: 800,
+                            fontSize: 13,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {note.title || '인수인계'}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            color: 'var(--nowa-text-muted)',
+                            fontSize: 12,
+                            lineHeight: 1.45,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {note.content}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <Modal
@@ -603,16 +760,16 @@ export default function MocvdOverview() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} xl={6}>
-          <SummaryTile title="활성 설비" value={machines.filter((row) => row.is_active).length} suffix="대" icon={<ControlOutlined />} accent="#6366f1" onClick={() => navigate('/epi/mocvd/management')} />
+          <SummaryTile title="활성 설비" value={machines.filter((row) => row.is_active).length} suffix="대" icon={<ControlOutlined />} accent="#6366f1" gradient="linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)" onClick={() => navigate('/epi/mocvd/management')} />
         </Col>
         <Col xs={24} md={12} xl={6}>
-          <SummaryTile title="소스 항목" value={sourceSummary.sourceCount ?? 0} suffix="건" icon={<NodeIndexOutlined />} accent="#14b8a6" onClick={() => navigate('/epi/mocvd/source?tab=input')} />
+          <SummaryTile title="소스 항목" value={sourceSummary.sourceCount ?? 0} suffix="건" icon={<NodeIndexOutlined />} accent="#14b8a6" gradient="linear-gradient(135deg,#14b8a6 0%,#0ea5e9 100%)" onClick={() => navigate('/epi/mocvd/source?tab=input')} />
         </Col>
         <Col xs={24} md={12} xl={6}>
-          <SummaryTile title="교체 임박/부족" value={sourceSummary.criticalCount ?? 0} suffix="건" icon={<WarningOutlined />} accent="#f59e0b" onClick={() => navigate('/epi/mocvd/source?tab=status-board')} />
+          <SummaryTile title="교체 임박/부족" value={sourceSummary.criticalCount ?? 0} suffix="건" icon={<WarningOutlined />} accent="#f59e0b" gradient="linear-gradient(135deg,#f59e0b 0%,#f97316 100%)" onClick={() => navigate('/epi/mocvd/source?tab=status-board')} />
         </Col>
         <Col xs={24} md={12} xl={6}>
-          <SummaryTile title="잔량 부족" value={sourceSummary.lowInventoryCount ?? 0} suffix="건" icon={<ClockCircleOutlined />} accent="#ef4444" onClick={() => navigate('/epi/mocvd/source?tab=machine-board')} />
+          <SummaryTile title="잔량 부족" value={sourceSummary.lowInventoryCount ?? 0} suffix="건" icon={<ClockCircleOutlined />} accent="#ef4444" gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)" onClick={() => navigate('/epi/mocvd/source?tab=machine-board')} />
         </Col>
       </Row>
 

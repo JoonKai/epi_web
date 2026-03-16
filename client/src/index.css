@@ -432,6 +432,101 @@ a { color: inherit; }
   margin-bottom: 12px;
 }
 
+.nowa-page-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.nowa-page-kicker {
+  color: var(--nowa-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.nowa-page-title {
+  color: var(--nowa-text);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1;
+}
+
+.nowa-page-desc {
+  color: var(--nowa-text-muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.nowa-metric-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--nowa-border);
+  background: var(--nowa-panel);
+  box-shadow: var(--nowa-shadow-card);
+  min-height: 118px;
+  padding: 18px 20px;
+}
+
+.nowa-metric-card::after {
+  content: '';
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--metric-accent-soft, rgba(99,102,241,0.08));
+  pointer-events: none;
+}
+
+.nowa-metric-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--metric-accent-soft, rgba(99,102,241,0.12));
+  color: var(--metric-accent, var(--nowa-primary));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.nowa-metric-label {
+  color: var(--nowa-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nowa-metric-value {
+  color: var(--nowa-text);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  margin-top: 10px;
+}
+
+.nowa-metric-suffix {
+  font-size: 15px;
+  font-weight: 700;
+  margin-left: 4px;
+  color: var(--nowa-text-soft);
+}
+
+.nowa-metric-sub {
+  color: var(--nowa-text-muted);
+  font-size: 12px;
+  margin-top: 8px;
+}
+
 /* ── Buttons ────────────────────────────────────────────────────── */
 .console-button.ant-btn,
 .console-button.ant-btn:hover,
