@@ -4,8 +4,13 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from models import MocvdMachine, MocvdSource, SourceChangeLog, SourceType
-from source_status import DEFAULT_THRESHOLD_RATIO, build_source_status_snapshot
+from models import MocvdMachine, MocvdSource, SourceChangeLog, SourceType, SystemSetting
+from source_status import (
+    DEFAULT_OVERDUE_DAYS,
+    DEFAULT_THRESHOLD_RATIO,
+    DEFAULT_URGENT_DAYS,
+    build_source_status_snapshot,
+)
 
 router = APIRouter(prefix="/api/mocvd", tags=["mocvd"])
 
@@ -60,8 +65,31 @@ class SourceChangeLogUpdate(SourceChangeLogCreate):
     pass
 
 
+class SourceStatusSettingsUpdate(BaseModel):
+    overdue_days: int = DEFAULT_OVERDUE_DAYS
+    urgent_days: int = DEFAULT_URGENT_DAYS
+
+
 def _active_source_types(db: Session):
     return db.query(SourceType).filter(SourceType.is_active == True).order_by(SourceType.order_idx).all()
+
+
+def _read_int_setting(db: Session, key: str, default: int) -> int:
+    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+    if not row or row.value in (None, ""):
+        return default
+    try:
+        return int(row.value)
+    except ValueError:
+        return default
+
+
+def _get_source_status_settings(db: Session) -> dict[str, int]:
+    overdue_days = _read_int_setting(db, "source_status_overdue_days", DEFAULT_OVERDUE_DAYS)
+    urgent_days = _read_int_setting(db, "source_status_urgent_days", DEFAULT_URGENT_DAYS)
+    if urgent_days < overdue_days:
+        urgent_days = overdue_days
+    return {"overdue_days": overdue_days, "urgent_days": urgent_days}
 
 
 @router.get("/machines")
@@ -74,6 +102,29 @@ def get_machines(db: Session = Depends(get_db), _=Depends(get_current_user)):
 def get_source_types(db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = _active_source_types(db)
     return [{"id": row.id, "name": row.name, "order_idx": row.order_idx} for row in rows]
+
+
+@router.get("/source-status-settings")
+def get_source_status_settings(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    return _get_source_status_settings(db)
+
+
+@router.put("/source-status-settings")
+def update_source_status_settings(body: SourceStatusSettingsUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    overdue_days = max(0, body.overdue_days)
+    urgent_days = max(overdue_days, body.urgent_days)
+
+    for key, value in {
+        "source_status_overdue_days": overdue_days,
+        "source_status_urgent_days": urgent_days,
+    }.items():
+        row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+        if row:
+            row.value = str(value)
+        else:
+            db.add(SystemSetting(key=key, value=str(value)))
+    db.commit()
+    return {"overdue_days": overdue_days, "urgent_days": urgent_days}
 
 
 @router.get("/source/{machine_no}")
@@ -192,7 +243,11 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
         row["updated_at"] = latest_at.strftime("%Y-%m-%d %H:%M") if latest_at else None
         result.append(row)
 
-    return {"source_names": source_names, "rows": result}
+    return {
+        "source_names": source_names,
+        "rows": result,
+        "status_settings": _get_source_status_settings(db),
+    }
 
 
 @router.get("/source-status")
@@ -200,7 +255,14 @@ def get_source_status(db: Session = Depends(get_db), _=Depends(get_current_user)
     machines = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
     source_types = _active_source_types(db)
     source_rows = db.query(MocvdSource).all()
-    return build_source_status_snapshot(machines, source_types, source_rows)
+    settings = _get_source_status_settings(db)
+    return build_source_status_snapshot(
+        machines,
+        source_types,
+        source_rows,
+        overdue_days=settings["overdue_days"],
+        urgent_days=settings["urgent_days"],
+    )
 
 
 @router.get("/source-change-logs")

@@ -11,11 +11,13 @@ const STATUS_META = {
   normal: { label: '정상', color: '#34d399', bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.22)' },
 }
 
-function getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio) {
+function getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio, statusSettings) {
   const remain = Number(remaining ?? 0)
   const usage = Number(dailyUsage ?? 0)
   const initial = Number(initialAmount ?? 0)
   const ratio = Number(thresholdRatio ?? 15)
+  const overdueDays = Number(statusSettings?.overdue_days ?? 0)
+  const urgentDays = Number(statusSettings?.urgent_days ?? 7)
   const thresholdAmount = initial > 0 ? (initial * ratio) / 100 : 0
 
   if (initial > 0 && remain <= thresholdAmount) return { key: 'overdue', daysLeft: 0 }
@@ -23,8 +25,8 @@ function getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio) {
   if (usage <= 0) return { key: 'normal', daysLeft: null }
 
   const daysLeft = Math.ceil((remain - thresholdAmount) / usage)
-  if (daysLeft <= 7) return { key: 'overdue', daysLeft }
-  if (daysLeft <= 15) return { key: 'urgent', daysLeft }
+  if (daysLeft <= overdueDays) return { key: 'overdue', daysLeft }
+  if (daysLeft <= urgentDays) return { key: 'urgent', daysLeft }
   return { key: 'normal', daysLeft }
 }
 
@@ -50,6 +52,7 @@ export default function SourceMachineBoard() {
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
   const [sourceNames, setSourceNames] = useState([])
+  const [statusSettings, setStatusSettings] = useState({ overdue_days: 0, urgent_days: 7 })
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
@@ -64,6 +67,7 @@ export default function SourceMachineBoard() {
       }
       setRows(json.rows ?? [])
       setSourceNames(json.source_names ?? [])
+      setStatusSettings(json.status_settings ?? { overdue_days: 0, urgent_days: 7 })
     } catch (err) {
       setError(err.message || '설비별 소스현황을 불러오지 못했습니다.')
     } finally {
@@ -89,7 +93,7 @@ export default function SourceMachineBoard() {
             dailyUsage,
             initialAmount,
             thresholdRatio,
-            ...getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio),
+            ...getSourceStatus(remaining, dailyUsage, initialAmount, thresholdRatio, statusSettings),
           }
         })
 
@@ -108,7 +112,7 @@ export default function SourceMachineBoard() {
           alertSources: sources.filter((item) => item.key !== 'normal'),
         }
       }),
-    [rows, sourceNames],
+    [rows, sourceNames, statusSettings],
   )
 
   const filteredCards = useMemo(() => {
@@ -150,7 +154,10 @@ export default function SourceMachineBoard() {
               ]}
             />
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+              부족 기준 {statusSettings.overdue_days}일 / 임박 기준 {statusSettings.urgent_days}일
+            </span>
             <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>{filteredCards.length}대 표시</span>
             <Button icon={<ReloadOutlined />} onClick={fetchData}>
               새로고침

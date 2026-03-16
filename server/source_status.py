@@ -6,6 +6,8 @@ from typing import Any
 
 
 DEFAULT_THRESHOLD_RATIO = 15.0
+DEFAULT_OVERDUE_DAYS = 0
+DEFAULT_URGENT_DAYS = 7
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -17,7 +19,7 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def _build_event(machine, source_type, source_row) -> dict[str, Any] | None:
+def _build_event(machine, source_type, source_row, overdue_days: int, urgent_days: int) -> dict[str, Any] | None:
     if source_row is None:
         return None
 
@@ -40,9 +42,9 @@ def _build_event(machine, source_type, source_row) -> dict[str, Any] | None:
 
     if initial_amount > 0 and remaining_amount <= threshold_amount:
         status = "overdue"
-    elif days_left is not None and days_left <= 0:
+    elif days_left is not None and days_left <= overdue_days:
         status = "overdue"
-    elif days_left is not None and days_left <= 7:
+    elif days_left is not None and days_left <= urgent_days:
         status = "urgent"
     elif days_left is not None and days_left <= 30:
         status = "upcoming"
@@ -67,7 +69,13 @@ def _build_event(machine, source_type, source_row) -> dict[str, Any] | None:
     }
 
 
-def build_source_status_snapshot(machines, source_types, source_rows) -> dict[str, Any]:
+def build_source_status_snapshot(
+    machines,
+    source_types,
+    source_rows,
+    overdue_days: int = DEFAULT_OVERDUE_DAYS,
+    urgent_days: int = DEFAULT_URGENT_DAYS,
+) -> dict[str, Any]:
     source_map = {
         (row.machine_no, row.source_name): row
         for row in source_rows
@@ -76,7 +84,13 @@ def build_source_status_snapshot(machines, source_types, source_rows) -> dict[st
     events: list[dict[str, Any]] = []
     for machine in machines:
         for source_type in source_types:
-            event = _build_event(machine, source_type, source_map.get((machine.machine_no, source_type.name)))
+            event = _build_event(
+                machine,
+                source_type,
+                source_map.get((machine.machine_no, source_type.name)),
+                overdue_days,
+                urgent_days,
+            )
             if event is not None:
                 events.append(event)
 
@@ -104,6 +118,10 @@ def build_source_status_snapshot(machines, source_types, source_rows) -> dict[st
             "overdue": overdue_count,
             "urgent": urgent_count,
             "this_month": month_count,
+        },
+        "settings": {
+            "overdue_days": overdue_days,
+            "urgent_days": urgent_days,
         },
         "events": events,
     }

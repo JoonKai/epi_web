@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Card, Input, Select, Space, Spin, Tabs } from 'antd'
+import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Tabs } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
@@ -451,6 +451,8 @@ function SourceInputTab() {
   const [pendingKeys, setPendingKeys] = useState(new Set())
   const [quickFilter, setQuickFilter] = useState('')
   const [forecastDays, setForecastDays] = useState(15)
+  const [statusSettings, setStatusSettings] = useState({ overdue_days: 0, urgent_days: 7 })
+  const [settingsSaving, setSettingsSaving] = useState(false)
 
   const fetchData = useCallback(() => {
     setLoading(true)
@@ -478,6 +480,7 @@ function SourceInputTab() {
 
         setCellData(nextCellData)
         setPendingKeys(new Set())
+        setStatusSettings(json.status_settings ?? { overdue_days: 0, urgent_days: 7 })
       })
       .catch((err) => setError(typeof err === 'string' ? err : '전체 소스 데이터를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
@@ -529,6 +532,45 @@ function SourceInputTab() {
     }
   }
 
+  const handleStatusSettingChange = (field, value) => {
+    setStatusSettings((prev) => {
+      const nextValue = Number(value ?? 0)
+      if (field === 'overdue_days') {
+        return {
+          overdue_days: Math.max(0, nextValue),
+          urgent_days: Math.max(prev.urgent_days, Math.max(0, nextValue)),
+        }
+      }
+      return {
+        ...prev,
+        urgent_days: Math.max(prev.overdue_days, Math.max(0, nextValue)),
+      }
+    })
+  }
+
+  const handleSaveStatusSettings = async () => {
+    setSettingsSaving(true)
+    setError(null)
+    try {
+      const payload = {
+        overdue_days: Number(statusSettings.overdue_days ?? 0),
+        urgent_days: Number(statusSettings.urgent_days ?? 7),
+      }
+      const res = await authFetch('/api/mocvd/source-status-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.detail || '상태 기준 저장에 실패했습니다.')
+      setStatusSettings(json)
+    } catch (err) {
+      setError(err.message || '상태 기준 저장에 실패했습니다.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
   const filteredMachines = useMemo(() => {
     const keyword = quickFilter.trim().toLowerCase()
     if (!keyword) return machines
@@ -566,6 +608,25 @@ function SourceInputTab() {
           </div>
         </div>
       </div>
+
+      <Card className="nowa-card" styles={{ body: { padding: 16 } }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Space wrap size={16}>
+            <div style={{ color: 'var(--nowa-text-soft)', fontSize: 13, fontWeight: 700 }}>상태 기준 설정</div>
+            <Space size={8}>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>부족 기준(일)</span>
+              <InputNumber min={0} value={statusSettings.overdue_days} onChange={(value) => handleStatusSettingChange('overdue_days', value)} />
+            </Space>
+            <Space size={8}>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>임박 기준(일)</span>
+              <InputNumber min={0} value={statusSettings.urgent_days} onChange={(value) => handleStatusSettingChange('urgent_days', value)} />
+            </Space>
+          </Space>
+          <Button onClick={handleSaveStatusSettings} loading={settingsSaving}>
+            기준 저장
+          </Button>
+        </div>
+      </Card>
 
       {error ? <Alert type="error" message={error} /> : null}
 
