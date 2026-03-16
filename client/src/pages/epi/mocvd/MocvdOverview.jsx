@@ -9,6 +9,7 @@ import {
   Empty,
   Form,
   Input,
+  Modal,
   Popconfirm,
   Row,
   Skeleton,
@@ -244,7 +245,7 @@ function NoticeBoard() {
           <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
             <div className="notice-marquee">
               <div className="notice-marquee-track">
-                {[...marqueeItems, ...marqueeItems].map((text, index) => (
+                {marqueeItems.map((text, index) => (
                   <span key={`${index}-${text}`} className="notice-marquee-item">
                     {text}
                   </span>
@@ -340,6 +341,7 @@ function HandoverBoard() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [previewNote, setPreviewNote] = useState(null)
   const [notes, setNotes] = useState([])
 
   const fetchNotes = useCallback(async () => {
@@ -479,11 +481,13 @@ function HandoverBoard() {
               {notes.map((note) => (
                 <div
                   key={note.id}
+                  onClick={() => setPreviewNote(note)}
                   style={{
                     border: '1px solid var(--nowa-border)',
                     borderRadius: 12,
                     padding: 10,
                     background: 'var(--nowa-soft-fill)',
+                    cursor: 'pointer',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
@@ -495,11 +499,18 @@ function HandoverBoard() {
                     </div>
                     {canManageNote(note) ? (
                       <Space size={6}>
-                        <Button size="small" icon={<EditOutlined />} onClick={() => beginEdit(note)}>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            beginEdit(note)
+                          }}
+                        >
                           수정
                         </Button>
                         <Popconfirm title="이 인수인계를 삭제하시겠습니까?" onConfirm={() => removeNote(note.id)}>
-                          <Button size="small" danger icon={<DeleteOutlined />} />
+                          <Button size="small" danger icon={<DeleteOutlined />} onClick={(event) => event.stopPropagation()} />
                         </Popconfirm>
                       </Space>
                     ) : null}
@@ -525,6 +536,24 @@ function HandoverBoard() {
           )}
         </Card>
       </div>
+
+      <Modal
+        title={previewNote?.title || '인수인계'}
+        open={Boolean(previewNote)}
+        onCancel={() => setPreviewNote(null)}
+        footer={null}
+      >
+        {previewNote ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12 }}>
+              {previewNote.handover_date} / {previewNote.author || '-'} / {previewNote.updated_at || previewNote.created_at || '-'}
+            </div>
+            <div style={{ color: 'var(--nowa-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+              {previewNote.content}
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </SectionCard>
   )
 }

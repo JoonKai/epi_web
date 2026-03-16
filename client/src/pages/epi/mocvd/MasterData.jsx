@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Tabs, Table, Button, Modal, Form, Input, Switch, Tag, Popconfirm, message, InputNumber, Space } from 'antd'
-import { PlusOutlined, DeleteOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons'
+import {
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Space,
+  Switch,
+  Table,
+  Tabs,
+  Tag,
+  message,
+} from 'antd'
+import { DeleteOutlined, EditOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 
@@ -9,7 +22,7 @@ function usePendingActiveMap(rows) {
 }
 
 function MachineTab() {
-  const [data, setData] = useState([])
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -18,29 +31,29 @@ function MachineTab() {
   const [createForm] = Form.useForm()
   const [editForm] = Form.useForm()
 
-  const fetchData = async () => {
+  const fetchRows = async () => {
     setLoading(true)
     try {
       const res = await authFetch('/api/admin/machines')
       const json = await res.json()
-      setData(json)
+      setRows(Array.isArray(json) ? json : [])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchData()
+    fetchRows()
   }, [])
 
-  const initialActiveMap = usePendingActiveMap(data)
+  const initialActiveMap = usePendingActiveMap(rows)
   const [pendingActiveMap, setPendingActiveMap] = useState({})
 
   useEffect(() => {
     setPendingActiveMap(initialActiveMap)
   }, [initialActiveMap])
 
-  const hasPendingChanges = data.some((row) => pendingActiveMap[row.id] !== row.is_active)
+  const hasPendingChanges = rows.some((row) => pendingActiveMap[row.id] !== row.is_active)
 
   const handleCreate = async (values) => {
     const res = await authFetch('/api/admin/machines', {
@@ -48,15 +61,17 @@ function MachineTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     })
-    if (res.ok) {
-      message.success('추가 완료')
-      setCreateOpen(false)
-      createForm.resetFields()
-      fetchData()
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '호기 추가에 실패했습니다.')
       return
     }
-    const err = await res.json()
-    message.error(err.detail)
+
+    message.success('호기를 추가했습니다.')
+    setCreateOpen(false)
+    createForm.resetFields()
+    fetchRows()
   }
 
   const handleEdit = async (values) => {
@@ -65,24 +80,33 @@ function MachineTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     })
-    if (res.ok) {
-      message.success('수정 완료')
-      setEditOpen(false)
-      setEditingRow(null)
-      editForm.resetFields()
-      fetchData()
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '호기 수정에 실패했습니다.')
       return
     }
-    const err = await res.json()
-    message.error(err.detail)
+
+    message.success('호기를 수정했습니다.')
+    setEditOpen(false)
+    setEditingRow(null)
+    editForm.resetFields()
+    fetchRows()
   }
 
-  const handleToggle = (row, isActive) => {
-    setPendingActiveMap((prev) => ({ ...prev, [row.id]: isActive }))
+  const handleDelete = async (id) => {
+    const res = await authFetch(`/api/admin/machines/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '호기 삭제에 실패했습니다.')
+      return
+    }
+    message.success('호기를 삭제했습니다.')
+    fetchRows()
   }
 
   const handleSaveActive = async () => {
-    const changedRows = data.filter((row) => pendingActiveMap[row.id] !== row.is_active)
+    const changedRows = rows.filter((row) => pendingActiveMap[row.id] !== row.is_active)
     if (changedRows.length === 0) {
       message.info('저장할 변경사항이 없습니다.')
       return
@@ -107,19 +131,13 @@ function MachineTab() {
         }
       }
 
-      message.success('호기 사용 여부 저장 완료')
-      fetchData()
+      message.success('호기 사용 여부를 저장했습니다.')
+      fetchRows()
     } catch (err) {
       message.error(err.message || '호기 사용 여부 저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }
-  }
-
-  const handleDelete = async (id) => {
-    await authFetch(`/api/admin/machines/${id}`, { method: 'DELETE' })
-    message.success('삭제 완료')
-    fetchData()
   }
 
   const openEdit = (row) => {
@@ -133,27 +151,37 @@ function MachineTab() {
   }
 
   const columns = [
-    { title: '호기 번호', dataIndex: 'machine_no', width: 170, render: (value) => formatMachineLabel(value) },
-    { title: '설명', dataIndex: 'description', render: (value) => value || '-' },
+    {
+      title: '호기 번호',
+      dataIndex: 'machine_no',
+      width: 180,
+      render: (value) => formatMachineLabel(value),
+    },
+    {
+      title: '설명',
+      dataIndex: 'description',
+      render: (value) => value || '-',
+    },
     {
       title: '사용',
-      dataIndex: 'is_active',
-      width: 110,
+      width: 100,
       render: (_, row) => (
         <Switch
-          checked={pendingActiveMap[row.id] ?? row.is_active}
           size="small"
-          onChange={(checked) => handleToggle(row, checked)}
+          checked={pendingActiveMap[row.id] ?? row.is_active}
+          onChange={(checked) => setPendingActiveMap((prev) => ({ ...prev, [row.id]: checked }))}
         />
       ),
     },
     {
       title: '관리',
-      width: 140,
+      width: 150,
       render: (_, row) => (
         <Space size={6}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>수정</Button>
-          <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
+            수정
+          </Button>
+          <Popconfirm title="이 호기를 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -164,25 +192,38 @@ function MachineTab() {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>호기 추가</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+          호기 추가
+        </Button>
         <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveActive} loading={saving} disabled={!hasPendingChanges}>
           저장
         </Button>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={{ pageSize: 20 }} size="middle" bordered />
+
+      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 20 }} bordered />
 
       <Modal title="호기 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
         <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
-          <Form.Item name="machine_no" label="호기 번호" rules={[{ required: true }]}><InputNumber min={1} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="description" label="설명"><Input placeholder="선택 사항" /></Form.Item>
+          <Form.Item name="machine_no" label="호기 번호" rules={[{ required: true, message: '호기 번호를 입력하세요.' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="description" label="설명">
+            <Input />
+          </Form.Item>
         </Form>
       </Modal>
 
       <Modal title="호기 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
         <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
-          <Form.Item name="machine_no" label="호기 번호" rules={[{ required: true }]}><InputNumber min={1} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="description" label="설명"><Input /></Form.Item>
-          <Form.Item name="is_active" label="사용" valuePropName="checked"><Switch /></Form.Item>
+          <Form.Item name="machine_no" label="호기 번호" rules={[{ required: true, message: '호기 번호를 입력하세요.' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="description" label="설명">
+            <Input />
+          </Form.Item>
+          <Form.Item name="is_active" label="사용" valuePropName="checked">
+            <Switch />
+          </Form.Item>
         </Form>
       </Modal>
     </>
@@ -190,7 +231,7 @@ function MachineTab() {
 }
 
 function SourceTab() {
-  const [data, setData] = useState([])
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -199,29 +240,29 @@ function SourceTab() {
   const [createForm] = Form.useForm()
   const [editForm] = Form.useForm()
 
-  const fetchData = async () => {
+  const fetchRows = async () => {
     setLoading(true)
     try {
       const res = await authFetch('/api/admin/sources')
       const json = await res.json()
-      setData(json)
+      setRows(Array.isArray(json) ? json : [])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchData()
+    fetchRows()
   }, [])
 
-  const initialActiveMap = usePendingActiveMap(data)
+  const initialActiveMap = usePendingActiveMap(rows)
   const [pendingActiveMap, setPendingActiveMap] = useState({})
 
   useEffect(() => {
     setPendingActiveMap(initialActiveMap)
   }, [initialActiveMap])
 
-  const hasPendingChanges = data.some((row) => pendingActiveMap[row.id] !== row.is_active)
+  const hasPendingChanges = rows.some((row) => pendingActiveMap[row.id] !== row.is_active)
 
   const handleCreate = async (values) => {
     const res = await authFetch('/api/admin/sources', {
@@ -229,15 +270,17 @@ function SourceTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     })
-    if (res.ok) {
-      message.success('추가 완료')
-      setCreateOpen(false)
-      createForm.resetFields()
-      fetchData()
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '소스 추가에 실패했습니다.')
       return
     }
-    const err = await res.json()
-    message.error(err.detail)
+
+    message.success('소스를 추가했습니다.')
+    setCreateOpen(false)
+    createForm.resetFields()
+    fetchRows()
   }
 
   const handleEdit = async (values) => {
@@ -246,24 +289,33 @@ function SourceTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     })
-    if (res.ok) {
-      message.success('수정 완료')
-      setEditOpen(false)
-      setEditingRow(null)
-      editForm.resetFields()
-      fetchData()
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '소스 수정에 실패했습니다.')
       return
     }
-    const err = await res.json()
-    message.error(err.detail)
+
+    message.success('소스를 수정했습니다.')
+    setEditOpen(false)
+    setEditingRow(null)
+    editForm.resetFields()
+    fetchRows()
   }
 
-  const handleToggle = (row, isActive) => {
-    setPendingActiveMap((prev) => ({ ...prev, [row.id]: isActive }))
+  const handleDelete = async (id) => {
+    const res = await authFetch(`/api/admin/sources/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '소스 삭제에 실패했습니다.')
+      return
+    }
+    message.success('소스를 삭제했습니다.')
+    fetchRows()
   }
 
   const handleSaveActive = async () => {
-    const changedRows = data.filter((row) => pendingActiveMap[row.id] !== row.is_active)
+    const changedRows = rows.filter((row) => pendingActiveMap[row.id] !== row.is_active)
     if (changedRows.length === 0) {
       message.info('저장할 변경사항이 없습니다.')
       return
@@ -288,19 +340,13 @@ function SourceTab() {
         }
       }
 
-      message.success('소스 사용 여부 저장 완료')
-      fetchData()
+      message.success('소스 사용 여부를 저장했습니다.')
+      fetchRows()
     } catch (err) {
       message.error(err.message || '소스 사용 여부 저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }
-  }
-
-  const handleDelete = async (id) => {
-    await authFetch(`/api/admin/sources/${id}`, { method: 'DELETE' })
-    message.success('삭제 완료')
-    fetchData()
   }
 
   const openEdit = (row) => {
@@ -314,27 +360,37 @@ function SourceTab() {
   }
 
   const columns = [
-    { title: '소스명', dataIndex: 'name', width: 150, render: (value) => <Tag color="blue">{value}</Tag> },
-    { title: '순서', dataIndex: 'order_idx', width: 80 },
+    {
+      title: '소스명',
+      dataIndex: 'name',
+      width: 180,
+      render: (value) => <Tag color="blue">{value}</Tag>,
+    },
+    {
+      title: '순서',
+      dataIndex: 'order_idx',
+      width: 100,
+    },
     {
       title: '사용',
-      dataIndex: 'is_active',
-      width: 110,
+      width: 100,
       render: (_, row) => (
         <Switch
-          checked={pendingActiveMap[row.id] ?? row.is_active}
           size="small"
-          onChange={(checked) => handleToggle(row, checked)}
+          checked={pendingActiveMap[row.id] ?? row.is_active}
+          onChange={(checked) => setPendingActiveMap((prev) => ({ ...prev, [row.id]: checked }))}
         />
       ),
     },
     {
       title: '관리',
-      width: 140,
+      width: 150,
       render: (_, row) => (
         <Space size={6}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>수정</Button>
-          <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
+            수정
+          </Button>
+          <Popconfirm title="이 소스를 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -345,36 +401,50 @@ function SourceTab() {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>소스 추가</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+          소스 추가
+        </Button>
         <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveActive} loading={saving} disabled={!hasPendingChanges}>
           저장
         </Button>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={false} size="middle" bordered />
+
+      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 20 }} bordered />
 
       <Modal title="소스 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
         <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="소스명" rules={[{ required: true }]}><Input placeholder="예: TMGa" /></Form.Item>
-          <Form.Item name="order_idx" label="순서" initialValue={0}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="name" label="소스명" rules={[{ required: true, message: '소스명을 입력하세요.' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="order_idx" label="순서" initialValue={0}>
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
         </Form>
       </Modal>
 
       <Modal title="소스 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
         <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="소스명" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="order_idx" label="순서"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="is_active" label="사용" valuePropName="checked"><Switch /></Form.Item>
+          <Form.Item name="name" label="소스명" rules={[{ required: true, message: '소스명을 입력하세요.' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="order_idx" label="순서">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="is_active" label="사용" valuePropName="checked">
+            <Switch />
+          </Form.Item>
         </Form>
       </Modal>
     </>
   )
 }
 
-function MasterData() {
+export default function MasterData() {
   return (
     <div>
       <h2 style={{ marginBottom: 24 }}>기준정보관리</h2>
       <Tabs
+        defaultActiveKey="machines"
         items={[
           { key: 'machines', label: 'MOCVD 호기 관리', children: <MachineTab /> },
           { key: 'sources', label: '소스 종류 관리', children: <SourceTab /> },
@@ -383,5 +453,3 @@ function MasterData() {
     </div>
   )
 }
-
-export default MasterData
