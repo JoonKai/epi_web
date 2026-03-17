@@ -23,6 +23,7 @@ import WorkLog from './pages/epi/mocvd/WorkLog'
 import Simulator from './pages/epi/Simulator'
 import PurchaseRequest from './pages/cost/PurchaseRequest'
 import CostMasterData from './pages/cost/CostMasterData'
+import RepairStatus from './pages/cost/RepairStatus'
 
 // ── Nowa-TS Design Tokens ──────────────────────────────────────────
 const DARK_TOKENS = {
@@ -109,6 +110,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/run-comparison" element={<RunComparison />} />
           <Route path="/grid" element={<DataGrid />} />
           <Route path="/cost/purchase-request" element={<PurchaseRequest />} />
+          <Route path="/cost/repair-status" element={<RepairStatus />} />
           <Route path="/cost/master-data" element={<CostMasterData />} />
           {user.role === 'admin' && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

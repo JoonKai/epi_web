@@ -40,6 +40,74 @@ class SystemSetting(Base):
     value = Column(String(200), nullable=False)
 
 
+class CostItem(Base):
+    __tablename__ = "cost_item"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String(50), default="")
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    unit = Column(String(20), default="EA")
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class CostVendor(Base):
+    __tablename__ = "cost_vendor"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendor_code = Column(String(50), unique=True, nullable=False, index=True)
+    vendor_name = Column(String(100), nullable=False, index=True)
+    business_type = Column(String(100), default="")
+    manager = Column(String(50), default="")
+    contact = Column(String(50), default="")
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class PurchaseRequest(Base):
+    __tablename__ = "purchase_request"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_date = Column(String(20), nullable=False, index=True)
+    material_code = Column(String(50), default="", index=True)
+    item_name = Column(String(200), nullable=False)
+    quantity = Column(Integer, default=1)
+    vendor_name = Column(String(100), default="")
+    requester = Column(String(50), default="")
+    actual_draft_count = Column(Integer, default=0)
+    purchase_reason = Column(String(200), default="")
+    approval_status = Column(String(50), default="기안 전", index=True)
+    draft_date = Column(String(20), default="")
+    receipt_date = Column(String(20), default="")
+    note = Column(String(500), default="")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class RepairStatus(Base):
+    __tablename__ = "repair_status"
+
+    id = Column(Integer, primary_key=True, index=True)
+    receipt_type = Column(String(50), default="", index=True)
+    repair_status = Column(String(50), default="", index=True)
+    outbound_date = Column(String(20), default="", index=True)
+    inbound_date = Column(String(20), default="")
+    equipment_name = Column(String(150), default="")
+    location = Column(String(100), default="")
+    chamber = Column(String(50), default="")
+    material_code = Column(String(100), default="")
+    material_name = Column(String(300), default="")
+    spec = Column(String(200), default="")
+    vendor_name = Column(String(150), default="")
+    vendor_code = Column(String(50), default="")
+    repair_reason = Column(String(500), default="")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
 class MocvdSource(Base):
     __tablename__ = "mocvd_source"
 

@@ -82,6 +82,7 @@ function buildMenuItems(isAdmin) {
       label: '비용',
       children: [
         { key: '/cost/purchase-request', label: '구매요청' },
+        { key: '/cost/repair-status', label: '수리현황' },
         { key: '/cost/master-data', label: '기준정보등록' },
       ],
     },
@@ -134,6 +135,7 @@ const PAGE_COLOR = {
   '/wafermap': '#ec4899',
   '/run-comparison': '#f43f5e',
   '/cost/purchase-request': '#f59e0b',
+  '/cost/repair-status': '#ef4444',
   '/cost/master-data': '#8b5cf6',
   '/grid': '#22c55e',
   '/admin': '#f43f5e',

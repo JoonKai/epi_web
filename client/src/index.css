@@ -662,6 +662,14 @@ a { color: inherit; }
   background: linear-gradient(90deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.06) 100%) !important;
 }
 
+.console-table.ant-table-wrapper .ant-table-tbody > tr.purchase-request-row-pending > td {
+  background: linear-gradient(90deg, rgba(245,158,11,0.1) 0%, rgba(249,115,22,0.04) 100%);
+}
+
+.console-table.ant-table-wrapper .ant-table-tbody > tr.purchase-request-row-pending:hover > td {
+  background: linear-gradient(90deg, rgba(245,158,11,0.16) 0%, rgba(249,115,22,0.08) 100%) !important;
+}
+
 /* ── Form inputs ────────────────────────────────────────────────── */
 .console-form .ant-form-item-label > label,
 .console-form .ant-input-number-group-addon,
