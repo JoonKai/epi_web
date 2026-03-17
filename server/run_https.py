@@ -19,7 +19,7 @@ CERT_FILE = CERT_DIR / "server-cert.pem"
 KEY_FILE = CERT_DIR / "server-key.pem"
 
 HOST = os.getenv("APP_HOST", "0.0.0.0")
-PORT = int(os.getenv("APP_PORT", "8443"))
+PORT = int(os.getenv("APP_HTTPS_PORT", os.getenv("APP_PORT", "8443")))
 
 
 def _collect_hostnames() -> tuple[list[str], list[ipaddress.IPv4Address | ipaddress.IPv6Address]]:

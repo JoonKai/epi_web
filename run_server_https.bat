@@ -38,8 +38,8 @@ echo [SETUP] Applying initial data...
 python init_data.py
 if errorlevel 1 goto :error
 
-echo [RUN] Starting HTTPS server...
-python run_https.py
+echo [RUN] Starting HTTP and HTTPS servers...
+python run_http_https.py
 goto :eof
 
 :error

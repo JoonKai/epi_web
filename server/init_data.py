@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import os
 
-from database import SessionLocal, engine
-from models import Base, MocvdMachine, SourceType, SystemSetting, User
+from database import SessionLocal
+from models import MocvdMachine, SourceType, SystemSetting, User
 from auth import hash_password
+from schema_sync import print_sync_summary, sync_schema
 from source_status import DEFAULT_OVERDUE_DAYS, DEFAULT_URGENT_DAYS
 
 
@@ -92,7 +93,8 @@ def ensure_system_settings(db) -> None:
 
 
 def main() -> None:
-    Base.metadata.create_all(bind=engine)
+    schema_actions = sync_schema()
+    print_sync_summary(schema_actions)
 
     db = SessionLocal()
     try:
