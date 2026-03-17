@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from models import MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdSource, SourceChangeLog, SourceType, SystemSetting
+from models import MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, SourceChangeLog, SourceType, SystemSetting
 from source_status import (
     DEFAULT_OVERDUE_DAYS,
     DEFAULT_THRESHOLD_RATIO,
@@ -92,6 +92,18 @@ class NoticeUpdate(NoticeCreate):
     pass
 
 
+class PmCounterUpdateItem(BaseModel):
+    machine_no: int
+    pm_count: float = 0.0
+    pm_base_count: float = 0.0
+    filter_count: float = 0.0
+    filter_base_count: float = 0.0
+
+
+class ForcedDownUpdate(BaseModel):
+    machine_nos: list[int] = []
+
+
 def _can_manage_handover_note(current_user, row: MocvdHandoverNote) -> bool:
     return getattr(current_user, "role", "") == "admin" or row.author == getattr(current_user, "username", "")
 
@@ -123,12 +135,114 @@ def _get_source_status_settings(db: Session) -> dict[str, int]:
     return {"overdue_days": overdue_days, "urgent_days": urgent_days}
 
 
+def _get_forced_down_machine_nos(db: Session) -> list[int]:
+    row = db.query(SystemSetting).filter(SystemSetting.key == "mocvd_forced_down_machine_nos").first()
+    if not row or not row.value:
+        return []
+    machine_nos = []
+    for token in row.value.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            machine_nos.append(int(token))
+        except ValueError:
+            continue
+    return sorted(set(machine_nos))
+
+
 
 
 @router.get("/machines")
 def get_machines(db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
     return [{"machine_no": row.machine_no, "description": row.description, "is_active": row.is_active} for row in rows]
+
+
+@router.get("/forced-down")
+def get_forced_down(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    return {"machine_nos": _get_forced_down_machine_nos(db)}
+
+
+@router.put("/forced-down")
+def update_forced_down(body: ForcedDownUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    active_machine_nos = {
+        machine_no
+        for (machine_no,) in db.query(MocvdMachine.machine_no).filter(MocvdMachine.is_active == True).all()
+    }
+    machine_nos = sorted({machine_no for machine_no in body.machine_nos if machine_no in active_machine_nos})
+    value = ",".join(str(machine_no) for machine_no in machine_nos)
+
+    row = db.query(SystemSetting).filter(SystemSetting.key == "mocvd_forced_down_machine_nos").first()
+    if row:
+        row.value = value
+    else:
+        db.add(SystemSetting(key="mocvd_forced_down_machine_nos", value=value))
+    db.commit()
+    return {"result": "ok", "machine_nos": machine_nos}
+
+
+@router.get("/pm-counters")
+def get_pm_counters(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    machines = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
+    counter_map = {
+        row.machine_no: row
+        for row in db.query(MocvdPmCounter).all()
+    }
+
+    result = []
+    for machine in machines:
+        row = counter_map.get(machine.machine_no)
+        result.append(
+            {
+                "machine_no": machine.machine_no,
+                "description": machine.description or "",
+                "pm_count": row.pm_count if row and row.pm_count is not None else 0.0,
+                "pm_base_count": row.pm_base_count if row and row.pm_base_count is not None else 0.0,
+                "filter_count": row.filter_count if row and row.filter_count is not None else 0.0,
+                "filter_base_count": row.filter_base_count if row and row.filter_base_count is not None else 0.0,
+                "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M") if row and row.updated_at else None,
+            }
+        )
+    return result
+
+
+@router.put("/pm-counters")
+def update_pm_counters(items: list[PmCounterUpdateItem], db: Session = Depends(get_db), _=Depends(get_current_user)):
+    machine_nos = {
+        row.machine_no
+        for row in db.query(MocvdMachine.machine_no).filter(MocvdMachine.is_active == True).all()
+    }
+    existing = {
+        row.machine_no: row
+        for row in db.query(MocvdPmCounter).all()
+    }
+
+    updated = 0
+    for item in items:
+        if item.machine_no not in machine_nos:
+            continue
+
+        row = existing.get(item.machine_no)
+        if row:
+            row.pm_count = item.pm_count
+            row.pm_base_count = item.pm_base_count
+            row.filter_count = item.filter_count
+            row.filter_base_count = item.filter_base_count
+        else:
+            db.add(
+                MocvdPmCounter(
+                    machine_no=item.machine_no,
+                    pm_count=item.pm_count,
+                    pm_base_count=item.pm_base_count,
+                    filter_count=item.filter_count,
+                    filter_base_count=item.filter_base_count,
+                )
+            )
+        updated += 1
+
+    db.commit()
+    return {"result": "ok", "updated": updated}
 
 
 @router.get("/source-types")

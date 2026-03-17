@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 
 from database import SessionLocal
-from models import CostItem, CostVendor, MocvdMachine, PurchaseRequest, RepairStatus, SourceType, SystemSetting, User
+from models import CostItem, CostVendor, MocvdMachine, MocvdPmCounter, PurchaseRequest, RepairStatus, SourceType, SystemSetting, User
 from auth import hash_password
 from schema_sync import print_sync_summary, sync_schema
 from source_status import DEFAULT_OVERDUE_DAYS, DEFAULT_URGENT_DAYS
@@ -111,6 +111,34 @@ def ensure_system_settings(db) -> None:
     print(f"[ok] system settings ensured: +{added} / total target {len(DEFAULT_SETTINGS)}")
 
 
+def ensure_pm_counters(db) -> None:
+    active_machine_nos = [
+        machine_no
+        for (machine_no,) in db.query(MocvdMachine.machine_no).filter(MocvdMachine.is_active == True).all()
+    ]
+    existing = {
+        row.machine_no
+        for row in db.query(MocvdPmCounter.machine_no).all()
+    }
+
+    added = 0
+    for machine_no in active_machine_nos:
+        if machine_no in existing:
+            continue
+        db.add(
+            MocvdPmCounter(
+                machine_no=machine_no,
+                pm_count=0.0,
+                pm_base_count=0.0,
+                filter_count=0.0,
+                filter_base_count=0.0,
+            )
+        )
+        added += 1
+
+    print(f"[ok] pm counters ensured: +{added} / total active machines {len(active_machine_nos)}")
+
+
 def ensure_cost_items(db) -> None:
     existing = {row.code: row for row in db.query(CostItem).all()}
     added = 0
@@ -173,6 +201,7 @@ def main() -> None:
         ensure_machines(db)
         ensure_source_types(db)
         ensure_system_settings(db)
+        ensure_pm_counters(db)
         ensure_cost_items(db)
         ensure_cost_vendors(db)
         ensure_purchase_requests(db)

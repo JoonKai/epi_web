@@ -57,6 +57,7 @@ function getRiskOrder(status) {
 }
 
 function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)', sub }) {
+  const resolvedAccent = accent || gradient.match(/#[0-9a-fA-F]{6}/)?.[0] || '#aeb8c9'
   return (
     <div
       className="nowa-kpi-card"
@@ -92,15 +93,15 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
         }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
-        <div style={{ color: accent, fontSize: 12, fontWeight: 700, paddingTop: 2 }}>{label}</div>
+        <div style={{ color: resolvedAccent, fontSize: 12, fontWeight: 700, paddingTop: 2 }}>{label}</div>
         <div
           style={{
             width: 30,
             height: 30,
             borderRadius: 9,
-            background: `${accent}18`,
-            border: `1px solid ${accent}30`,
-            color: accent,
+            background: `${resolvedAccent}18`,
+            border: `1px solid ${resolvedAccent}30`,
+            color: resolvedAccent,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -113,9 +114,9 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
       </div>
       <div style={{ marginTop: 10, color: 'var(--nowa-text)', fontSize: 30, fontWeight: 800, lineHeight: 1, position: 'relative', zIndex: 1 }}>
         {value}
-        {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${accent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
+        {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${resolvedAccent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
       </div>
-      {sub ? <div style={{ color: `${accent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
+      {sub ? <div style={{ color: `${resolvedAccent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
     </div>
   )
 }
@@ -508,6 +509,7 @@ function SourceStatusBoard() {
             value={totalMachines}
             suffix="대"
             icon={<ToolOutlined />}
+            accent="#818cf8"
             gradient="linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)"
             sub="현재 운영 중인 장비"
           />
@@ -518,6 +520,7 @@ function SourceStatusBoard() {
             value={events.length}
             suffix="건"
             icon={<NodeIndexOutlined />}
+            accent="#2dd4bf"
             gradient="linear-gradient(135deg,#14b8a6 0%,#0ea5e9 100%)"
             sub="등록된 교체 일정"
           />
@@ -528,6 +531,7 @@ function SourceStatusBoard() {
             value={overdueCount + urgentCount}
             suffix="건"
             icon={<WarningOutlined />}
+            accent="#fbbf24"
             gradient="linear-gradient(135deg,#f59e0b 0%,#f97316 100%)"
             sub="즉시 확인 필요"
           />
@@ -538,6 +542,7 @@ function SourceStatusBoard() {
             value={overdueCount}
             suffix="건"
             icon={<AlertOutlined />}
+            accent="#fb7185"
             gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)"
             sub="소스 교체 초과"
           />

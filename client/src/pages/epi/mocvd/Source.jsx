@@ -7,6 +7,7 @@ import { authFetch } from '../../../context/AuthContext'
 import SourceChangeLogTab from './SourceChangeLogTab'
 import SourceStatusBoard from './SourceStatusBoard'
 import SourceMachineBoard from './SourceMachineBoard'
+import { formatMachineLabel } from './machineLabel'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
 const LABEL_W = 72
@@ -14,6 +15,14 @@ const CELL_W = 78
 const ROW_H = 30
 const HEAD1_H = 36
 const HEAD2_H = 26
+const FORECAST_STICKY_TOP = HEAD1_H + HEAD2_H
+const STICKY_TOP_INITIAL = FORECAST_STICKY_TOP
+const STICKY_TOP_THRESHOLD = STICKY_TOP_INITIAL + ROW_H
+const STICKY_TOP_DAILY = STICKY_TOP_THRESHOLD + ROW_H
+const STICKY_TOP_REMAINING = STICKY_TOP_DAILY + ROW_H
+const STICKY_TOP_THRESHOLD_AMOUNT = STICKY_TOP_REMAINING + ROW_H
+const STICKY_TOP_DAYS_LEFT = STICKY_TOP_THRESHOLD_AMOUNT + ROW_H
+const STICKY_TOP_REPLACEMENT_DATE = STICKY_TOP_DAYS_LEFT + ROW_H
 const BASE_BG = '#0f1117'
 const BORDER = '1px solid rgba(245,158,11,0.12)'
 const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
@@ -197,6 +206,7 @@ function EditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, color
 function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, onChange }) {
   const colCount = machines.length * sourceNames.length
   const [activeEditKey, setActiveEditKey] = useState(null)
+  const wrapperRef = useRef(null)
   const orderedEditKeys = useMemo(
     () =>
       EDITABLE_FIELDS.flatMap((field) =>
@@ -217,12 +227,34 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
     },
     [orderedEditKeys],
   )
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const stickyTops = [
+      STICKY_TOP_INITIAL,
+      STICKY_TOP_THRESHOLD,
+      STICKY_TOP_DAILY,
+      STICKY_TOP_REMAINING,
+      STICKY_TOP_THRESHOLD_AMOUNT,
+      STICKY_TOP_DAYS_LEFT,
+      STICKY_TOP_REPLACEMENT_DATE,
+    ]
+
+    stickyTops.forEach((top, index) => {
+      const cell = wrapper.querySelector(`tbody tr:nth-child(${index + 1}) td:first-child`)
+      if (!(cell instanceof HTMLElement)) return
+      cell.style.top = `${top}px`
+      cell.style.zIndex = '11'
+    })
+  }, [machines, sourceNames, cellData, dateRows])
+
   if (colCount === 0) {
     return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>데이터가 없습니다.</div>
   }
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 400px)', position: 'relative' }}>
+    <div ref={wrapperRef} style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 400px)', position: 'relative' }}>
       <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
         <colgroup>
           <col style={{ width: LABEL_W, minWidth: LABEL_W }} />
@@ -262,7 +294,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                   letterSpacing: 1,
                 }}
               >
-                {machine.machine_no}
+                {formatMachineLabel(machine.machine_no)}
               </th>
             ))}
           </tr>
@@ -291,7 +323,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#0a1119' }}>
+                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_INITIAL, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#0a1119' }}>
                     <EditCell
                       cellId={`initial_amount:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -314,7 +346,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#110e00' }}>
+                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_THRESHOLD, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#110e00' }}>
                     <EditCell
                       cellId={`threshold_ratio:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -337,7 +369,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#100e00' }}>
+                  <td key={key} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_DAILY, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#100e00' }}>
                     <EditCell
                       cellId={`daily_usage:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -360,7 +392,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#060f06' }}>
+                  <td key={key} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_REMAINING, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#060f06' }}>
                     <EditCell
                       cellId={`remaining:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -388,6 +420,9 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                     key={`${key}:threshold_amount`}
                     style={{
                       ...tdCellBase,
+                      position: 'sticky',
+                      top: STICKY_TOP_THRESHOLD_AMOUNT,
+                      zIndex: 7,
                       borderLeft: index === 0 ? GROUP_BORDER : BORDER,
                       background: '#110a00',
                       color: '#f97316',
@@ -415,6 +450,9 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                     key={`${key}:days_left`}
                     style={{
                       ...tdCellBase,
+                      position: 'sticky',
+                      top: STICKY_TOP_DAYS_LEFT,
+                      zIndex: 7,
                       borderLeft: index === 0 ? GROUP_BORDER : BORDER,
                       background: '#0f0d00',
                       color: derived.days_left != null && derived.days_left <= 7 ? '#f87171' : '#facc15',
@@ -442,6 +480,9 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                     key={`${key}:replacement_date`}
                     style={{
                       ...tdCellBase,
+                      position: 'sticky',
+                      top: STICKY_TOP_REPLACEMENT_DATE,
+                      zIndex: 7,
                       borderLeft: index === 0 ? GROUP_BORDER : BORDER,
                       background: '#060f18',
                       color: '#60a5fa',
@@ -744,6 +785,125 @@ function SourceInputTab() {
             onChange={handleChange}
           />
         )}
+      </Card>
+
+      <Card
+        className="nowa-card"
+        title="설비별 잔량 도달율"
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 12 }}>
+          위 입력표와 같은 열 기준으로 소스별 잔량 도달율을 표시합니다. 초기량 대비 잔량 비율이 막대로 보입니다.
+        </div>
+        <div style={{ overflowX: 'auto', overflowY: 'hidden', position: 'relative' }}>
+          <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
+            <colgroup>
+              <col style={{ width: LABEL_W, minWidth: LABEL_W }} />
+              {filteredMachines.map((machine) =>
+                sourceNames.map((sourceName) => (
+                  <col key={`chart:${machine.machine_no}:${sourceName}`} style={{ width: CELL_W, minWidth: CELL_W }} />
+                )),
+              )}
+            </colgroup>
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    ...th1Base,
+                    left: 0,
+                    zIndex: 12,
+                    background: '#0f1117',
+                    width: LABEL_W,
+                    fontSize: 13,
+                    color: 'rgba(148,163,184,0.6)',
+                  }}
+                >
+                  구분
+                </th>
+                {filteredMachines.map((machine) => (
+                  <th
+                    key={`chart-head:${machine.machine_no}`}
+                    colSpan={sourceNames.length}
+                    style={{
+                      ...th1Base,
+                      borderLeft: GROUP_BORDER,
+                      color: '#fbbf24',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    {formatMachineLabel(machine.machine_no)}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                {filteredMachines.map((machine) =>
+                  sourceNames.map((sourceName, index) => (
+                    <th
+                      key={`chart-sub:${machine.machine_no}:${sourceName}`}
+                      style={{
+                        ...th2Base,
+                        borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                        color: 'rgba(180,196,210,0.7)',
+                      }}
+                    >
+                      {sourceName}
+                    </th>
+                  )),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ ...tdLabelBase, background: '#0f1117', color: '#86efac', borderRight: GROUP_BORDER }}>
+                  잔량 도달율
+                </td>
+                {filteredMachines.map((machine) =>
+                  sourceNames.map((sourceName, index) => {
+                    const key = `${machine.machine_no}:${sourceName}`
+                    const cell = cellData[key]
+                    const initialAmount = Number(cell?.initial_amount ?? 0)
+                    const remaining = Number(cell?.remaining ?? 0)
+                    const rate = initialAmount > 0 ? Math.max(0, Math.min(100, (remaining / initialAmount) * 100)) : 0
+                    const color = rate <= 15 ? '#f43f5e' : rate <= 40 ? '#f59e0b' : '#14b8a6'
+
+                    return (
+                      <td
+                        key={`chart-cell:${key}`}
+                        title={`${formatMachineLabel(machine.machine_no)} / ${sourceName} - ${rate.toFixed(1)}% (${remaining.toFixed(2)} / ${initialAmount.toFixed(2)})`}
+                        style={{
+                          ...tdCellBase,
+                          borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                          background: '#10151d',
+                          padding: '8px 6px 6px',
+                          height: 132,
+                          verticalAlign: 'bottom',
+                        }}
+                      >
+                        <div style={{ height: 86, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                          <div
+                            style={{
+                              width: 28,
+                              height: `${Math.max(4, rate * 0.86)}px`,
+                              borderRadius: '8px 8px 0 0',
+                              background: color,
+                              boxShadow: `0 8px 18px ${color}22`,
+                              transition: 'height 0.2s ease',
+                            }}
+                          />
+                        </div>
+                        <div style={{ marginTop: 8, textAlign: 'center', color, fontSize: 12, fontWeight: 800 }}>
+                          {rate.toFixed(0)}%
+                        </div>
+                      </td>
+                    )
+                  }),
+                )}
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   )

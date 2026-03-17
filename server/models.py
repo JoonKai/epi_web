@@ -122,6 +122,18 @@ class MocvdSource(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+class MocvdPmCounter(Base):
+    __tablename__ = "mocvd_pm_counter"
+
+    id = Column(Integer, primary_key=True, index=True)
+    machine_no = Column(Integer, unique=True, nullable=False, index=True)
+    pm_count = Column(Float, default=0.0)
+    pm_base_count = Column(Float, default=0.0)
+    filter_count = Column(Float, default=0.0)
+    filter_base_count = Column(Float, default=0.0)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
 class SourceChangeLog(Base):
     __tablename__ = "source_change_log"
 
