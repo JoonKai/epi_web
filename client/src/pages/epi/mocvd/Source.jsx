@@ -505,8 +505,9 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                 style={{
                   ...tdLabelBase,
                   background: rowIndex % 2 === 0 ? BASE_BG : '#131619',
-                  color: 'rgba(148,163,184,0.55)',
+                  color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(148,163,184,0.82)',
                   borderRight: GROUP_BORDER,
+                  fontWeight: rowIndex === 0 ? 800 : 700,
                 }}
               >
                 {label}
@@ -527,10 +528,11 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                         ...tdCellBase,
                         borderLeft: index === 0 ? GROUP_BORDER : BORDER,
                         background: isCritical ? 'rgba(239,68,68,0.12)' : isLow ? 'rgba(251,191,36,0.07)' : undefined,
-                        color: isCritical ? '#f87171' : isLow ? '#fbbf24' : '#475569',
+                        color: isCritical ? '#f87171' : isLow ? '#fbbf24' : 'rgba(148,163,184,0.8)',
                         textAlign: 'right',
                         paddingRight: 5,
                         fontSize: 13,
+                        fontWeight: isCritical || isLow ? 700 : 500,
                       }}
                     >
                       {projected === null ? '-' : fmt(projected)}

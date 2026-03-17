@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Form, Input, Button, message } from 'antd'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useAuth } from '../context/AuthContext'
 
-function Login() {
+export default function Login() {
   const { login } = useAuth()
   const [loading, setLoading] = useState(false)
 
@@ -11,8 +11,8 @@ function Login() {
     setLoading(true)
     try {
       await login(username, password)
-    } catch (e) {
-      message.error(e.message)
+    } catch (error) {
+      message.error(error.message)
     } finally {
       setLoading(false)
     }
@@ -25,88 +25,118 @@ function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0b0f1a 0%, #111827 50%, #0d1340 100%)',
+        background: 'radial-gradient(circle at top left, rgba(245,158,11,0.12) 0%, transparent 28%), radial-gradient(circle at right center, rgba(249,115,22,0.10) 0%, transparent 24%), linear-gradient(135deg, #0b0d14 0%, #0f1117 45%, #151821 100%)',
         position: 'relative',
         overflow: 'hidden',
+        padding: 24,
       }}
     >
-      {/* 배경 장식 */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        <div style={{
-          position: 'absolute', width: 700, height: 700, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 65%)',
-          top: -250, left: -200,
-        }} />
-        <div style={{
-          position: 'absolute', width: 500, height: 500, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 65%)',
-          bottom: -150, right: -100,
-        }} />
-        <div style={{
-          position: 'absolute', width: 300, height: 300, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(20,184,166,0.08) 0%, transparent 65%)',
-          top: '40%', right: '15%',
-        }} />
-      </div>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(245,158,11,0.03) 0%, transparent 24%, transparent 100%)',
+          pointerEvents: 'none',
+        }}
+      />
 
       <div
         style={{
-          width: 420,
-          background: 'rgba(17, 24, 39, 0.85)',
-          backdropFilter: 'blur(20px)',
+          width: 440,
+          background: 'linear-gradient(180deg, rgba(22,25,33,0.96) 0%, rgba(15,17,23,0.98) 100%)',
+          backdropFilter: 'blur(18px)',
           borderRadius: 24,
-          border: '1px solid rgba(99,102,241,0.15)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset',
-          padding: '48px 40px 40px',
+          border: '1px solid rgba(245,158,11,0.14)',
+          boxShadow: '0 28px 70px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.03)',
+          padding: '42px 40px 36px',
           position: 'relative',
           zIndex: 1,
+          overflow: 'hidden',
         }}
       >
-        {/* 로고 */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: 'linear-gradient(90deg, #f59e0b 0%, #f97316 100%)',
+            opacity: 0.95,
+          }}
+        />
+
+        <div style={{ textAlign: 'center', marginBottom: 34 }}>
           <div
             style={{
-              width: 68, height: 68, borderRadius: 20,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 30, fontWeight: 900, color: '#fff',
-              margin: '0 auto 20px',
-              boxShadow: '0 10px 36px rgba(99,102,241,0.45)',
+              width: 84,
+              height: 84,
+              borderRadius: 22,
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(249,115,22,0.14) 100%)',
+              border: '1px solid rgba(245,158,11,0.26)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fbbf24',
+              fontSize: 42,
+              fontWeight: 900,
+              margin: '0 auto 18px',
+              boxShadow: '0 14px 34px rgba(245,158,11,0.16)',
             }}
           >
             E
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#e2e8f0', letterSpacing: -0.5 }}>EPI</div>
-          <div style={{ fontSize: 13, color: 'rgba(148,163,184,0.7)', marginTop: 6, letterSpacing: 0.3 }}>
-            사내 EPI 공정 관리 시스템
+          <div style={{ fontSize: 28, fontWeight: 900, color: '#f8fafc', letterSpacing: -0.6 }}>
+            EPI
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(148,163,184,0.78)', marginTop: 8, lineHeight: 1.6 }}>
+            EPI 운영 관리 페이지
           </div>
         </div>
 
-        <Form layout="vertical" onFinish={onFinish} size="large" className="login-dark-input">
+        <Form layout="vertical" onFinish={onFinish} size="large">
           <Form.Item
             name="username"
             rules={[{ required: true, message: '아이디를 입력하세요.' }]}
             style={{ marginBottom: 16 }}
           >
             <Input
-              prefix={<UserOutlined style={{ color: 'rgba(99,102,241,0.7)' }} />}
+              className="epi-login-input"
+              prefix={<UserOutlined style={{ color: 'rgba(245,158,11,0.72)' }} />}
               placeholder="아이디"
               autoComplete="username"
-              style={{ height: 48, borderRadius: 12 }}
+              style={{
+                height: 48,
+                borderRadius: 12,
+                background: 'rgba(15,23,42,0.52)',
+                borderColor: 'rgba(245,158,11,0.16)',
+                color: '#e5e7eb',
+                boxShadow: 'none',
+              }}
             />
           </Form.Item>
+
           <Form.Item
             name="password"
             rules={[{ required: true, message: '비밀번호를 입력하세요.' }]}
-            style={{ marginBottom: 28 }}
+            style={{ marginBottom: 24 }}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: 'rgba(99,102,241,0.7)' }} />}
+              className="epi-login-input"
+              prefix={<LockOutlined style={{ color: 'rgba(245,158,11,0.72)' }} />}
               placeholder="비밀번호"
               autoComplete="current-password"
-              style={{ height: 48, borderRadius: 12 }}
+              style={{
+                height: 48,
+                borderRadius: 12,
+                background: 'rgba(15,23,42,0.52)',
+                borderColor: 'rgba(245,158,11,0.16)',
+                color: '#e5e7eb',
+                boxShadow: 'none',
+              }}
             />
           </Form.Item>
+
           <Button
             type="primary"
             htmlType="submit"
@@ -116,30 +146,55 @@ function Login() {
               height: 50,
               borderRadius: 12,
               fontSize: 15,
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
               border: 'none',
-              boxShadow: '0 6px 24px rgba(99,102,241,0.45)',
-              letterSpacing: 0.5,
+              boxShadow: '0 10px 24px rgba(245,158,11,0.28)',
+              letterSpacing: 0.3,
             }}
           >
             로그인
           </Button>
         </Form>
 
-        {/* 구분선 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(99,102,241,0.12)' }} />
-          <span style={{ fontSize: 11, color: 'rgba(148,163,184,0.4)', letterSpacing: 1 }}>EPI SYSTEM</span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(99,102,241,0.12)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.12)' }} />
+          <span style={{ fontSize: 11, color: 'rgba(148,163,184,0.42)', letterSpacing: 1.2 }}>MOCVD CONSOLE</span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.12)' }} />
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'rgba(148,163,184,0.3)' }}>
-          © 2025 EPI Process Management System
+        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'rgba(148,163,184,0.36)' }}>
+          2026 EPI Process Management System
         </div>
       </div>
+
+      <style>{`
+        .epi-login-input.ant-input,
+        .epi-login-input.ant-input-affix-wrapper,
+        .epi-login-input.ant-input-affix-wrapper-focused,
+        .epi-login-input.ant-input-affix-wrapper:hover,
+        .epi-login-input.ant-input-affix-wrapper:focus,
+        .epi-login-input.ant-input-affix-wrapper:focus-within,
+        .epi-login-input.ant-input:focus,
+        .epi-login-input.ant-input:hover {
+          background: rgba(15,23,42,0.52) !important;
+          box-shadow: none !important;
+        }
+        .epi-login-input input {
+          background: transparent !important;
+          color: #e5e7eb !important;
+        }
+        .epi-login-input input:-webkit-autofill,
+        .epi-login-input input:-webkit-autofill:hover,
+        .epi-login-input input:-webkit-autofill:focus,
+        .epi-login-input input:-webkit-autofill:active {
+          -webkit-text-fill-color: #e5e7eb !important;
+          -webkit-box-shadow: 0 0 0 1000px rgba(15,23,42,0.52) inset !important;
+          box-shadow: 0 0 0 1000px rgba(15,23,42,0.52) inset !important;
+          transition: background-color 9999s ease-out 0s !important;
+          caret-color: #e5e7eb !important;
+        }
+      `}</style>
     </div>
   )
 }
-
-export default Login

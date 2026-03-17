@@ -610,7 +610,7 @@ function HandoverBoard() {
           ) : notes.length === 0 ? (
             <Empty description="등록된 인수인계가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 210, overflowY: 'auto', paddingRight: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto', paddingRight: 4 }}>
               {notes.map((note) => (
                 <div
                   key={note.id}
@@ -694,7 +694,7 @@ function HandoverBoard() {
             ) : timelineNotes.length === 0 ? (
               <Empty description="표시할 인수인계가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 210, overflowY: 'auto', paddingRight: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 300, overflowY: 'auto', paddingRight: 4 }}>
                 {timelineNotes.map((note, index) => {
                   const dt = dayjs(note.updated_at || note.created_at || note.handover_date)
                   const dateLabel = dt.isValid() ? dt.format('YYYY-MM-DD') : '-'
