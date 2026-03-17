@@ -46,29 +46,65 @@ function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) 
         cursor: onClick ? 'pointer' : 'default',
       }}
     >
-      <div className="nowa-kpi-card" style={{ background: gradient }}>
+      <div
+        className="nowa-kpi-card"
+        style={{
+          minHeight: 124,
+          padding: '16px 18px',
+          borderRadius: 18,
+          background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
+          border: `1px solid ${accent}30`,
+          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)`,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
         <div
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 12,
-            background: 'var(--nowa-soft-fill-strong)',
-            color: 'var(--nowa-contrast-text)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 18,
-            marginBottom: 12,
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(135deg, ${accent}22 0%, transparent 38%, transparent 100%)`,
+            pointerEvents: 'none',
           }}
-        >
-          {icon}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: `linear-gradient(90deg, ${accent} 0%, ${accent}66 100%)`,
+            opacity: 0.9,
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
+          <div style={{ color: '#aeb8c9', fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em', paddingTop: 2 }}>
+            {title}
+          </div>
+          <div
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 9,
+              background: `${accent}18`,
+              border: `1px solid ${accent}30`,
+              color: accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              flexShrink: 0,
+            }}
+          >
+            {icon}
+          </div>
         </div>
-        <div style={{ color: 'var(--nowa-contrast-text-soft)', fontSize: 13, fontWeight: 700 }}>{title}</div>
-        <div style={{ marginTop: 10, color: 'var(--nowa-contrast-text)', fontWeight: 900, lineHeight: 1 }}>
+        <div style={{ marginTop: 10, color: 'var(--nowa-text)', fontSize: 30, fontWeight: 800, lineHeight: 1, position: 'relative', zIndex: 1 }}>
           {value}
-          {suffix ? <span style={{ fontSize: 15, marginLeft: 4, color: 'var(--nowa-contrast-text-soft)' }}>{suffix}</span> : null}
+          {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: '#d6dcea', fontWeight: 700 }}>{suffix}</span> : null}
         </div>
-        <div style={{ color: 'var(--nowa-contrast-text-muted)', fontSize: 12, marginTop: 8 }}>관련 화면으로 바로 이동</div>
+        <div style={{ marginTop: 10, color: accent, fontSize: 12, fontWeight: 700, position: 'relative', zIndex: 1 }}>관련 화면으로 이동</div>
       </div>
     </button>
   )
@@ -97,12 +133,19 @@ function LinkButton({ label, onClick, icon }) {
 
 function NoticeBoard() {
   const { user } = useAuth()
+  const PRESET_COLORS = [
+    '#c4cdd8', '#fbbf24', '#f97316', '#f43f5e',
+    '#22c55e', '#3b82f6', '#a78bfa', '#ec4899',
+    '#14b8a6', '#ffffff',
+  ]
+
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [notices, setNotices] = useState([])
+  const [noticeColor, setNoticeColor] = useState('#c4cdd8')
 
   const isAdmin = user?.role === 'admin'
 
@@ -131,10 +174,10 @@ function NoticeBoard() {
     if (notices.length === 0) {
       return ['공지사항이 없습니다. 관리자 계정으로 공지를 등록할 수 있습니다.']
     }
-    return notices.map((notice) => {
-      const title = (notice.title || '').trim()
-      return title ? `[${title}] ${notice.content}` : notice.content
-    })
+    return notices.map((notice) => ({
+      text: (notice.title || '').trim() ? `[${notice.title.trim()}] ${notice.content}` : notice.content,
+      color: notice.color || '#c4cdd8',
+    }))
   }, [notices])
 
   const resetForm = () => {
@@ -142,6 +185,7 @@ function NoticeBoard() {
     setShowForm(false)
     form.resetFields()
     form.setFieldsValue({ title: '', content: '' })
+    setNoticeColor('#c4cdd8')
   }
 
   const startEdit = (notice) => {
@@ -151,6 +195,7 @@ function NoticeBoard() {
       title: notice.title || '',
       content: notice.content || '',
     })
+    setNoticeColor(notice.color || '#c4cdd8')
   }
 
   const submitNotice = async () => {
@@ -160,6 +205,7 @@ function NoticeBoard() {
       const payload = {
         title: values.title?.trim() || '',
         content: values.content.trim(),
+        color: noticeColor,
         is_active: true,
       }
       const path = editingId ? `/api/mocvd/notices/${editingId}` : '/api/mocvd/notices'
@@ -195,10 +241,40 @@ function NoticeBoard() {
   }
 
   return (
-    <SectionCard
-      title="공지사항"
-      extra={
-        <Space>
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '9px 16px',
+          border: '1px solid rgba(245,158,11,0.2)',
+          borderLeft: '3px solid #f59e0b',
+          borderRadius: 12,
+          background: 'rgba(245,158,11,0.05)',
+          overflow: 'hidden',
+        }}
+      >
+        <span style={{ color: '#e8c98a', fontWeight: 800, fontSize: 18, whiteSpace: 'nowrap', flexShrink: 0, letterSpacing: '-0.02em' }}>
+          공지사항
+        </span>
+        <div style={{ width: 1, height: 16, background: 'rgba(245,158,11,0.3)', flexShrink: 0 }} />
+        <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+          <div className="notice-marquee">
+            <div className="notice-marquee-track">
+              {marqueeItems.map((item, index) => (
+                <span
+                  key={`${index}-${typeof item === 'string' ? item : item.text}`}
+                  className="notice-marquee-item"
+                  style={{ color: typeof item === 'string' ? undefined : item.color }}
+                >
+                  {typeof item === 'string' ? item : item.text}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {isAdmin ? (
             <Button type="primary" size="small" onClick={() => setShowForm((prev) => !prev)}>
               {showForm ? '폼 닫기' : '공지 등록'}
@@ -207,40 +283,8 @@ function NoticeBoard() {
           <Tag color="blue" style={{ marginInlineEnd: 0 }}>
             {notices.length}건
           </Tag>
-        </Space>
-      }
-    >
-      <div
-        style={{
-          border: '1px solid var(--nowa-border)',
-          borderRadius: 16,
-          background: 'var(--nowa-soft-fill)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '10px 14px',
-          }}
-        >
-          <Tag color="processing" style={{ marginInlineEnd: 0 }}>
-            공지
-          </Tag>
-          <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-            <div className="notice-marquee">
-              <div className="notice-marquee-track">
-                {marqueeItems.map((text, index) => (
-                  <span key={`${index}-${text}`} className="notice-marquee-item">
-                    {text}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
+      </div>
 
         {showForm && isAdmin ? (
           <div style={{ padding: 12, borderTop: '1px solid var(--nowa-border)' }}>
@@ -260,14 +304,60 @@ function NoticeBoard() {
               >
                 <Form form={form} layout="vertical">
                   <Form.Item name="title" label="제목">
-                    <Input placeholder="예: PM 점검 일정 변경 안내" />
+                    <Input placeholder="예: PM 점검 일정 변경 안내" spellCheck={false} autoComplete="off" />
                   </Form.Item>
                   <Form.Item
                     name="content"
                     label="내용"
                     rules={[{ required: true, message: '공지 내용을 입력하세요.' }]}
                   >
-                    <Input.TextArea rows={5} placeholder="상단에 흐를 공지 문구를 입력하세요." />
+                    <Input.TextArea rows={4} placeholder="상단에 흐를 공지 문구를 입력하세요." spellCheck={false} />
+                  </Form.Item>
+                  <Form.Item label="글자 색상">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      {PRESET_COLORS.map((c) => (
+                        <div
+                          key={c}
+                          onClick={() => setNoticeColor(c)}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            background: c,
+                            cursor: 'pointer',
+                            border: noticeColor === c ? '2px solid #f59e0b' : '2px solid rgba(255,255,255,0.15)',
+                            boxShadow: noticeColor === c ? '0 0 0 2px rgba(245,158,11,0.4)' : 'none',
+                            transition: 'all 0.15s ease',
+                            flexShrink: 0,
+                          }}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={noticeColor}
+                        onChange={(e) => setNoticeColor(e.target.value)}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.15)',
+                          padding: 0,
+                          cursor: 'pointer',
+                          background: 'none',
+                        }}
+                        title="직접 색상 선택"
+                      />
+                      <span style={{
+                        color: noticeColor,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '2px 10px',
+                        borderRadius: 8,
+                      }}>
+                        미리보기
+                      </span>
+                    </div>
                   </Form.Item>
                 </Form>
               </Card>
@@ -316,8 +406,7 @@ function NoticeBoard() {
             </div>
           </div>
         ) : null}
-      </div>
-    </SectionCard>
+    </div>
   )
 }
 
@@ -607,28 +696,38 @@ function HandoverBoard() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 210, overflowY: 'auto', paddingRight: 4 }}>
                 {timelineNotes.map((note, index) => {
-                  const timeLabel = dayjs(note.updated_at || note.created_at || note.handover_date).isValid()
-                    ? dayjs(note.updated_at || note.created_at || note.handover_date).format('HH:mm')
-                    : '-'
+                  const dt = dayjs(note.updated_at || note.created_at || note.handover_date)
+                  const dateLabel = dt.isValid() ? dt.format('YYYY-MM-DD') : '-'
+                  const timeLabel = dt.isValid() ? dt.format('HH:mm') : '-'
+                  const prevDt = index > 0 ? dayjs(timelineNotes[index - 1].updated_at || timelineNotes[index - 1].created_at || timelineNotes[index - 1].handover_date) : null
+                  const prevDateLabel = prevDt?.isValid() ? prevDt.format('YYYY-MM-DD') : null
+                  const showDateSplit = dateLabel !== prevDateLabel
 
                   return (
+                    <div key={`timeline:${note.id}`}>
+                      {showDateSplit && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0 6px' }}>
+                          <span style={{ color: '#f59e0b', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{dateLabel}</span>
+                          <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.25)' }} />
+                        </div>
+                      )}
                     <button
-                      key={`timeline:${note.id}`}
                       type="button"
                       onClick={() => setPreviewNote(note)}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '54px 18px minmax(0, 1fr)',
+                        gridTemplateColumns: '48px 18px minmax(0, 1fr)',
                         gap: 10,
-                        padding: '10px 0',
+                        padding: '8px 0',
                         border: 'none',
-                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid rgba(148,163,184,0.08)',
+                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid rgba(148,163,184,0.06)',
                         background: 'transparent',
                         textAlign: 'left',
                         cursor: 'pointer',
+                        width: '100%',
                       }}
                     >
-                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, fontWeight: 700, paddingTop: 1 }}>
+                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, paddingTop: 1 }}>
                         {timeLabel}
                       </div>
                       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
@@ -686,6 +785,7 @@ function HandoverBoard() {
                         </div>
                       </div>
                     </button>
+                    </div>
                   )
                 })}
               </div>

@@ -14,6 +14,7 @@ import {
   DashboardOutlined,
   DollarOutlined,
   HeatMapOutlined,
+  ShoppingCartOutlined,
   SwapOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -81,9 +82,9 @@ function buildMenuItems(isAdmin) {
       icon: <DollarOutlined />,
       label: '비용',
       children: [
-        { key: '/cost/purchase-request', label: '구매요청' },
-        { key: '/cost/repair-status', label: '수리현황' },
-        { key: '/cost/master-data', label: '기준정보등록' },
+        { key: '/cost/purchase-request', icon: <ShoppingCartOutlined />, label: '구매요청' },
+        { key: '/cost/repair-status', icon: <ToolOutlined />, label: '수리현황' },
+        { key: '/cost/master-data', icon: <AppstoreAddOutlined />, label: '기준정보등록' },
       ],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
@@ -122,21 +123,21 @@ function findPath(items, pathname, trail = []) {
 }
 
 const PAGE_COLOR = {
-  '/dashboard': '#6366f1',
+  '/dashboard': '#f59e0b',
   '/epi/mocvd/overview': '#22c55e',
   '/epi/mocvd/source': '#14b8a6',
   '/epi/mocvd/pm-plan': '#06b6d4',
   '/epi/mocvd/management': '#0ea5e9',
   '/epi/mocvd/personnel': '#f97316',
-  '/epi/mocvd/work-log': '#a78bfa',
-  '/epi/mocvd/master-data': '#8b5cf6',
+  '/epi/mocvd/work-log': '#f59e0b',
+  '/epi/mocvd/master-data': '#f97316',
   '/epi/measurement': '#3b82f6',
   '/epi/simulator': '#f59e0b',
   '/wafermap': '#ec4899',
   '/run-comparison': '#f43f5e',
   '/cost/purchase-request': '#f59e0b',
   '/cost/repair-status': '#ef4444',
-  '/cost/master-data': '#8b5cf6',
+  '/cost/master-data': '#f97316',
   '/grid': '#22c55e',
   '/admin': '#f43f5e',
 }
@@ -170,9 +171,9 @@ function Layout({ children, isDark, onThemeToggle }) {
         trigger={null}
         style={{
           background: isDark
-            ? 'linear-gradient(180deg, #0a0e1c 0%, #0d1428 60%, #0a1020 100%)'
-            : 'linear-gradient(180deg, #1e1f3b 0%, #1a1c38 60%, #161830 100%)',
-          borderRight: '1px solid rgba(99,102,241,0.2)',
+            ? 'linear-gradient(180deg, #0c0e16 0%, #0e1018 60%, #0b0d14 100%)'
+            : 'linear-gradient(180deg, #1a1c24 0%, #171920 60%, #141618 100%)',
+          borderRight: '1px solid rgba(245,158,11,0.15)',
           display: 'flex',
           flexDirection: 'column',
           position: 'fixed',
@@ -192,10 +193,10 @@ function Layout({ children, isDark, onThemeToggle }) {
             alignItems: 'center',
             gap: 12,
             padding: '0 20px',
-            borderBottom: '1px solid rgba(99,102,241,0.18)',
+            borderBottom: '1px solid rgba(245,158,11,0.15)',
             cursor: 'pointer',
             flexShrink: 0,
-            background: 'linear-gradient(90deg, rgba(99,102,241,0.08) 0%, transparent 100%)',
+            background: 'linear-gradient(90deg, rgba(245,158,11,0.07) 0%, transparent 100%)',
           }}
         >
           <div
@@ -203,7 +204,7 @@ function Layout({ children, isDark, onThemeToggle }) {
               width: 36,
               height: 36,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -211,17 +212,17 @@ function Layout({ children, isDark, onThemeToggle }) {
               fontWeight: 900,
               color: '#fff',
               flexShrink: 0,
-              boxShadow: '0 4px 16px rgba(99,102,241,0.55)',
+              boxShadow: '0 4px 16px rgba(245,158,11,0.5)',
             }}
           >
             E
           </div>
           {!collapsed && (
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ color: '#c7d2fe', fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap', textShadow: '0 0 20px rgba(129,140,248,0.4)' }}>
+              <div style={{ color: '#fde68a', fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap', textShadow: '0 0 20px rgba(245,158,11,0.4)' }}>
                 EPI
               </div>
-              <div style={{ color: 'rgba(165,180,252,0.5)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'rgba(253,230,138,0.5)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
                 운영 시스템
               </div>
             </div>
@@ -229,7 +230,7 @@ function Layout({ children, isDark, onThemeToggle }) {
         </div>
 
         {!collapsed && (
-          <div style={{ padding: '16px 20px 4px', color: 'rgba(129,140,248,0.5)', fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+          <div style={{ padding: '16px 20px 4px', color: 'rgba(245,158,11,0.45)', fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
             Main Menu
           </div>
         )}
@@ -328,7 +329,7 @@ function Layout({ children, isDark, onThemeToggle }) {
             </Tooltip>
 
             <Tooltip title="알림">
-              <Badge dot color="var(--nowa-primary)" offset={[-4, 4]}>
+              <Badge dot color="#f59e0b" offset={[-4, 4]}>
                 <Button
                   type="text"
                   icon={<BellOutlined />}
@@ -360,7 +361,7 @@ function Layout({ children, isDark, onThemeToggle }) {
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Avatar size={30} icon={<UserOutlined />} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', flexShrink: 0 }} />
+                <Avatar size={30} icon={<UserOutlined />} style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', flexShrink: 0 }} />
                 <div style={{ lineHeight: 1.3 }}>
                   <div style={{ color: 'var(--nowa-text)', fontSize: 13, fontWeight: 600 }}>{user?.username}</div>
                   <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11 }}>{isAdmin ? '관리자' : '사용자'}</div>

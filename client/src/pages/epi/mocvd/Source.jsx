@@ -14,15 +14,16 @@ const CELL_W = 78
 const ROW_H = 30
 const HEAD1_H = 36
 const HEAD2_H = 26
-const BASE_BG = '#0d1420'
-const BORDER = '1px solid #1e2a3c'
-const GROUP_BORDER = '2px solid #2d4060'
+const BASE_BG = '#0f1117'
+const BORDER = '1px solid rgba(245,158,11,0.12)'
+const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
 const DEFAULT_THRESHOLD_RATIO = 15
+const EDITABLE_FIELDS = ['initial_amount', 'threshold_ratio', 'daily_usage', 'remaining']
 
 const th1Base = {
   position: 'sticky',
   top: 0,
-  background: '#111827',
+  background: '#1c1f2a',
   border: BORDER,
   padding: '0 4px',
   textAlign: 'center',
@@ -34,11 +35,11 @@ const th1Base = {
 const th2Base = {
   position: 'sticky',
   top: HEAD1_H,
-  background: '#0f172a',
+  background: '#161921',
   border: BORDER,
   padding: '0 3px',
   textAlign: 'center',
-  fontSize: 10,
+  fontSize: 12,
   whiteSpace: 'nowrap',
   height: HEAD2_H,
   zIndex: 9,
@@ -53,7 +54,7 @@ const tdLabelBase = {
   whiteSpace: 'nowrap',
   height: ROW_H,
   fontWeight: 600,
-  fontSize: 12,
+  fontSize: 14,
   textAlign: 'center',
 }
 
@@ -77,6 +78,12 @@ function fmt(v) {
   return v.toFixed(2)
 }
 
+function toEditingText(value) {
+  const num = Number(value ?? 0)
+  if (!Number.isFinite(num) || num === 0) return ''
+  return String(value)
+}
+
 function buildDerivedCell(cell) {
   const initialAmount = toNumber(cell.initial_amount)
   const thresholdRatio = toNumber(cell.threshold_ratio, DEFAULT_THRESHOLD_RATIO)
@@ -98,16 +105,32 @@ function buildDerivedCell(cell) {
   }
 }
 
-function EditCell({ value, onChange, color, bg, pending }) {
+function EditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, color, bg, pending }) {
   const [editing, setEditing] = useState(false)
-  const [local, setLocal] = useState(String(value ?? 0))
+  const [local, setLocal] = useState(toEditingText(value))
   const inputRef = useRef(null)
 
   useEffect(() => {
-    if (!editing) setLocal(String(value ?? 0))
+    if (!editing) setLocal(toEditingText(value))
   }, [value, editing])
 
+  useEffect(() => {
+    if (activeEditKey === cellId) {
+      setLocal(toEditingText(value))
+      setEditing(true)
+    }
+  }, [activeEditKey, cellId, value])
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.select()
+  }, [editing])
+
   const commit = () => {
+    if (local.trim() === '') {
+      onChange(0)
+      setEditing(false)
+      return
+    }
     const num = parseFloat(local)
     if (!Number.isNaN(num)) onChange(num)
     setEditing(false)
@@ -122,16 +145,21 @@ function EditCell({ value, onChange, color, bg, pending }) {
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === 'Enter') commit()
+          if (event.key === 'Tab') {
+            event.preventDefault()
+            commit()
+            onTabNavigate?.(cellId, event.shiftKey ? -1 : 1)
+          }
           if (event.key === 'Escape') setEditing(false)
         }}
         autoFocus
         style={{
           width: '100%',
           height: ROW_H - 2,
-          background: 'rgba(99,102,241,0.15)',
-          border: '1px solid #6366f1',
-          color: color ?? '#e2e8f0',
-          fontSize: 11,
+          background: 'rgba(245,158,11,0.12)',
+          border: '1px solid #f59e0b',
+          color: color ?? '#c4cdd8',
+          fontSize: 13,
           textAlign: 'right',
           padding: '0 4px',
           outline: 'none',
@@ -143,7 +171,10 @@ function EditCell({ value, onChange, color, bg, pending }) {
 
   return (
     <div
-      onClick={() => setEditing(true)}
+      onClick={() => {
+        setLocal(toEditingText(value))
+        setEditing(true)
+      }}
       style={{
         width: '100%',
         height: ROW_H - 2,
@@ -152,9 +183,9 @@ function EditCell({ value, onChange, color, bg, pending }) {
         justifyContent: 'flex-end',
         paddingRight: 5,
         cursor: 'text',
-        color: color ?? '#e2e8f0',
-        fontSize: 11,
-        background: pending ? 'rgba(99,102,241,0.10)' : (bg ?? 'transparent'),
+        color: color ?? '#c4cdd8',
+        fontSize: 13,
+        background: pending ? 'rgba(245,158,11,0.08)' : (bg ?? 'transparent'),
         userSelect: 'none',
       }}
     >
@@ -165,14 +196,34 @@ function EditCell({ value, onChange, color, bg, pending }) {
 
 function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, onChange }) {
   const colCount = machines.length * sourceNames.length
-
+  const [activeEditKey, setActiveEditKey] = useState(null)
+  const orderedEditKeys = useMemo(
+    () =>
+      EDITABLE_FIELDS.flatMap((field) =>
+        machines.flatMap((machine) => sourceNames.map((sourceName) => `${field}:${machine.machine_no}:${sourceName}`)),
+      ),
+    [machines, sourceNames],
+  )
+  const handleTabNavigate = useCallback(
+    (cellId, direction) => {
+      const currentIndex = orderedEditKeys.indexOf(cellId)
+      if (currentIndex < 0) return
+      const nextIndex = currentIndex + direction
+      if (nextIndex < 0 || nextIndex >= orderedEditKeys.length) {
+        setActiveEditKey(null)
+        return
+      }
+      setActiveEditKey(orderedEditKeys[nextIndex])
+    },
+    [orderedEditKeys],
+  )
   if (colCount === 0) {
     return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>데이터가 없습니다.</div>
   }
 
   return (
     <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 400px)', position: 'relative' }}>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 12 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
         <colgroup>
           <col style={{ width: LABEL_W, minWidth: LABEL_W }} />
           {machines.map((machine) =>
@@ -190,10 +241,10 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                 ...th1Base,
                 left: 0,
                 zIndex: 12,
-                background: '#0d1420',
+                background: '#0f1117',
                 width: LABEL_W,
-                fontSize: 11,
-                color: '#64748b',
+                fontSize: 13,
+                color: 'rgba(148,163,184,0.6)',
               }}
             >
               구분
@@ -205,9 +256,9 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                 style={{
                   ...th1Base,
                   borderLeft: GROUP_BORDER,
-                  color: '#a5b4fc',
+                  color: '#fbbf24',
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: 15,
                   letterSpacing: 1,
                 }}
               >
@@ -223,7 +274,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                   style={{
                     ...th2Base,
                     borderLeft: index === 0 ? GROUP_BORDER : BORDER,
-                    color: '#94a3b8',
+                    color: 'rgba(180,196,210,0.7)',
                   }}
                 >
                   {sourceName}
@@ -235,17 +286,20 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
 
         <tbody>
           <tr>
-            <td style={{ ...tdLabelBase, background: '#081521', color: '#38bdf8', borderRight: GROUP_BORDER }}>초기량</td>
+            <td style={{ ...tdLabelBase, background: '#0d1520', color: '#38bdf8', borderRight: GROUP_BORDER }}>초기량</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#07111b' }}>
+                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#0a1119' }}>
                     <EditCell
+                      cellId={`initial_amount:${machine.machine_no}:${sourceName}`}
+                      activeEditKey={activeEditKey}
                       value={cellData[key]?.initial_amount ?? 0}
                       color="#38bdf8"
-                      bg="#07111b"
+                      bg="#0a1119"
                       pending={pendingKeys.has(key)}
+                      onTabNavigate={handleTabNavigate}
                       onChange={(value) => onChange(machine.machine_no, sourceName, 'initial_amount', value)}
                     />
                   </td>
@@ -255,17 +309,20 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1d1200', color: '#f59e0b', borderRight: GROUP_BORDER }}>교체기준(%)</td>
+            <td style={{ ...tdLabelBase, background: '#1a1400', color: '#f59e0b', borderRight: GROUP_BORDER }}>교체기준(%)</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#130d00' }}>
+                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#110e00' }}>
                     <EditCell
+                      cellId={`threshold_ratio:${machine.machine_no}:${sourceName}`}
+                      activeEditKey={activeEditKey}
                       value={cellData[key]?.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO}
                       color="#f59e0b"
-                      bg="#130d00"
+                      bg="#110e00"
                       pending={pendingKeys.has(key)}
+                      onTabNavigate={handleTabNavigate}
                       onChange={(value) => onChange(machine.machine_no, sourceName, 'threshold_ratio', value)}
                     />
                   </td>
@@ -275,17 +332,20 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1c1400', color: '#fbbf24', borderRight: GROUP_BORDER }}>일사용량</td>
+            <td style={{ ...tdLabelBase, background: '#191500', color: '#fbbf24', borderRight: GROUP_BORDER }}>일사용량</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#110d00' }}>
+                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#100e00' }}>
                     <EditCell
+                      cellId={`daily_usage:${machine.machine_no}:${sourceName}`}
+                      activeEditKey={activeEditKey}
                       value={cellData[key]?.daily_usage ?? 0}
                       color="#fbbf24"
-                      bg="#110d00"
+                      bg="#100e00"
                       pending={pendingKeys.has(key)}
+                      onTabNavigate={handleTabNavigate}
                       onChange={(value) => onChange(machine.machine_no, sourceName, 'daily_usage', value)}
                     />
                   </td>
@@ -295,17 +355,20 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#0c1a0c', color: '#86efac', borderRight: GROUP_BORDER }}>잔량</td>
+            <td style={{ ...tdLabelBase, background: '#0a1a0a', color: '#86efac', borderRight: GROUP_BORDER }}>잔량</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#070f07' }}>
+                  <td key={key} style={{ ...tdCellBase, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#060f06' }}>
                     <EditCell
+                      cellId={`remaining:${machine.machine_no}:${sourceName}`}
+                      activeEditKey={activeEditKey}
                       value={cellData[key]?.remaining ?? 0}
                       color="#86efac"
-                      bg="#070f07"
+                      bg="#060f06"
                       pending={pendingKeys.has(key)}
+                      onTabNavigate={handleTabNavigate}
                       onChange={(value) => onChange(machine.machine_no, sourceName, 'remaining', value)}
                     />
                   </td>
@@ -315,7 +378,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1e0e00', color: '#f97316', borderRight: GROUP_BORDER }}>교체기준량</td>
+            <td style={{ ...tdLabelBase, background: '#1a0d00', color: '#f97316', borderRight: GROUP_BORDER }}>교체기준량</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -326,11 +389,11 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                     style={{
                       ...tdCellBase,
                       borderLeft: index === 0 ? GROUP_BORDER : BORDER,
-                      background: '#130907',
+                      background: '#110a00',
                       color: '#f97316',
                       textAlign: 'right',
                       paddingRight: 5,
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: 700,
                     }}
                   >
@@ -342,7 +405,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#181400', color: '#facc15', borderRight: GROUP_BORDER }}>예상 잔여일</td>
+            <td style={{ ...tdLabelBase, background: '#161200', color: '#facc15', borderRight: GROUP_BORDER }}>예상 잔여일</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -353,11 +416,11 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                     style={{
                       ...tdCellBase,
                       borderLeft: index === 0 ? GROUP_BORDER : BORDER,
-                      background: '#110d00',
+                      background: '#0f0d00',
                       color: derived.days_left != null && derived.days_left <= 7 ? '#f87171' : '#facc15',
                       textAlign: 'right',
                       paddingRight: 5,
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: 700,
                     }}
                   >
@@ -369,7 +432,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#081320', color: '#60a5fa', borderRight: GROUP_BORDER }}>예상 교체일</td>
+            <td style={{ ...tdLabelBase, background: '#091420', color: '#60a5fa', borderRight: GROUP_BORDER }}>예상 교체일</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -380,11 +443,11 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                     style={{
                       ...tdCellBase,
                       borderLeft: index === 0 ? GROUP_BORDER : BORDER,
-                      background: '#06111b',
+                      background: '#060f18',
                       color: '#60a5fa',
                       textAlign: 'right',
                       paddingRight: 5,
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: 700,
                     }}
                   >
@@ -396,12 +459,12 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           {dateRows.map(({ label, daysAhead }, rowIndex) => (
-            <tr key={label} style={{ background: rowIndex % 2 === 0 ? BASE_BG : '#0a1120' }}>
+            <tr key={label} style={{ background: rowIndex % 2 === 0 ? BASE_BG : '#131619' }}>
               <td
                 style={{
                   ...tdLabelBase,
-                  background: rowIndex % 2 === 0 ? BASE_BG : '#0a1120',
-                  color: '#64748b',
+                  background: rowIndex % 2 === 0 ? BASE_BG : '#131619',
+                  color: 'rgba(148,163,184,0.55)',
                   borderRight: GROUP_BORDER,
                 }}
               >
@@ -426,7 +489,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                         color: isCritical ? '#f87171' : isLow ? '#fbbf24' : '#475569',
                         textAlign: 'right',
                         paddingRight: 5,
-                        fontSize: 11,
+                        fontSize: 13,
                       }}
                     >
                       {projected === null ? '-' : fmt(projected)}
@@ -593,11 +656,10 @@ function SourceInputTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
       <div className="console-toolbar">
         <div>
-          <div style={sectionTitleStyle}>수기 입력</div>
-          <div style={{ color: 'var(--console-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>
+          <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>
             MOCVD 전체 소스 입력
           </div>
-          <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>
             초기량, 교체기준, 일사용량, 잔량을 한 화면에서 입력하고 아래 예측값을 바로 확인합니다.
           </div>
         </div>

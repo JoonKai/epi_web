@@ -84,21 +84,15 @@ def ensure_machines(db) -> None:
 
 
 def ensure_source_types(db) -> None:
-    existing = {
-        row.name: row
-        for row in db.query(SourceType).all()
-    }
+    existing_rows = db.query(SourceType).order_by(SourceType.id.asc()).all()
+    if existing_rows:
+        print(f"[skip] source types preserved: {len(existing_rows)} existing rows")
+        return
 
-    added = 0
     for order_idx, name in enumerate(DEFAULT_SOURCE_TYPES):
-        row = existing.get(name)
-        if row is None:
-            db.add(SourceType(name=name, order_idx=order_idx, is_active=True))
-            added += 1
-        elif row.order_idx != order_idx:
-            row.order_idx = order_idx
+        db.add(SourceType(name=name, order_idx=order_idx, is_active=True))
 
-    print(f"[ok] source types ensured: +{added} / total target {len(DEFAULT_SOURCE_TYPES)}")
+    print(f"[ok] source types ensured: +{len(DEFAULT_SOURCE_TYPES)} / total target {len(DEFAULT_SOURCE_TYPES)}")
 
 
 def ensure_system_settings(db) -> None:

@@ -84,6 +84,7 @@ class HandoverNoteUpdate(HandoverNoteCreate):
 class NoticeCreate(BaseModel):
     title: str = ""
     content: str
+    color: str = "#c4cdd8"
     is_active: bool = True
 
 
@@ -309,6 +310,7 @@ def list_notices(db: Session = Depends(get_db), _=Depends(get_current_user)):
             "id": row.id,
             "title": row.title,
             "content": row.content,
+            "color": row.color or "#c4cdd8",
             "is_active": row.is_active,
             "author": row.author,
             "created_at": row.created_at.strftime("%Y-%m-%d %H:%M") if row.created_at else None,
@@ -329,6 +331,7 @@ def create_notice(
         MocvdNotice(
             title=body.title.strip(),
             content=body.content.strip(),
+            color=body.color or "#c4cdd8",
             is_active=body.is_active,
             author=getattr(current_user, "username", ""),
         )
@@ -350,6 +353,7 @@ def update_notice(
         raise HTTPException(status_code=404, detail="공지사항을 찾을 수 없습니다.")
     row.title = body.title.strip()
     row.content = body.content.strip()
+    row.color = body.color or "#c4cdd8"
     row.is_active = body.is_active
     db.commit()
     return {"result": "ok"}

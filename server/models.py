@@ -201,6 +201,7 @@ class MocvdNotice(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), default="")
     content = Column(String(2000), nullable=False)
+    color = Column(String(20), default="#c4cdd8")
     is_active = Column(Boolean, default=True, index=True)
     author = Column(String(50), default="")
     created_at = Column(DateTime, default=func.now())

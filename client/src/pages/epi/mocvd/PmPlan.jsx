@@ -125,31 +125,66 @@ function statusTag(daysLeft) {
   return <Tag color="green">정상</Tag>
 }
 
-function SummaryCard({ label, value, suffix, sub, gradient = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)', icon = <CalendarOutlined /> }) {
+function SummaryCard({ label, value, suffix, sub, accent = '#818cf8', gradient = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)', icon = <CalendarOutlined /> }) {
   return (
-    <div className="nowa-kpi-card" style={{ background: gradient }}>
+    <div
+      className="nowa-kpi-card"
+      style={{
+        minHeight: 124,
+        padding: '16px 18px',
+        borderRadius: 18,
+        background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
+        border: '1px solid rgba(148,163,184,0.16)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
       <div
         style={{
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          background: 'var(--nowa-soft-fill-strong)',
-          color: 'var(--nowa-contrast-text)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 18,
-          marginBottom: 12,
+          position: 'absolute',
+          inset: 0,
+          background: `${gradient}`,
+          opacity: 0.14,
+          pointerEvents: 'none',
         }}
-      >
-        {icon}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          background: gradient,
+          opacity: 0.95,
+        }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
+        <div style={{ color: accent, fontSize: 12, fontWeight: 700, paddingTop: 2 }}>{label}</div>
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 9,
+            background: `${accent}18`,
+            border: `1px solid ${accent}30`,
+            color: accent,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
       </div>
-      <div style={{ color: 'var(--nowa-contrast-text-soft)', fontSize: 13, fontWeight: 700 }}>{label}</div>
-      <div style={{ marginTop: 10, color: 'var(--nowa-contrast-text)', fontWeight: 900, lineHeight: 1 }}>
+      <div style={{ marginTop: 10, color: 'var(--nowa-text)', fontSize: 30, fontWeight: 800, lineHeight: 1, position: 'relative', zIndex: 1 }}>
         {value}
-        {suffix ? <span style={{ fontSize: 15, marginLeft: 4, color: 'var(--nowa-contrast-text-soft)' }}>{suffix}</span> : null}
+        {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${accent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
       </div>
-      <div style={{ color: 'var(--nowa-contrast-text-muted)', fontSize: 12, marginTop: 8 }}>{sub}</div>
+      <div style={{ color: `${accent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div>
     </div>
   )
 }

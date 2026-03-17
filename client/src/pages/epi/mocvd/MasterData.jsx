@@ -154,17 +154,19 @@ function MachineTab() {
     {
       title: '호기 번호',
       dataIndex: 'machine_no',
-      width: 180,
+      width: 150,
       render: (value) => formatMachineLabel(value),
     },
     {
       title: '설명',
       dataIndex: 'description',
+      width: 280,
+      ellipsis: true,
       render: (value) => value || '-',
     },
     {
       title: '사용',
-      width: 100,
+      width: 84,
       render: (_, row) => (
         <Switch
           size="small"
@@ -175,7 +177,7 @@ function MachineTab() {
     },
     {
       title: '관리',
-      width: 150,
+      width: 124,
       render: (_, row) => (
         <Space size={6}>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
@@ -200,7 +202,7 @@ function MachineTab() {
         </Button>
       </div>
 
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 20 }} bordered />
+      <Table rowKey="id" size="small" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 30, showSizeChanger: false }} bordered />
 
       <Modal title="호기 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
         <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
@@ -363,17 +365,28 @@ function SourceTab() {
     {
       title: '소스명',
       dataIndex: 'name',
-      width: 180,
-      render: (value) => <Tag color="blue">{value}</Tag>,
+      width: 150,
+      render: (value) => (
+        <Tag
+          style={{
+            marginInlineEnd: 0,
+            borderColor: 'rgba(245,158,11,0.18)',
+            background: 'rgba(245,158,11,0.08)',
+            color: '#d7dde7',
+          }}
+        >
+          {value}
+        </Tag>
+      ),
     },
     {
       title: '순서',
       dataIndex: 'order_idx',
-      width: 100,
+      width: 84,
     },
     {
       title: '사용',
-      width: 100,
+      width: 84,
       render: (_, row) => (
         <Switch
           size="small"
@@ -384,7 +397,7 @@ function SourceTab() {
     },
     {
       title: '관리',
-      width: 150,
+      width: 124,
       render: (_, row) => (
         <Space size={6}>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>
@@ -409,7 +422,7 @@ function SourceTab() {
         </Button>
       </div>
 
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 20 }} bordered />
+      <Table rowKey="id" size="small" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 30, showSizeChanger: false }} bordered />
 
       <Modal title="소스 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
         <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
