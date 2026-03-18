@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
 import { Button, Card, Col, Input, Row, Segmented, Spin, Table, Tabs, Tag, message } from 'antd'
-import { CalendarOutlined, ReloadOutlined, SaveOutlined, UnorderedListOutlined, UploadOutlined } from '@ant-design/icons'
+import { BarChartOutlined, CalendarOutlined, EditOutlined, ReloadOutlined, SaveOutlined, UnorderedListOutlined, UploadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
@@ -674,8 +674,12 @@ function PmInputTab() {
                     backgroundColor: 'transparent',
                     grid: { top: 24, bottom: 20, left: 72, right: 120 },
                     tooltip: {
+                      renderMode: 'html',
+                      appendToBody: true,
+                      confine: false,
                       trigger: 'axis',
                       axisPointer: { type: 'shadow' },
+                      extraCssText: 'white-space: nowrap; z-index: 9999;',
                       formatter: (params) => {
                         const row = chartRows[params?.[0]?.dataIndex ?? 0]
                         const pmRate = row.pmBase > 0 ? (row.pm / row.pmBase) * 100 : 0
@@ -752,6 +756,12 @@ function PmInputTab() {
   )
 }
 
+const tabBarStyle = {
+  borderBottom: '1px solid rgba(245,158,11,0.18)',
+  marginBottom: 20,
+  paddingBottom: 0,
+}
+
 export default function PmPlan() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -765,10 +775,11 @@ export default function PmPlan() {
     <Tabs
       activeKey={activeTab}
       onChange={(key) => navigate(`/epi/mocvd/pm-plan?tab=${key}`)}
+      tabBarStyle={tabBarStyle}
       items={[
-        { key: 'status', label: 'PM주기 현황판', children: <PmStatusBoard /> },
-        { key: 'machine', label: '설비별 PM현황', children: <PmMachineBoard /> },
-        { key: 'input', label: 'PM주기 입력', children: <PmInputTab /> },
+        { key: 'status', label: <span><BarChartOutlined /> PM주기 현황판</span>, children: <PmStatusBoard /> },
+        { key: 'machine', label: <span><CalendarOutlined /> 설비별 PM현황</span>, children: <PmMachineBoard /> },
+        { key: 'input', label: <span><EditOutlined /> PM주기 입력</span>, children: <PmInputTab /> },
       ]}
     />
   )

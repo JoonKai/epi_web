@@ -18,6 +18,7 @@ import {
   message,
 } from 'antd'
 import {
+  ApiOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -26,6 +27,8 @@ import {
   EditOutlined,
   FileTextOutlined,
   NodeIndexOutlined,
+  SwapOutlined,
+  ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -110,11 +113,16 @@ function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) 
   )
 }
 
-function SectionCard({ title, extra, children }) {
+function SectionCard({ title, icon, extra, children }) {
   return (
     <Card
       className="nowa-card"
-      title={<span style={{ fontWeight: 800 }}>{title}</span>}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {icon && <span style={{ color: '#f59e0b', fontSize: 15 }}>{icon}</span>}
+          <span style={{ fontWeight: 800 }}>{title}</span>
+        </div>
+      }
       extra={extra}
       styles={{ body: { padding: 18 } }}
     >
@@ -524,6 +532,7 @@ function HandoverBoard() {
   return (
     <SectionCard
       title="인수인계일지"
+      icon={<SwapOutlined />}
       extra={
         <Button type="primary" size="small" onClick={() => setShowForm((prev) => !prev)}>
           {showForm ? '폼 닫기' : '인수인계 등록'}
@@ -879,6 +888,7 @@ export default function MocvdOverview() {
         <Col xs={24} xl={14}>
           <SectionCard
             title="오늘 교체 일정"
+            icon={<CalendarOutlined />}
             extra={
               <Space>
                 <Tag color="processing">{todayItems.length}건 표시</Tag>
@@ -921,7 +931,7 @@ export default function MocvdOverview() {
         </Col>
 
         <Col xs={24} xl={10}>
-          <SectionCard title="설비별 위험도 Top" extra={<Button size="small" onClick={() => navigate('/epi/mocvd/source?tab=machine-board')}>설비별 소스현황</Button>}>
+          <SectionCard title="설비별 위험도 Top" icon={<WarningOutlined />} extra={<Button size="small" onClick={() => navigate('/epi/mocvd/source?tab=machine-board')}>설비별 소스현황</Button>}>
             {machineRows.length === 0 ? (
               <Empty description="표시할 설비가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
@@ -967,7 +977,7 @@ export default function MocvdOverview() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={8}>
-          <SectionCard title="소스관리 연결" extra={<Tag color="cyan">소스</Tag>}>
+          <SectionCard title="소스관리 연결" icon={<NodeIndexOutlined />} extra={<Tag color="cyan">소스</Tag>}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <LinkButton label="소스교체 현황판" icon={<CheckCircleOutlined />} onClick={() => navigate('/epi/mocvd/source?tab=status-board')} />
               <LinkButton label="설비별 소스현황" icon={<WarningOutlined />} onClick={() => navigate('/epi/mocvd/source?tab=machine-board')} />
@@ -977,7 +987,7 @@ export default function MocvdOverview() {
           </SectionCard>
         </Col>
         <Col xs={24} lg={8}>
-          <SectionCard title="PM주기 계획 연결" extra={<Tag color="gold">PM</Tag>}>
+          <SectionCard title="PM주기 계획 연결" icon={<ToolOutlined />} extra={<Tag color="gold">PM</Tag>}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <LinkButton label="PM주기 현황판" icon={<CalendarOutlined />} onClick={() => navigate('/epi/mocvd/pm-plan?tab=status')} />
               <LinkButton label="설비별 PM현황" icon={<ControlOutlined />} onClick={() => navigate('/epi/mocvd/pm-plan?tab=machine')} />
@@ -986,7 +996,7 @@ export default function MocvdOverview() {
           </SectionCard>
         </Col>
         <Col xs={24} lg={8}>
-          <SectionCard title="기타 운영 연결" extra={<Tag color="green">운영</Tag>}>
+          <SectionCard title="기타 운영 연결" icon={<ApiOutlined />} extra={<Tag color="green">운영</Tag>}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <LinkButton label="MOCVD 관리" icon={<ControlOutlined />} onClick={() => navigate('/epi/mocvd/management')} />
               <LinkButton label="업무 일지" icon={<FileTextOutlined />} onClick={() => navigate('/epi/mocvd/work-log')} />

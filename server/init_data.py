@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 
 from database import SessionLocal
-from models import CostItem, CostVendor, MocvdMachine, MocvdPmCounter, PurchaseRequest, RepairStatus, SourceType, SystemSetting, User
+from models import CostItem, CostVendor, MocvdMachine, MocvdPmCounter, PurchaseRequest, RepairStatus, ShiftType, SourceType, SystemSetting, User
 from auth import hash_password
 from schema_sync import print_sync_summary, sync_schema
 from source_status import DEFAULT_OVERDUE_DAYS, DEFAULT_URGENT_DAYS
@@ -27,6 +27,18 @@ DEFAULT_SETTINGS = {
     "source_status_overdue_days": str(DEFAULT_OVERDUE_DAYS),
     "source_status_urgent_days": str(DEFAULT_URGENT_DAYS),
 }
+DEFAULT_SHIFT_TYPES = [
+    {"name": "1",     "label": "주간",   "color": "#fbbf24", "bg_color": "rgba(245,158,11,0.18)",  "border_color": "rgba(245,158,11,0.4)",   "order_idx": 0},
+    {"name": "2",     "label": "야간",   "color": "#4ade80", "bg_color": "rgba(34,197,94,0.22)",   "border_color": "rgba(34,197,94,0.4)",    "order_idx": 1},
+    {"name": "휴무",  "label": "휴무",   "color": "#fca5a5", "bg_color": "rgba(248,113,113,0.26)", "border_color": "rgba(248,113,113,0.4)",  "order_idx": 2},
+    {"name": "연차",  "label": "연차",   "color": "#fde68a", "bg_color": "rgba(251,191,36,0.28)",  "border_color": "rgba(251,191,36,0.5)",   "order_idx": 3},
+    {"name": "반차",  "label": "반차",   "color": "#93c5fd", "bg_color": "rgba(56,189,248,0.26)",  "border_color": "rgba(56,189,248,0.4)",   "order_idx": 4},
+    {"name": "반반차A","label": "반반차A","color": "#67e8f9", "bg_color": "rgba(6,182,212,0.26)",   "border_color": "rgba(6,182,212,0.4)",    "order_idx": 5},
+    {"name": "반반차B","label": "반반차B","color": "#c4b5fd", "bg_color": "rgba(99,102,241,0.26)",  "border_color": "rgba(99,102,241,0.4)",   "order_idx": 6},
+    {"name": "오후",  "label": "오후",   "color": "#e9d5ff", "bg_color": "rgba(168,85,247,0.26)",  "border_color": "rgba(168,85,247,0.4)",   "order_idx": 7},
+    {"name": "교육",  "label": "교육",   "color": "#6ee7b7", "bg_color": "rgba(20,184,166,0.26)",  "border_color": "rgba(20,184,166,0.4)",   "order_idx": 8},
+]
+
 DEFAULT_COST_ITEMS = [
     {"category": "소모품", "code": "MAT-001", "name": "MOCVD 필라멘트", "unit": "EA", "is_active": True},
     {"category": "부품", "code": "PART-014", "name": "측정 장비 부품", "unit": "SET", "is_active": True},
@@ -176,6 +188,16 @@ def ensure_purchase_requests(db) -> None:
     print(f"[ok] purchase requests ensured: +{added} / total target {len(DEFAULT_PURCHASE_REQUESTS)}")
 
 
+def ensure_shift_types(db) -> None:
+    existing = {row.name for row in db.query(ShiftType.name).all()}
+    added = 0
+    for item in DEFAULT_SHIFT_TYPES:
+        if item["name"] not in existing:
+            db.add(ShiftType(**item))
+            added += 1
+    print(f"[ok] shift types ensured: +{added} / total target {len(DEFAULT_SHIFT_TYPES)}")
+
+
 def ensure_repair_status(db) -> None:
     existing = {
         (row.outbound_date, row.material_code, row.material_name, row.chamber): row
@@ -206,6 +228,7 @@ def main() -> None:
         ensure_cost_vendors(db)
         ensure_purchase_requests(db)
         ensure_repair_status(db)
+        ensure_shift_types(db)
         db.commit()
         print("[done] initial data setup completed")
     except Exception:

@@ -467,4 +467,5 @@ function PersonnelManagement() {
   )
 }
 
+export { VendorTab, MemberTab }
 export default PersonnelManagement

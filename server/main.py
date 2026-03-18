@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 import models  # noqa: F401
-from routers import admin, auth, cost, mocvd
+from routers import admin, auth, cost, mocvd, shift
 from schema_sync import print_sync_summary, sync_schema
 
 print_sync_summary(sync_schema())
@@ -24,6 +24,7 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(mocvd.router)
 app.include_router(cost.router)
+app.include_router(shift.router)
 
 
 @app.get("/api/")

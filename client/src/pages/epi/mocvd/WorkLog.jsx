@@ -3,10 +3,12 @@ import {
   BookOutlined,
   DeleteOutlined,
   EditOutlined,
+  FileTextOutlined,
   PlusOutlined,
   ReloadOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons'
-import { Button, Card, DatePicker, Form, Input, Select, Space, Table, Tag, message } from 'antd'
+import { Button, Card, DatePicker, Form, Input, Segmented, Select, Space, Table, Tag, message } from 'antd'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -72,6 +74,7 @@ export default function WorkLog() {
   const [machineOptions, setMachineOptions] = useState([])
   const [machineLoading, setMachineLoading] = useState(false)
   const [editingKey, setEditingKey] = useState(null)
+  const [listView, setListView] = useState('scroll')
   const [form] = Form.useForm()
 
   const nextKey = useMemo(() => (rows.length ? Math.max(...rows.map((row) => row.key)) + 1 : 1), [rows])
@@ -233,24 +236,13 @@ export default function WorkLog() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="nowa-page-intro">
-        <div>
-          <div className="nowa-page-kicker">?? ??</div>
-          <div className="nowa-page-title" style={{ fontSize: 24 }}>
-          MOCVD 업무 일지
-        </div>
-          <div className="nowa-page-desc">
-          장비별 이상, 점검, 조치 내용을 현재 UI 스타일에 맞춰 바로 기록합니다.
-          </div>
-        </div>
-      </div>
 
       <Card
         className="nowa-card"
         title={(
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <BookOutlined />
-            <span>업무 일지 작성</span>
+            <FileTextOutlined style={{ color: '#f59e0b' }} />
+            <span>{editingKey != null ? '업무 일지 수정' : '업무 일지 작성'}</span>
           </div>
         )}
         extra={(
@@ -312,7 +304,21 @@ export default function WorkLog() {
         </Form>
       </Card>
 
-      <Card className="nowa-card" title="업무 일지 목록" styles={{ body: { padding: 0 } }}>
+      <Card
+        className="nowa-card"
+        title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><UnorderedListOutlined style={{ color: '#f59e0b' }} /><span>업무 일지 목록</span></div>}
+        extra={(
+          <Segmented
+            value={listView}
+            onChange={setListView}
+            options={[
+              { label: '스크롤 보기', value: 'scroll' },
+              { label: '페이지 보기', value: 'page' },
+            ]}
+          />
+        )}
+        styles={{ body: { padding: 0, minHeight: 'calc(100vh - 320px)' } }}
+      >
         <Table
           className="console-table"
           bordered
@@ -320,8 +326,8 @@ export default function WorkLog() {
           rowKey="key"
           columns={columns}
           dataSource={rows}
-          pagination={{ pageSize: 8, showSizeChanger: false }}
-          scroll={{ x: 2100 }}
+          pagination={listView === 'page' ? { pageSize: 10, showSizeChanger: false } : false}
+          scroll={listView === 'scroll' ? { x: 2100, y: 'calc(100vh - 380px)' } : { x: 2100 }}
         />
       </Card>
     </div>

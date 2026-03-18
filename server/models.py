@@ -220,6 +220,42 @@ class MocvdNotice(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+class ShiftType(Base):
+    __tablename__ = "shift_type"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(20), unique=True, nullable=False, comment="코드값 (1, 2, 휴무, 연차 ...)")
+    label = Column(String(30), nullable=False, comment="표시명 (주간, 야간 ...)")
+    color = Column(String(30), default="#f59e0b", comment="텍스트 색상")
+    bg_color = Column(String(60), default="rgba(245,158,11,0.18)", comment="배경 색상")
+    border_color = Column(String(60), default="rgba(245,158,11,0.4)", comment="테두리 색상")
+    order_idx = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+
+
+class ShiftMember(Base):
+    __tablename__ = "shift_member"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False)
+    team = Column(String(20), default="")
+    vendor_name = Column(String(100), default="")
+    personnel_member_id = Column(Integer, nullable=True)
+    order_idx = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+
+
+class ShiftScheduleEntry(Base):
+    __tablename__ = "shift_schedule"
+
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, nullable=False, index=True)
+    work_date = Column(String(10), nullable=False, index=True)
+    shift_type = Column(String(20), nullable=False, default="1")
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

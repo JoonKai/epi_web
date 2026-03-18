@@ -7,12 +7,12 @@ import {
   AppstoreAddOutlined,
   BarChartOutlined,
   BellOutlined,
-  BookOutlined,
-  BuildOutlined,
+BuildOutlined,
   CalendarOutlined,
   ControlOutlined,
   DashboardOutlined,
   DollarOutlined,
+  FireOutlined,
   HeatMapOutlined,
   ShoppingCartOutlined,
   SwapOutlined,
@@ -34,7 +34,7 @@ const { Header, Sider, Content } = AntLayout
 
 function buildMenuItems(isAdmin) {
   const items = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: '대시보드' },
+    { key: '/dashboard', icon: <DashboardOutlined />, label: 'EPI 현황판' },
     {
       key: 'equipment',
       icon: <ToolOutlined />,
@@ -47,13 +47,14 @@ function buildMenuItems(isAdmin) {
           children: [
             { key: '/epi/mocvd/overview', icon: <DashboardOutlined />, label: '종합 현황판' },
             { key: '/epi/mocvd/management', icon: <ControlOutlined />, label: 'MOCVD 관리' },
-            { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스관리' },
-            { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM주기 계획' },
-            { key: '/epi/mocvd/work-log', icon: <BookOutlined />, label: '업무 일지' },
-            { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보관리' },
+            { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스 관리' },
+            { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM/BM 관리' },
+            { key: '/epi/mocvd/shift-schedule', icon: <UserOutlined />, label: '인원 관리' },
+{ key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 관리' },
           ],
         },
-        { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정장비' },
+        { key: '/epi/bake', icon: <FireOutlined />, label: '베이크', disabled: true },
+        { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
       ],
     },
     {
@@ -74,7 +75,7 @@ function buildMenuItems(isAdmin) {
       label: '분석',
       children: [
         { key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼맵' },
-        { key: '/run-comparison', icon: <SwapOutlined />, label: '런 비교' },
+        { key: '/run-comparison', icon: <SwapOutlined />, label: 'Run 비교' },
       ],
     },
     {
@@ -88,8 +89,7 @@ function buildMenuItems(isAdmin) {
       ],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
-    { key: '/epi/mocvd/personnel', icon: <UserOutlined />, label: '인원 관리' },
-    { key: '/grid', icon: <TableOutlined />, label: '데이터 조회' },
+    { key: '/grid', icon: <TableOutlined />, label: '레포트' },
   ]
 
   if (isAdmin) {
@@ -127,8 +127,8 @@ const PAGE_COLOR = {
   '/epi/mocvd/overview': '#22c55e',
   '/epi/mocvd/source': '#14b8a6',
   '/epi/mocvd/pm-plan': '#06b6d4',
+  '/epi/mocvd/shift-schedule': '#f59e0b',
   '/epi/mocvd/management': '#0ea5e9',
-  '/epi/mocvd/personnel': '#f97316',
   '/epi/mocvd/work-log': '#f59e0b',
   '/epi/mocvd/master-data': '#f97316',
   '/epi/measurement': '#3b82f6',
@@ -219,7 +219,16 @@ function Layout({ children, isDark, onThemeToggle }) {
           </div>
           {!collapsed && (
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ color: '#fde68a', fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap', textShadow: '0 0 20px rgba(245,158,11,0.4)' }}>
+              <div
+                style={{
+                  color: '#fde68a',
+                  fontSize: 17,
+                  fontWeight: 800,
+                  letterSpacing: -0.5,
+                  whiteSpace: 'nowrap',
+                  textShadow: '0 0 20px rgba(245,158,11,0.4)',
+                }}
+              >
                 EPI
               </div>
               <div style={{ color: 'rgba(253,230,138,0.5)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
@@ -230,7 +239,16 @@ function Layout({ children, isDark, onThemeToggle }) {
         </div>
 
         {!collapsed && (
-          <div style={{ padding: '16px 20px 4px', color: 'rgba(245,158,11,0.45)', fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+          <div
+            style={{
+              padding: '16px 20px 4px',
+              color: 'rgba(245,158,11,0.45)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+            }}
+          >
             Main Menu
           </div>
         )}

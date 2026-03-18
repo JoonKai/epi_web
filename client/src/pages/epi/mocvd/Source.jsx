@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Tabs } from 'antd'
-import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import { BarChartOutlined, BookOutlined, EditOutlined, HeatMapOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { authFetch } from '../../../context/AuthContext'
@@ -924,11 +924,16 @@ export default function Source() {
     <Tabs
       activeKey={activeTab}
       onChange={(key) => navigate(`/epi/mocvd/source?tab=${key}`)}
+      tabBarStyle={{
+        borderBottom: '1px solid rgba(245,158,11,0.18)',
+        marginBottom: 20,
+        paddingBottom: 0,
+      }}
       items={[
-        { key: 'status-board', label: '소스교체 현황판', children: <SourceStatusBoard /> },
-        { key: 'machine-board', label: '설비별 소스현황', children: <SourceMachineBoard /> },
-        { key: 'input', label: '소스 입력', children: <SourceInputTab /> },
-        { key: 'change-log', label: '소스교체 작업 일지', children: <SourceChangeLogTab /> },
+        { key: 'status-board', label: <span><BarChartOutlined /> 소스교체 현황판</span>, children: <SourceStatusBoard /> },
+        { key: 'machine-board', label: <span><HeatMapOutlined /> 설비별 소스현황</span>, children: <SourceMachineBoard /> },
+        { key: 'input', label: <span><EditOutlined /> 소스 입력</span>, children: <SourceInputTab /> },
+        { key: 'change-log', label: <span><BookOutlined /> 소스교체 작업 일지</span>, children: <SourceChangeLogTab /> },
       ]}
     />
   )

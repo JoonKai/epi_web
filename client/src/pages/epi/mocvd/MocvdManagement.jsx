@@ -5,6 +5,9 @@ import {
   AlertOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DashboardOutlined,
+  FileTextOutlined,
+  PoweroffOutlined,
   ReloadOutlined,
   SaveOutlined,
   SearchOutlined,
@@ -14,6 +17,7 @@ import {
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { useThemeMode } from '../../../theme/useThemeMode'
+import WorkLog from './WorkLog'
 
 function getMachineRiskStatus(sources, forcedDown) {
   if (forcedDown) return 'forced'
@@ -472,6 +476,12 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
   )
 }
 
+const tabBarStyle = {
+  borderBottom: '1px solid rgba(245,158,11,0.18)',
+  marginBottom: 20,
+  paddingBottom: 0,
+}
+
 export default function MocvdManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -589,10 +599,11 @@ export default function MocvdManagement() {
 
   return (
     <Tabs
+      tabBarStyle={tabBarStyle}
       items={[
         {
           key: 'overview',
-          label: '장비 현황판',
+          label: <span><DashboardOutlined /> 장비 현황판</span>,
           children: (
             <OverviewTab
               machineList={machineList}
@@ -607,7 +618,7 @@ export default function MocvdManagement() {
         },
         {
           key: 'forced-down',
-          label: '장비 강제 다운',
+          label: <span><PoweroffOutlined /> 장비 강제 다운</span>,
           children: (
             <ForceDownTab
               machineList={machineList}
@@ -618,6 +629,11 @@ export default function MocvdManagement() {
               saving={saving}
             />
           ),
+        },
+        {
+          key: 'work-log',
+          label: <span><FileTextOutlined /> 업무 일지</span>,
+          children: <div style={{ paddingTop: 12 }}><WorkLog /></div>,
         },
       ]}
     />

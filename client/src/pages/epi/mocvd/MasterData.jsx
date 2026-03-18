@@ -13,7 +13,7 @@ import {
   Tag,
   message,
 } from 'antd'
-import { DeleteOutlined, EditOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 
@@ -452,15 +452,234 @@ function SourceTab() {
   )
 }
 
+function ShiftTypeTab() {
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingRow, setEditingRow] = useState(null)
+  const [createForm] = Form.useForm()
+  const [editForm] = Form.useForm()
+
+  const fetchRows = async () => {
+    setLoading(true)
+    try {
+      const res = await authFetch('/api/shift/shift-types')
+      const json = await res.json()
+      setRows(Array.isArray(json) ? json : [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchRows() }, [])
+
+  const handleCreate = async (values) => {
+    const res = await authFetch('/api/shift/shift-types', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '추가에 실패했습니다.')
+      return
+    }
+    message.success('근무 유형을 추가했습니다.')
+    setCreateOpen(false)
+    createForm.resetFields()
+    fetchRows()
+  }
+
+  const handleEdit = async (values) => {
+    const res = await authFetch(`/api/shift/shift-types/${editingRow.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      message.error(err.detail || '수정에 실패했습니다.')
+      return
+    }
+    message.success('수정했습니다.')
+    setEditOpen(false)
+    setEditingRow(null)
+    editForm.resetFields()
+    fetchRows()
+  }
+
+  const handleDelete = async (id) => {
+    const res = await authFetch(`/api/shift/shift-types/${id}`, { method: 'DELETE' })
+    if (!res.ok) { message.error('삭제에 실패했습니다.'); return }
+    message.success('삭제했습니다.')
+    fetchRows()
+  }
+
+  const openEdit = (row) => {
+    setEditingRow(row)
+    editForm.setFieldsValue({ ...row })
+    setEditOpen(true)
+  }
+
+  const shiftFormFields = (
+    <>
+      <Form.Item name="name" label="코드값" rules={[{ required: true, message: '코드값을 입력하세요.' }]}
+        tooltip="근무표에 표시될 짧은 코드 (예: 1, 2, 휴무, 반반차A)">
+        <Input placeholder="예: 반반차A" />
+      </Form.Item>
+      <Form.Item name="label" label="표시명" rules={[{ required: true, message: '표시명을 입력하세요.' }]}>
+        <Input placeholder="예: 반반차A" />
+      </Form.Item>
+      <Form.Item name="order_idx" label="순서" initialValue={0}>
+        <InputNumber min={0} style={{ width: '100%' }} />
+      </Form.Item>
+      <Form.Item name="color" label="텍스트 색상" initialValue="#f59e0b">
+        <Input placeholder="#f59e0b 또는 rgba(...)" />
+      </Form.Item>
+      <Form.Item name="bg_color" label="배경 색상" initialValue="rgba(245,158,11,0.18)">
+        <Input placeholder="rgba(245,158,11,0.18)" />
+      </Form.Item>
+      <Form.Item name="border_color" label="테두리 색상" initialValue="rgba(245,158,11,0.4)">
+        <Input placeholder="rgba(245,158,11,0.4)" />
+      </Form.Item>
+    </>
+  )
+
+  const columns = [
+    {
+      title: '순서',
+      dataIndex: 'order_idx',
+      width: 60,
+    },
+    {
+      title: '코드값',
+      dataIndex: 'name',
+      width: 100,
+      render: (name, row) => (
+        <Tag style={{
+          marginInlineEnd: 0,
+          background: row.bg_color,
+          color: row.color,
+          borderColor: row.border_color,
+          fontWeight: 700,
+          fontSize: 13,
+        }}>
+          {name}
+        </Tag>
+      ),
+    },
+    {
+      title: '표시명',
+      dataIndex: 'label',
+      width: 120,
+    },
+    {
+      title: '텍스트 색상',
+      dataIndex: 'color',
+      width: 160,
+      render: (color) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 16, height: 16, borderRadius: 4, background: color, display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }} />
+          {color}
+        </span>
+      ),
+    },
+    {
+      title: '배경 색상',
+      dataIndex: 'bg_color',
+      width: 220,
+      render: (bg) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 16, height: 16, borderRadius: 4, background: bg, display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }} />
+          {bg}
+        </span>
+      ),
+    },
+    {
+      title: '사용',
+      width: 72,
+      render: (_, row) => (
+        <Switch
+          size="small"
+          checked={row.is_active}
+          onChange={async (checked) => {
+            await authFetch(`/api/shift/shift-types/${row.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ is_active: checked }),
+            })
+            fetchRows()
+          }}
+        />
+      ),
+    },
+    {
+      title: '관리',
+      width: 124,
+      render: (_, row) => (
+        <Space size={6}>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>수정</Button>
+          <Popconfirm title="이 근무 유형을 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <div style={{ marginBottom: 12 }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+          유형 추가
+        </Button>
+      </div>
+
+      <Table
+        rowKey="id"
+        size="small"
+        columns={columns}
+        dataSource={rows}
+        loading={loading}
+        pagination={{ pageSize: 30, showSizeChanger: false }}
+        bordered
+      />
+
+      <Modal title="근무 유형 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
+        <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
+          {shiftFormFields}
+        </Form>
+      </Modal>
+
+      <Modal title="근무 유형 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
+        <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
+          {shiftFormFields}
+          <Form.Item name="is_active" label="사용" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  )
+}
+
+const tabBarStyle = {
+  borderBottom: '1px solid rgba(245,158,11,0.18)',
+  marginBottom: 20,
+  paddingBottom: 0,
+}
+
 export default function MasterData() {
   return (
     <div>
-      <h2 style={{ marginBottom: 24 }}>기준정보관리</h2>
       <Tabs
         defaultActiveKey="machines"
+        tabBarStyle={tabBarStyle}
         items={[
-          { key: 'machines', label: 'MOCVD 호기 관리', children: <MachineTab /> },
-          { key: 'sources', label: '소스 종류 관리', children: <SourceTab /> },
+          { key: 'machines', label: <span><AppstoreOutlined /> MOCVD 호기 관리</span>, children: <MachineTab /> },
+          { key: 'sources', label: <span><ExperimentOutlined /> 소스 종류 관리</span>, children: <SourceTab /> },
+          { key: 'shift-types', label: <span><CalendarOutlined /> 근무 유형 관리</span>, children: <ShiftTypeTab /> },
         ]}
       />
     </div>

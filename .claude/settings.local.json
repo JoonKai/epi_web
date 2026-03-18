@@ -6,7 +6,15 @@
       "Bash(python -m pip install -r requirements.txt)",
       "Bash(py --version)",
       "Bash(where python:*)",
-      "Bash(find c:UsersthstjsourcereposEPIHomeEPI -type f \\\\\\(-name *.csv -o -name *.txt -o -name *.map -o -name *.sum \\\\\\))"
+      "Bash(find c:UsersthstjsourcereposEPIHomeEPI -type f \\\\\\(-name *.csv -o -name *.txt -o -name *.map -o -name *.sum \\\\\\))",
+      "Bash(npx --no-install eslint src/pages/epi/mocvd/ShiftSchedule.jsx --rule '{\"\"\"\"react/jsx-no-duplicate-props\"\"\"\": \"\"\"\"error\"\"\"\"}')",
+      "Bash(grep -n ?? /c/epi_web/client/src/pages/epi/mocvd/WorkLog.jsx)",
+      "Bash(grep -rn ?? /c/epi_web/client/src/pages/epi/mocvd/)",
+      "Bash(python -c \":*)",
+      "Bash(.venv/Scripts/python.exe -c \":*)",
+      "Bash(.venvScriptspython.exe init_data.py)",
+      "Bash(.venv/Scripts/python.exe init_data.py)",
+      "Bash(.venv/Scripts/python.exe -c \"from database import Base, engine; from models import ShiftDayOverride; Base.metadata.create_all\\(bind=engine\\); print\\(''done''\\)\")"
     ]
   }
 }
