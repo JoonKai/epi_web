@@ -1,16 +1,50 @@
-from fastapi import Depends, FastAPI
+import json
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_db, SessionLocal
 import models  # noqa: F401
+from models import SystemSetting
 from routers import admin, auth, cost, mocvd, shift
 from schema_sync import print_sync_summary, sync_schema
 
 print_sync_summary(sync_schema())
 
 app = FastAPI(title="Epi Web API", version="0.1.0")
+
+
+BYPASS_PATHS = {"/api/auth/login", "/api/auth/refresh", "/api/health", "/api/"}
+
+@app.middleware("http")
+async def ip_filter_middleware(request: Request, call_next):
+    # 로그인·헬스체크는 항상 통과
+    if request.url.path in BYPASS_PATHS:
+        return await call_next(request)
+
+    db = SessionLocal()
+    try:
+        row = db.query(SystemSetting).filter(SystemSetting.key == "ip_filter").first()
+        cfg = json.loads(row.value) if row else {"mode": "off", "ips": []}
+    finally:
+        db.close()
+
+    mode = cfg.get("mode", "off")
+    if mode == "off":
+        return await call_next(request)
+
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
+    ips = [ip.strip() for ip in cfg.get("ips", []) if ip.strip()]
+
+    if mode == "allow" and ips and client_ip not in ips:
+        return JSONResponse(status_code=403, content={"detail": f"접근이 차단된 IP입니다: {client_ip}"})
+    if mode == "block" and client_ip in ips:
+        return JSONResponse(status_code=403, content={"detail": f"접근이 차단된 IP입니다: {client_ip}"})
+
+    return await call_next(request)
+
 
 app.add_middleware(
     CORSMiddleware,

@@ -27,10 +27,12 @@ import {
   EditOutlined,
   FileTextOutlined,
   NodeIndexOutlined,
+  TeamOutlined,
   SwapOutlined,
   ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
+import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { authFetch, useAuth } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -415,6 +417,97 @@ function NoticeBoard() {
           </div>
         ) : null}
     </div>
+  )
+}
+
+function AttendanceCard() {
+  const [items, setItems] = useState([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const today = dayjs()
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [schedRes, typeRes] = await Promise.all([
+          authFetch(`/api/shift/schedules?year=${today.year()}&month=${today.month() + 1}`),
+          authFetch('/api/shift/shift-types'),
+        ])
+        const [schedJson, typeJson] = await Promise.all([schedRes.json(), typeRes.json()])
+        const todayStr = today.format('YYYY-MM-DD')
+        const counts = {}
+        schedJson.filter((s) => s.work_date === todayStr).forEach((s) => {
+          counts[s.shift_type] = (counts[s.shift_type] || 0) + 1
+        })
+        const result = typeJson
+          .filter((t) => t.is_active && counts[t.name])
+          .map((t) => ({ name: t.label, value: counts[t.name], color: t.color, bg: t.bg_color }))
+          .sort((a, b) => b.value - a.value)
+        setItems(result)
+        setTotal(result.reduce((s, d) => s + d.value, 0))
+      } catch {}
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
+
+  const chartOption = {
+    backgroundColor: 'transparent',
+    grid: { top: 8, right: 20, bottom: 8, left: 8, containLabel: true },
+    xAxis: { type: 'value', axisLabel: { show: false }, axisLine: { show: false }, splitLine: { show: false } },
+    yAxis: {
+      type: 'category',
+      data: items.map((d) => d.name),
+      axisLabel: { color: 'rgba(196,205,216,0.8)', fontSize: 12, fontWeight: 700 },
+      axisLine: { show: false }, axisTick: { show: false },
+    },
+    series: [{
+      type: 'bar',
+      data: items.map((d) => ({
+        value: d.value,
+        itemStyle: { color: d.color, borderRadius: [0, 6, 6, 0] },
+        label: { show: true, position: 'right', color: d.color, fontWeight: 700, fontSize: 13, formatter: '{c}명' },
+      })),
+      barMaxWidth: 22,
+    }],
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#1c1f2a', borderColor: 'rgba(245,158,11,0.2)', textStyle: { color: '#e2e8f0' } },
+  }
+
+  return (
+    <SectionCard
+      title="오늘 출근 인원"
+      icon={<TeamOutlined />}
+      extra={
+        <span style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b' }}>
+          총 {total}<span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.65)', marginLeft: 4 }}>명</span>
+        </span>
+      }
+    >
+      {loading ? (
+        <Skeleton active paragraph={{ rows: 2 }} />
+      ) : items.length === 0 ? (
+        <Empty description="오늘 등록된 근무 데이터가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <ReactECharts
+            option={chartOption}
+            style={{ height: Math.max(60, items.length * 36), flex: 1 }}
+            theme="dark"
+          />
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0 }}>
+            {items.map((d) => (
+              <div key={d.name} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                background: d.bg, borderRadius: 12, padding: '10px 18px', minWidth: 64,
+              }}>
+                <span style={{ fontSize: 26, fontWeight: 900, color: d.color, lineHeight: 1 }}>{d.value}</span>
+                <span style={{ fontSize: 11, color: d.color, opacity: 0.8, marginTop: 4, fontWeight: 700 }}>{d.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </SectionCard>
   )
 }
 
@@ -883,6 +976,8 @@ export default function MocvdOverview() {
       </Row>
 
       <HandoverBoard />
+
+      <AttendanceCard />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={14}>

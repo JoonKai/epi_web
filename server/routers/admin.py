@@ -1,6 +1,8 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from typing import List
 
 from auth import hash_password, require_admin
 from audit_log import write_audit_log
@@ -454,3 +456,32 @@ def list_logs(log_type: str = "system", db: Session = Depends(get_db), _=Depends
         }
         for row in rows
     ]
+
+
+# ─── IP 필터 설정 ──────────────────────────────────────────────────────────────
+
+IP_FILTER_KEY = "ip_filter"
+
+class IpFilterBody(BaseModel):
+    mode: str  # "off" | "allow" | "block"
+    ips: List[str] = []
+
+
+@router.get("/settings/ip-filter")
+def get_ip_filter(db: Session = Depends(get_db), _=Depends(require_admin)):
+    row = db.query(SystemSetting).filter(SystemSetting.key == IP_FILTER_KEY).first()
+    if row:
+        return json.loads(row.value)
+    return {"mode": "off", "ips": []}
+
+
+@router.put("/settings/ip-filter")
+def save_ip_filter(body: IpFilterBody, db: Session = Depends(get_db), _=Depends(require_admin)):
+    value = json.dumps({"mode": body.mode, "ips": body.ips})
+    row = db.query(SystemSetting).filter(SystemSetting.key == IP_FILTER_KEY).first()
+    if row:
+        row.value = value
+    else:
+        db.add(SystemSetting(key=IP_FILTER_KEY, value=value))
+    db.commit()
+    return {"ok": True}

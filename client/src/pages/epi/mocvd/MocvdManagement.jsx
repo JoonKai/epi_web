@@ -7,6 +7,7 @@ import {
   CloseCircleOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   PoweroffOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -634,6 +635,15 @@ export default function MocvdManagement() {
           key: 'work-log',
           label: <span><FileTextOutlined /> 업무 일지</span>,
           children: <div style={{ paddingTop: 12 }}><WorkLog /></div>,
+        },
+        {
+          key: 'equipment-history',
+          label: <span><HistoryOutlined /> 장비 이력</span>,
+          children: (
+            <div style={{ paddingTop: 24, textAlign: 'center', color: 'rgba(148,163,184,0.4)', fontSize: 14 }}>
+              장비 이력 기능이 추가될 예정입니다.
+            </div>
+          ),
         },
       ]}
     />

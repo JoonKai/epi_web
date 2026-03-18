@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Layout as AntLayout, Menu, Button, Badge, Avatar, Dropdown, Tooltip } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -151,6 +151,49 @@ function Layout({ children, isDark, onThemeToggle }) {
 
   const isAdmin = user?.role === 'admin'
   const menuItems = useMemo(() => attachPopupClass(buildMenuItems(isAdmin)), [isAdmin])
+
+  // 사이드바 드래그 스크롤
+  const sideScrollRef = useRef(null)
+
+  useEffect(() => {
+    const el = sideScrollRef.current
+    if (!el) return
+
+    let startY = 0
+    let startScrollTop = 0
+    let dragging = false
+
+    const onMouseDown = (e) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      dragging = true
+      startY = e.clientY
+      startScrollTop = el.scrollTop
+      el.style.cursor = 'grabbing'
+    }
+
+    const onMouseMove = (e) => {
+      if (!dragging) return
+      e.preventDefault()
+      el.scrollTop = startScrollTop - (e.clientY - startY)
+    }
+
+    const onMouseUp = () => {
+      if (!dragging) return
+      dragging = false
+      el.style.cursor = 'grab'
+    }
+
+    el.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
   const breadcrumbs = findPath(menuItems, location.pathname) ?? ['EPI']
   const title = breadcrumbs[breadcrumbs.length - 1]
   const pageColor = PAGE_COLOR[location.pathname] ?? '#6366f1'
@@ -254,12 +297,14 @@ function Layout({ children, isDark, onThemeToggle }) {
         )}
 
         <div
+          ref={sideScrollRef}
           style={{
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
             overflowX: 'hidden',
             paddingBottom: 24,
+            cursor: 'grab',
           }}
         >
           <Menu

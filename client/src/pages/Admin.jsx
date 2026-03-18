@@ -6,6 +6,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Radio,
   Select,
   Space,
   Switch,
@@ -14,7 +15,7 @@ import {
   Tag,
   message,
 } from 'antd'
-import { DeleteOutlined, HistoryOutlined, KeyOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, HistoryOutlined, KeyOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons'
 import { authFetch } from '../context/AuthContext'
 
 const SESSION_OPTIONS = [
@@ -268,6 +269,130 @@ function UserTab() {
   )
 }
 
+function SystemSettingsTab() {
+  const [mode, setMode] = useState('off')
+  const [ips, setIps] = useState([])
+  const [inputVal, setInputVal] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    authFetch('/api/admin/settings/ip-filter')
+      .then((r) => r.json())
+      .then((data) => { setMode(data.mode || 'off'); setIps(Array.isArray(data.ips) ? data.ips : []) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const addIp = () => {
+    const val = inputVal.trim()
+    if (!val) return
+    if (ips.includes(val)) { message.warning('이미 추가된 IP입니다.'); return }
+    setIps((prev) => [...prev, val])
+    setInputVal('')
+  }
+
+  const removeIp = (ip) => setIps((prev) => prev.filter((x) => x !== ip))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await authFetch('/api/admin/settings/ip-filter', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, ips }),
+      })
+      if (!res.ok) throw new Error()
+      message.success('IP 필터 설정을 저장했습니다.')
+    } catch {
+      message.error('저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const modeDesc = {
+    off: '모든 IP의 접속을 허용합니다.',
+    allow: '목록에 있는 IP만 접속을 허용합니다. 목록 외 IP는 차단됩니다.',
+    block: '목록에 있는 IP의 접속을 차단합니다. 목록 외 IP는 허용됩니다.',
+  }
+
+  const modeColor = { off: '#94a3b8', allow: '#22c55e', block: '#ef4444' }
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <div style={{
+        padding: 18, borderRadius: 16,
+        border: '1px solid var(--nowa-border)',
+        background: 'var(--nowa-hero-bg)',
+        marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--nowa-text)', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>
+          <SettingOutlined />
+          <span>IP 접속 필터</span>
+        </div>
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+          서버에 접속 가능한 IP를 허용/차단 목록으로 관리합니다.<br />
+          ⚠️ 잘못 설정하면 본인 IP도 차단될 수 있으니 주의하세요.
+        </div>
+      </div>
+
+      {/* 모드 선택 */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--nowa-text)' }}>필터 모드</div>
+        <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)}>
+          <Radio.Button value="off">비활성</Radio.Button>
+          <Radio.Button value="allow">허용 모드 (화이트리스트)</Radio.Button>
+          <Radio.Button value="block">차단 모드 (블랙리스트)</Radio.Button>
+        </Radio.Group>
+        <div style={{ marginTop: 8, fontSize: 13, color: modeColor[mode] }}>
+          {modeDesc[mode]}
+        </div>
+      </div>
+
+      {/* IP 목록 */}
+      {mode !== 'off' && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--nowa-text)' }}>
+            {mode === 'allow' ? '허용 IP 목록' : '차단 IP 목록'}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <Input
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              onPressEnter={addIp}
+              placeholder="예: 192.168.1.100"
+              style={{ maxWidth: 300 }}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={addIp}>추가</Button>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {ips.length === 0 && (
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>추가된 IP가 없습니다.</span>
+            )}
+            {ips.map((ip) => (
+              <Tag
+                key={ip}
+                closable
+                onClose={() => removeIp(ip)}
+                color={mode === 'allow' ? 'green' : 'red'}
+                style={{ fontSize: 13, padding: '3px 10px' }}
+              >
+                {ip}
+              </Tag>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Button type="primary" loading={saving} onClick={handleSave} style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}>
+        저장
+      </Button>
+    </div>
+  )
+}
+
 function LogTable({ rows, loading }) {
   const columns = [
     { title: '발생시각', dataIndex: 'occurred_at', width: 170 },
@@ -367,6 +492,7 @@ function Admin() {
       <Tabs
         items={[
           { key: 'users', label: '사용자 관리', children: <UserTab /> },
+          { key: 'system', label: '시스템 설정', children: <SystemSettingsTab /> },
           { key: 'log', label: 'Log', children: <LogTab /> },
         ]}
       />
