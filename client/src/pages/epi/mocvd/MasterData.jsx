@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Form,
@@ -14,6 +14,7 @@ import {
   message,
 } from 'antd'
 import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { HexColorPicker, RgbaStringColorPicker } from 'react-colorful'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 
@@ -452,6 +453,65 @@ function SourceTab() {
   )
 }
 
+function ColorPickerField({ value, onChange, rgba = false }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+      <div
+        onClick={() => setOpen((p) => !p)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+          padding: '4px 10px', cursor: 'pointer',
+          background: 'rgba(255,255,255,0.04)',
+        }}
+      >
+        <span style={{
+          width: 20, height: 20, borderRadius: 4,
+          background: value || 'transparent',
+          border: '1px solid rgba(255,255,255,0.2)',
+          flexShrink: 0,
+        }} />
+        <span style={{ fontSize: 12, color: 'var(--nowa-text)', flex: 1 }}>{value || '선택 안됨'}</span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', zIndex: 1000, top: '110%', left: 0,
+          background: '#1c1f2a', border: '1px solid rgba(245,158,11,0.25)',
+          borderRadius: 10, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          minWidth: 220,
+        }}>
+          {rgba ? (
+            <RgbaStringColorPicker color={value || 'rgba(245,158,11,0.18)'} onChange={onChange} />
+          ) : (
+            <HexColorPicker color={value || '#f59e0b'} onChange={onChange} />
+          )}
+          <input
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              marginTop: 8, width: '100%', background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+              padding: '4px 8px', color: '#e2e8f0', fontSize: 12,
+            }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ShiftTypeTab() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
@@ -535,13 +595,13 @@ function ShiftTypeTab() {
         <InputNumber min={0} style={{ width: '100%' }} />
       </Form.Item>
       <Form.Item name="color" label="텍스트 색상" initialValue="#f59e0b">
-        <Input placeholder="#f59e0b 또는 rgba(...)" />
+        <ColorPickerField />
       </Form.Item>
       <Form.Item name="bg_color" label="배경 색상" initialValue="rgba(245,158,11,0.18)">
-        <Input placeholder="rgba(245,158,11,0.18)" />
+        <ColorPickerField rgba />
       </Form.Item>
       <Form.Item name="border_color" label="테두리 색상" initialValue="rgba(245,158,11,0.4)">
-        <Input placeholder="rgba(245,158,11,0.4)" />
+        <ColorPickerField rgba />
       </Form.Item>
     </>
   )

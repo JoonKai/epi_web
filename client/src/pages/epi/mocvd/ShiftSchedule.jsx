@@ -375,8 +375,6 @@ function ScheduleTab() {
           </span>
           <Button size="small" type="text" style={{ color: 'var(--nowa-text-muted)', fontSize: 18, padding: '0 4px', lineHeight: 1 }}
             onClick={() => setCurrentMonth((p) => p.add(1, 'month'))}>›</Button>
-          <Button size="small" type="text" icon={<ReloadOutlined style={{ fontSize: 12 }} />}
-            onClick={fetchData} style={{ color: 'var(--nowa-text-muted)', marginLeft: 4 }} />
           <Button
             onClick={() => setCurrentMonth(dayjs())}
             style={{ marginLeft: 4, borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b', background: 'rgba(245,158,11,0.08)', fontWeight: 700, height: 32, padding: '0 14px', fontSize: 14 }}
@@ -408,6 +406,8 @@ function ScheduleTab() {
           >
             {isDirty ? '● 저장' : '저장'}
           </Button>
+          <Button size="small" type="text" icon={<ReloadOutlined style={{ fontSize: 13 }} />}
+            onClick={fetchData} style={{ color: 'var(--nowa-text-muted)', marginLeft: 2, height: 32, width: 32 }} />
         </div>
 
         {/* 오른쪽: 범례 */}
