@@ -14,7 +14,12 @@
       "Bash(.venv/Scripts/python.exe -c \":*)",
       "Bash(.venvScriptspython.exe init_data.py)",
       "Bash(.venv/Scripts/python.exe init_data.py)",
-      "Bash(.venv/Scripts/python.exe -c \"from database import Base, engine; from models import ShiftDayOverride; Base.metadata.create_all\\(bind=engine\\); print\\(''done''\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"from database import Base, engine; from models import ShiftDayOverride; Base.metadata.create_all\\(bind=engine\\); print\\(''done''\\)\")",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i \"s/#0f1117/#171b26/g;      s/#161921/#1e222e/g;      s/#13161e/#1a1d28/g;      s/#1a1d28/#212535/g;      s/#1c1f2a/#242834/g;      s/#22242f/#2a2d3b/g;      s/#0c0e16/#131620/g;      s/#0b0d14/#121520/g;      s/#0e1018/#151820/g\" \"$f\")",
+      "Bash(echo \"Updated: $f\")",
+      "Bash(done)"
     ]
   }
 }

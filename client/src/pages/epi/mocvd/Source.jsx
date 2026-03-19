@@ -23,7 +23,7 @@ const STICKY_TOP_REMAINING = STICKY_TOP_DAILY + ROW_H
 const STICKY_TOP_THRESHOLD_AMOUNT = STICKY_TOP_REMAINING + ROW_H
 const STICKY_TOP_DAYS_LEFT = STICKY_TOP_THRESHOLD_AMOUNT + ROW_H
 const STICKY_TOP_REPLACEMENT_DATE = STICKY_TOP_DAYS_LEFT + ROW_H
-const BASE_BG = '#0f1117'
+const BASE_BG = '#171b26'
 const BORDER = '1px solid rgba(245,158,11,0.12)'
 const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
 const DEFAULT_THRESHOLD_RATIO = 15
@@ -32,7 +32,7 @@ const EDITABLE_FIELDS = ['initial_amount', 'threshold_ratio', 'daily_usage', 're
 const th1Base = {
   position: 'sticky',
   top: 0,
-  background: '#1c1f2a',
+  background: '#242834',
   border: BORDER,
   padding: '0 4px',
   textAlign: 'center',
@@ -44,7 +44,7 @@ const th1Base = {
 const th2Base = {
   position: 'sticky',
   top: HEAD1_H,
-  background: '#161921',
+  background: '#1e222e',
   border: BORDER,
   padding: '0 3px',
   textAlign: 'center',
@@ -273,10 +273,10 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                 ...th1Base,
                 left: 0,
                 zIndex: 12,
-                background: '#0f1117',
+                background: '#171b26',
                 width: LABEL_W,
                 fontSize: 13,
-                color: 'rgba(148,163,184,0.6)',
+                color: 'rgba(196,210,226,0.6)',
               }}
             >
               구분
@@ -505,7 +505,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                 style={{
                   ...tdLabelBase,
                   background: rowIndex % 2 === 0 ? BASE_BG : '#131619',
-                  color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(148,163,184,0.82)',
+                  color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)',
                   borderRight: GROUP_BORDER,
                   fontWeight: rowIndex === 0 ? 800 : 700,
                 }}
@@ -528,7 +528,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                         ...tdCellBase,
                         borderLeft: index === 0 ? GROUP_BORDER : BORDER,
                         background: isCritical ? 'rgba(239,68,68,0.12)' : isLow ? 'rgba(251,191,36,0.07)' : undefined,
-                        color: isCritical ? '#f87171' : isLow ? '#fbbf24' : 'rgba(148,163,184,0.8)',
+                        color: isCritical ? '#f87171' : isLow ? '#fbbf24' : 'rgba(196,210,226,0.8)',
                         textAlign: 'right',
                         paddingRight: 5,
                         fontSize: 13,
@@ -814,10 +814,10 @@ function SourceInputTab() {
                     ...th1Base,
                     left: 0,
                     zIndex: 12,
-                    background: '#0f1117',
+                    background: '#171b26',
                     width: LABEL_W,
                     fontSize: 13,
-                    color: 'rgba(148,163,184,0.6)',
+                    color: 'rgba(196,210,226,0.6)',
                   }}
                 >
                   구분
@@ -858,7 +858,7 @@ function SourceInputTab() {
             </thead>
             <tbody>
               <tr>
-                <td style={{ ...tdLabelBase, background: '#0f1117', color: '#86efac', borderRight: GROUP_BORDER }}>
+                <td style={{ ...tdLabelBase, background: '#171b26', color: '#86efac', borderRight: GROUP_BORDER }}>
                   잔량 도달율
                 </td>
                 {filteredMachines.map((machine) =>

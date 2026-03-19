@@ -424,24 +424,36 @@ function AttendanceCard() {
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [selectedDay, setSelectedDay] = useState(dayjs())
   const today = dayjs()
+  const isToday = selectedDay.isSame(today, 'day')
 
   useEffect(() => {
     async function load() {
+      setLoading(true)
       try {
-        const [schedRes, typeRes] = await Promise.all([
-          authFetch(`/api/shift/schedules?year=${today.year()}&month=${today.month() + 1}`),
+        const [schedRes, typeRes, memberRes] = await Promise.all([
+          authFetch(`/api/shift/schedules?year=${selectedDay.year()}&month=${selectedDay.month() + 1}`),
           authFetch('/api/shift/shift-types'),
+          authFetch('/api/shift/members'),
         ])
-        const [schedJson, typeJson] = await Promise.all([schedRes.json(), typeRes.json()])
-        const todayStr = today.format('YYYY-MM-DD')
+        const [schedJson, typeJson, memberJson] = await Promise.all([schedRes.json(), typeRes.json(), memberRes.json()])
+        const members = Array.isArray(memberJson) ? memberJson : []
+        const activeMemberIds = new Set(members.map((m) => m.id))
+        const memberMap = Object.fromEntries(members.map((m) => [m.id, m.name]))
+        const dayStr = selectedDay.format('YYYY-MM-DD')
         const counts = {}
-        schedJson.filter((s) => s.work_date === todayStr).forEach((s) => {
-          counts[s.shift_type] = (counts[s.shift_type] || 0) + 1
-        })
+        const namesByType = {}
+        schedJson
+          .filter((s) => s.work_date === dayStr && activeMemberIds.has(s.member_id))
+          .forEach((s) => {
+            counts[s.shift_type] = (counts[s.shift_type] || 0) + 1
+            if (!namesByType[s.shift_type]) namesByType[s.shift_type] = []
+            namesByType[s.shift_type].push(memberMap[s.member_id] || '?')
+          })
         const result = typeJson
           .filter((t) => t.is_active && counts[t.name])
-          .map((t) => ({ name: t.label, value: counts[t.name], color: t.color, bg: t.bg_color }))
+          .map((t) => ({ name: t.label, value: counts[t.name], color: t.color, bg: t.bg_color, names: namesByType[t.name] || [] }))
           .sort((a, b) => b.value - a.value)
         setItems(result)
         setTotal(result.reduce((s, d) => s + d.value, 0))
@@ -449,16 +461,16 @@ function AttendanceCard() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [selectedDay])
 
   const chartOption = {
     backgroundColor: 'transparent',
-    grid: { top: 8, right: 20, bottom: 8, left: 8, containLabel: true },
+    grid: { top: 8, right: 60, bottom: 8, left: 8, containLabel: true },
     xAxis: { type: 'value', axisLabel: { show: false }, axisLine: { show: false }, splitLine: { show: false } },
     yAxis: {
       type: 'category',
       data: items.map((d) => d.name),
-      axisLabel: { color: 'rgba(196,205,216,0.8)', fontSize: 12, fontWeight: 700 },
+      axisLabel: { color: 'rgba(214,222,232,0.8)', fontSize: 12, fontWeight: 700 },
       axisLine: { show: false }, axisTick: { show: false },
     },
     series: [{
@@ -470,41 +482,71 @@ function AttendanceCard() {
       })),
       barMaxWidth: 22,
     }],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#1c1f2a', borderColor: 'rgba(245,158,11,0.2)', textStyle: { color: '#e2e8f0' } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#242834', borderColor: 'rgba(245,158,11,0.2)', textStyle: { color: '#e2e8f0' } },
   }
+
+  const navBtn = (label, onClick, active) => (
+    <button onClick={onClick} style={{
+      background: active ? '#f59e0b' : 'rgba(245,158,11,0.1)',
+      border: `1px solid ${active ? '#f59e0b' : 'rgba(245,158,11,0.35)'}`,
+      color: active ? '#000' : '#f0c060',
+      borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: active ? 700 : 600,
+      cursor: 'pointer', lineHeight: '22px',
+    }}>{label}</button>
+  )
 
   return (
     <SectionCard
-      title="오늘 출근 인원"
+      title={
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          출근 인원
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.7)' }}>
+            {selectedDay.format('M월 D일 (ddd)')}
+          </span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>
+            총 {total}<span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.65)', marginLeft: 3 }}>명</span>
+          </span>
+        </span>
+      }
       icon={<TeamOutlined />}
       extra={
-        <span style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b' }}>
-          총 {total}<span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.65)', marginLeft: 4 }}>명</span>
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {navBtn('전날', () => setSelectedDay((d) => d.subtract(1, 'day')), false)}
+          {navBtn('오늘', () => setSelectedDay(dayjs()), isToday)}
+          {navBtn('다음날', () => setSelectedDay((d) => d.add(1, 'day')), false)}
+        </div>
       }
     >
       {loading ? (
         <Skeleton active paragraph={{ rows: 2 }} />
       ) : items.length === 0 ? (
-        <Empty description="오늘 등록된 근무 데이터가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <Empty description="등록된 근무 데이터가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <ReactECharts
-            option={chartOption}
-            style={{ height: Math.max(60, items.length * 36), flex: 1 }}
-            theme="dark"
-          />
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0 }}>
-            {items.map((d) => (
-              <div key={d.name} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                background: d.bg, borderRadius: 12, padding: '10px 18px', minWidth: 64,
-              }}>
-                <span style={{ fontSize: 26, fontWeight: 900, color: d.color, lineHeight: 1 }}>{d.value}</span>
-                <span style={{ fontSize: 11, color: d.color, opacity: 0.8, marginTop: 4, fontWeight: 700 }}>{d.name}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map((d) => (
+            <div key={d.name} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '8px 12px', borderRadius: 10,
+              background: `${d.bg}`,
+              borderLeft: `4px solid ${d.color}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 72, flexShrink: 0 }}>
+                <span style={{ fontSize: 20, fontWeight: 900, color: d.color, lineHeight: 1 }}>{d.value}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: d.color, opacity: 0.75 }}>{d.name}</span>
               </div>
-            ))}
-          </div>
+              <div style={{ width: 1, height: 20, background: `${d.color}40`, flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px' }}>
+                {d.names.map((n) => (
+                  <span key={n} style={{
+                    fontSize: 14, fontWeight: 600, color: d.color,
+                    padding: '1px 10px', borderRadius: 20,
+                    background: `${d.color}18`,
+                    border: `1px solid ${d.color}30`,
+                  }}>{n}</span>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </SectionCard>
@@ -728,8 +770,8 @@ function HandoverBoard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
                     <div>
                       <div style={{ color: 'var(--nowa-text)', fontWeight: 800, fontSize: 14 }}>{note.title || '인수인계'}</div>
-                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, marginTop: 3 }}>
-                        {note.handover_date} / {note.author || '-'} / {note.updated_at || note.created_at || '-'}
+                      <div style={{ color: 'rgba(245,158,11,0.85)', fontSize: 11, marginTop: 3 }}>
+                        {note.author || '-'} / {note.handover_date}
                       </div>
                     </div>
                     {canManageNote(note) ? (
@@ -822,7 +864,7 @@ function HandoverBoard() {
                         gap: 10,
                         padding: '8px 0',
                         border: 'none',
-                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid rgba(148,163,184,0.06)',
+                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid rgba(196,210,226,0.06)',
                         background: 'transparent',
                         textAlign: 'left',
                         cursor: 'pointer',
@@ -853,7 +895,7 @@ function HandoverBoard() {
                               bottom: -10,
                               width: 2,
                               borderRadius: 999,
-                              background: 'rgba(148,163,184,0.22)',
+                              background: 'rgba(196,210,226,0.22)',
                             }}
                           />
                         ) : null}

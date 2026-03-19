@@ -15,7 +15,7 @@ export const consoleColors = {
   // Text
   text: '#e2e8f0',
   textSoft: 'rgba(226, 232, 240, 0.82)',
-  textMuted: 'rgba(148, 163, 184, 0.65)',
+  textMuted: 'rgba(196, 210, 226, 0.65)',
 
   // Brand
   primary: '#6366f1',

@@ -131,7 +131,7 @@ function MiniWaferMap({ wafer, param, rangeStart, rangeEnd, colors, size }) {
           opts={{ renderer: 'canvas' }}
         />
       </div>
-      <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, letterSpacing: 0.3 }}>
+      <div style={{ fontSize: 11, color: '#b0c0d0', fontWeight: 600, letterSpacing: 0.3 }}>
         {wafer.id}
       </div>
     </div>

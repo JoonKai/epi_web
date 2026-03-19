@@ -66,7 +66,7 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
         padding: '16px 18px',
         borderRadius: 18,
         background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-        border: '1px solid rgba(148,163,184,0.16)',
+        border: '1px solid rgba(196,210,226,0.16)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
         position: 'relative',
         overflow: 'hidden',
@@ -572,7 +572,7 @@ function SourceStatusBoard() {
                     backgroundColor: 'transparent',
                     grid: { top: 16, bottom: 44, left: 36, right: 16 },
                     tooltip: { trigger: 'axis' },
-                    legend: { bottom: 4, textStyle: { color: '#94a3b8', fontSize: 11 } },
+                    legend: { bottom: 4, textStyle: { color: '#b0c0d0', fontSize: 11 } },
                     xAxis: {
                       type: 'category',
                       data: list.map(m => `${m.machine_no}`),
@@ -641,7 +641,7 @@ function SourceStatusBoard() {
                     type: 'bar',
                     data: counts.map((v, i) => ({ value: v, itemStyle: { color: buckets[i].color, borderRadius: [4, 4, 0, 0] } })),
                     barMaxWidth: 48,
-                    label: { show: true, position: 'top', color: '#94a3b8', fontSize: 11 },
+                    label: { show: true, position: 'top', color: '#b0c0d0', fontSize: 11 },
                   }],
                 }
               })()}

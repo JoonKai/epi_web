@@ -115,7 +115,7 @@ function RiskBar({ name, remaining, daily_usage }) {
           <span>{name}</span>
           <span style={{ color }}>{daysLeft == null ? '-' : `${Math.max(daysLeft, 0).toFixed(0)}일`}</span>
         </div>
-        <div style={{ height: 6, borderRadius: 999, background: 'rgba(148,163,184,0.14)', overflow: 'hidden' }}>
+        <div style={{ height: 6, borderRadius: 999, background: 'rgba(196,210,226,0.14)', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 999, transition: 'width 0.25s ease' }} />
         </div>
       </div>
@@ -181,7 +181,7 @@ function SummaryCard({ label, value, suffix, gradient, accent, icon, sub }) {
         padding: '16px 18px',
         borderRadius: 18,
         background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-        border: '1px solid rgba(148,163,184,0.16)',
+        border: '1px solid rgba(196,210,226,0.16)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
         position: 'relative',
         overflow: 'hidden',
@@ -371,7 +371,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
                   backgroundColor: 'transparent',
                   grid: { top: 16, bottom: 44, left: 36, right: 16 },
                   tooltip: { trigger: 'axis' },
-                  legend: { bottom: 4, textStyle: { color: '#94a3b8', fontSize: 11 } },
+                  legend: { bottom: 4, textStyle: { color: '#b0c0d0', fontSize: 11 } },
                   xAxis: {
                     type: 'category',
                     data: riskChartRows.map((row) => `${row.machine_no}`),
@@ -421,7 +421,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
                     type: 'bar',
                     data: distributionCounts.map((value, index) => ({ value, itemStyle: { color: distributionBuckets[index].color, borderRadius: [4, 4, 0, 0] } })),
                     barMaxWidth: 48,
-                    label: { show: true, position: 'top', color: '#94a3b8', fontSize: 11 },
+                    label: { show: true, position: 'top', color: '#b0c0d0', fontSize: 11 },
                   },
                 ],
               }}
@@ -640,7 +640,7 @@ export default function MocvdManagement() {
           key: 'equipment-history',
           label: <span><HistoryOutlined /> 장비 이력</span>,
           children: (
-            <div style={{ paddingTop: 24, textAlign: 'center', color: 'rgba(148,163,184,0.4)', fontSize: 14 }}>
+            <div style={{ paddingTop: 24, textAlign: 'center', color: 'rgba(196,210,226,0.4)', fontSize: 14 }}>
               장비 이력 기능이 추가될 예정입니다.
             </div>
           ),

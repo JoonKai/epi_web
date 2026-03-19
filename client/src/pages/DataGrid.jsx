@@ -169,7 +169,7 @@ function buildPreviewSections(checkedKeys, reportTitle) {
 export default function DataGrid() {
   const [checkedKeys, setCheckedKeys] = useState(DEFAULT_KEYS)
   const [expandedKeys, setExpandedKeys] = useState(REPORT_TREE.map((node) => node.key))
-  const [reportTitle, setReportTitle] = useState(`EPI 운영 레포트 ${dayjs().format('YYYY-MM-DD')}`)
+  const [reportTitle, setReportTitle] = useState(`EPI 운영 보고서 ${dayjs().format('YYYY-MM-DD')}`)
   const [exporting, setExporting] = useState(false)
   const previewRef = useRef(null)
 
@@ -192,14 +192,14 @@ export default function DataGrid() {
 
   const exportPdf = async () => {
     if (!previewRef.current || previewSections.length === 0) {
-      message.warning('레포트에 포함할 메뉴를 먼저 선택하세요.')
+      message.warning('보고서에 포함할 메뉴를 먼저 선택하세요.')
       return
     }
 
     setExporting(true)
     try {
       const canvas = await html2canvas(previewRef.current, {
-        backgroundColor: '#0f1117',
+        backgroundColor: '#171b26',
         scale: 2,
         useCORS: true,
       })
@@ -223,7 +223,7 @@ export default function DataGrid() {
       }
 
       pdf.save(`${sanitizeFileName(reportTitle)}.pdf`)
-      message.success('PDF 레포트를 생성했습니다.')
+      message.success('PDF 보고서를 생성했습니다.')
     } catch (error) {
       message.error(error.message || 'PDF 생성에 실패했습니다.')
     } finally {
@@ -233,7 +233,7 @@ export default function DataGrid() {
 
   const exportPptx = async () => {
     if (previewSections.length === 0) {
-      message.warning('레포트에 포함할 메뉴를 먼저 선택하세요.')
+      message.warning('보고서에 포함할 메뉴를 먼저 선택하세요.')
       return
     }
 
@@ -306,7 +306,7 @@ export default function DataGrid() {
       })
 
       await pptx.writeFile({ fileName: `${sanitizeFileName(reportTitle)}.pptx` })
-      message.success('PPTX 레포트를 생성했습니다.')
+      message.success('PPTX 보고서를 생성했습니다.')
     } catch (error) {
       message.error(error.message || 'PPTX 생성에 실패했습니다.')
     } finally {
@@ -319,9 +319,9 @@ export default function DataGrid() {
       <div className="console-toolbar">
         <div>
           <div style={{ color: 'rgba(245,158,11,0.72)', fontSize: 12, fontWeight: 700, letterSpacing: 1.2 }}>REPORT BUILDER</div>
-          <div style={{ color: 'var(--nowa-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>메뉴 기반 레포트 만들기</div>
+          <div style={{ color: 'var(--nowa-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>메뉴 기반 보고서 만들기</div>
           <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>
-            메뉴 트리에서 필요한 화면을 체크하고 PDF 또는 PPTX 형태로 정리된 레포트를 생성합니다.
+            메뉴 트리에서 필요한 화면을 체크하고 PDF 또는 PPTX 형태로 정리된 보고서를 생성합니다.
           </div>
         </div>
         <div className="console-toolbar-group">
@@ -343,7 +343,7 @@ export default function DataGrid() {
               <Input
                 value={reportTitle}
                 onChange={(event) => setReportTitle(event.target.value)}
-                placeholder="레포트 제목"
+                placeholder="보고서 제목"
               />
               <Alert
                 type="info"
@@ -376,9 +376,9 @@ export default function DataGrid() {
         </Col>
 
         <Col xs={24} xl={17}>
-          <Card className="console-panel" style={{ ...panelStyle, height: '100%' }} title="레포트 미리보기">
+          <Card className="console-panel" style={{ ...panelStyle, height: '100%' }} title="보고서 미리보기">
             {previewSections.length === 0 ? (
-              <Alert type="warning" showIcon message="선택된 메뉴가 없습니다." description="왼쪽 트리에서 레포트에 포함할 메뉴를 먼저 체크하세요." />
+              <Alert type="warning" showIcon message="선택된 메뉴가 없습니다." description="왼쪽 트리에서 보고서에 포함할 메뉴를 먼저 체크하세요." />
             ) : (
               <div ref={previewRef} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div
@@ -389,7 +389,7 @@ export default function DataGrid() {
                     background: 'linear-gradient(180deg, rgba(24,18,12,0.85) 0%, rgba(15,17,23,0.98) 100%)',
                   }}
                 >
-                  <div style={{ color: '#f4d28b', fontSize: 22, fontWeight: 800 }}>{reportTitle || '레포트 제목 없음'}</div>
+                  <div style={{ color: '#f4d28b', fontSize: 22, fontWeight: 800 }}>{reportTitle || '보고서 제목 없음'}</div>
                   <div style={{ color: 'rgba(220,232,255,0.68)', marginTop: 6 }}>
                     생성일 {dayjs().format('YYYY-MM-DD HH:mm')} / 포함 메뉴 {previewSections.length}개
                   </div>
@@ -408,7 +408,7 @@ export default function DataGrid() {
                     style={{
                       borderRadius: 16,
                       padding: '16px 18px',
-                      border: '1px solid rgba(148,163,184,0.14)',
+                      border: '1px solid rgba(196,210,226,0.14)',
                       background: 'rgba(15,23,42,0.44)',
                     }}
                   >

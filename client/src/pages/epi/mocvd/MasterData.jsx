@@ -13,7 +13,7 @@ import {
   Tag,
   message,
 } from 'antd'
-import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, PlusOutlined, SaveOutlined, UnorderedListOutlined, TableOutlined } from '@ant-design/icons'
 import { HexColorPicker, RgbaStringColorPicker } from 'react-colorful'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -29,6 +29,7 @@ function MachineTab() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
+  const [viewMode, setViewMode] = useState('scroll')
   const [createForm] = Form.useForm()
   const [editForm] = Form.useForm()
 
@@ -198,12 +199,41 @@ function MachineTab() {
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
           호기 추가
         </Button>
-        <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveActive} loading={saving} disabled={!hasPendingChanges}>
-          저장
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.25)' }}>
+            {[{ key: 'scroll', icon: <UnorderedListOutlined />, label: '스크롤' }, { key: 'page', icon: <TableOutlined />, label: '페이지' }].map(({ key, icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setViewMode(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', border: 'none', cursor: 'pointer', fontSize: 13,
+                  background: viewMode === key ? 'rgba(245,158,11,0.18)' : 'transparent',
+                  color: viewMode === key ? '#fbbf24' : 'var(--nowa-text-muted)',
+                  fontWeight: viewMode === key ? 700 : 400,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+          <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveActive} loading={saving} disabled={!hasPendingChanges}>
+            저장
+          </Button>
+        </div>
       </div>
 
-      <Table rowKey="id" size="small" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 30, showSizeChanger: false }} bordered />
+      <Table
+        rowKey="id"
+        size="small"
+        columns={columns}
+        dataSource={rows}
+        loading={loading}
+        pagination={viewMode === 'page' ? { pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] } : false}
+        scroll={viewMode === 'scroll' ? { y: 520 } : undefined}
+        bordered
+      />
 
       <Modal title="호기 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
         <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
@@ -487,7 +517,7 @@ function ColorPickerField({ value, onChange, rgba = false }) {
       {open && (
         <div style={{
           position: 'absolute', zIndex: 1000, top: '110%', left: 0,
-          background: '#1c1f2a', border: '1px solid rgba(245,158,11,0.25)',
+          background: '#242834', border: '1px solid rgba(245,158,11,0.25)',
           borderRadius: 10, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           minWidth: 220,
         }}>

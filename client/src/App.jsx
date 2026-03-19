@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ConfigProvider, Spin, theme as antTheme } from 'antd'
 import koKR from 'antd/locale/ko_KR'
@@ -32,18 +32,18 @@ const DARK_TOKENS = {
   colorWarning: '#eab308',
   colorError: '#f43f5e',
   colorInfo: '#3b82f6',
-  colorTextBase: '#c4cdd8',
-  colorBgBase: '#0f1117',
-  colorBgLayout: '#0f1117',
-  colorBgContainer: '#161921',
-  colorBgElevated: '#1c1f2a',
+  colorTextBase: '#cdd6e0',
+  colorBgBase: '#171b26',
+  colorBgLayout: '#171b26',
+  colorBgContainer: '#1e222e',
+  colorBgElevated: '#242834',
   colorBorder: 'rgba(245,158,11,0.15)',
   colorBorderSecondary: 'rgba(245,158,11,0.09)',
   colorFillAlter: 'rgba(245,158,11,0.05)',
-  colorFillContent: 'rgba(255,255,255,0.04)',
-  colorTextSecondary: 'rgba(180,196,210,0.78)',
-  colorTextTertiary: 'rgba(100,116,132,0.82)',
-  colorTextQuaternary: 'rgba(100,116,132,0.5)',
+  colorFillContent: 'rgba(255,255,255,0.05)',
+  colorTextSecondary: 'rgba(196,212,224,0.82)',
+  colorTextTertiary: 'rgba(118,136,154,0.85)',
+  colorTextQuaternary: 'rgba(118,136,154,0.5)',
   borderRadius: 12,
   fontFamily: "'Pretendard', 'Inter', 'Segoe UI', -apple-system, sans-serif",
   fontSize: 14,
@@ -73,13 +73,7 @@ const LIGHT_TOKENS = {
 }
 
 function AppRoutes({ isDark, onThemeToggle }) {
-  const { user, loading, logout } = useAuth()
-
-  useEffect(() => {
-    const handler = () => logout()
-    window.addEventListener('auth:logout', handler)
-    return () => window.removeEventListener('auth:logout', handler)
-  }, [logout])
+  const { user, loading } = useAuth()
 
   if (loading) {
     return (
@@ -144,7 +138,7 @@ function App() {
           Menu: {
             darkItemBg: 'transparent',
             darkSubMenuItemBg: 'transparent',
-            darkItemColor: isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.8)',
+            darkItemColor: isDark ? 'rgba(196,210,226,0.65)' : 'rgba(100,116,139,0.8)',
             darkItemHoverColor: isDark ? '#e2e8f0' : '#0f172a',
             darkItemSelectedColor: isDark ? '#fbbf24' : '#f59e0b',
             darkItemSelectedBg: 'rgba(245,158,11,0.12)',
@@ -152,12 +146,12 @@ function App() {
             itemSelectedColor: '#f59e0b',
           },
           Card: {
-            colorBgContainer: isDark ? '#161921' : '#f8f9ff',
+            colorBgContainer: isDark ? '#1e222e' : '#f8f9ff',
             headerBg: 'transparent',
             borderRadiusLG: 16,
           },
           Tabs: {
-            itemColor: isDark ? 'rgba(148,163,184,0.6)' : 'rgba(100,116,139,0.75)',
+            itemColor: isDark ? 'rgba(196,210,226,0.6)' : 'rgba(100,116,139,0.75)',
             itemSelectedColor: '#f59e0b',
             itemHoverColor: isDark ? '#e2e8f0' : '#0f172a',
             inkBarColor: '#f59e0b',

@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Modal, Popconfirm, Spin, Tabs, message } from 'antd'
+import { Button, Card, Modal, Popconfirm, Spin, Tabs, message } from 'antd'
 import {
   CalendarOutlined,
   ClearOutlined,
   DeleteOutlined,
-  LinkOutlined,
   ReloadOutlined,
-  TeamOutlined,
   UserOutlined,
   ShopOutlined,
 } from '@ant-design/icons'
@@ -294,33 +292,33 @@ function ScheduleTab() {
       grid: { top: 28, right: 16, bottom: 32, left: 32, containLabel: true },
       legend: {
         right: 12, top: 2,
-        textStyle: { color: 'rgba(196,205,216,0.65)', fontSize: 12 },
+        textStyle: { color: 'rgba(214,222,232,0.65)', fontSize: 14},
         itemWidth: 12, itemHeight: 8,
       },
       xAxis: {
         type: 'category', data: xData,
         axisLine: { lineStyle: { color: 'rgba(245,158,11,0.15)' } },
         axisTick: { show: false },
-        axisLabel: { color: 'rgba(196,205,216,0.45)', fontSize: 10, interval: 1 },
+        axisLabel: { color: 'rgba(214,222,232,0.45)', fontSize: 14, interval: 1 },
         splitLine: { show: false },
       },
       yAxis: {
         type: 'value', min: 0, max: maxVal + 1, interval: 1,
         axisLine: { show: false }, axisTick: { show: false },
-        axisLabel: { color: 'rgba(196,205,216,0.4)', fontSize: 11 },
+        axisLabel: { color: 'rgba(214,222,232,0.4)', fontSize: 14},
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
       },
       series: top3.map((k) => {
-        const color = shiftLegend[k]?.color ?? '#94a3b8'
+        const color = shiftLegend[k]?.color ?? '#b0c0d0'
         const label = shiftLegend[k]?.label ?? k
         const data  = dateList.map((d) => daySummary[k]?.[d.format('YYYY-MM-DD')] || 0)
         return gradBar(color, label, data)
       }),
       tooltip: {
         trigger: 'axis', axisPointer: { type: 'shadow' },
-        backgroundColor: '#1c1f2a',
+        backgroundColor: '#242834',
         borderColor: 'rgba(245,158,11,0.2)',
-        textStyle: { color: '#e2e8f0', fontSize: 12 },
+        textStyle: { color: '#e2e8f0', fontSize: 14},
       },
     }
   }, [dateList, daySummary, shiftCycle, shiftLegend, summaryRowKeys])
@@ -331,7 +329,7 @@ function ScheduleTab() {
       style={{
         padding: '7px 4px',
         textAlign: 'center',
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 700,
         color: 'rgba(245,158,11,0.95)',
         background: 'rgba(245,158,11,0.1)',
@@ -353,12 +351,16 @@ function ScheduleTab() {
   }))
 
   return (
-    <div style={{
-      background: 'var(--nowa-card-bg, #161921)',
-      border: '1px solid rgba(245,158,11,0.12)',
-      borderRadius: 16,
-      overflow: 'hidden',
-    }}>
+    <Card
+      className="nowa-card"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#f59e0b', fontSize: 15 }}><CalendarOutlined /></span>
+          <span style={{ fontWeight: 800 }}>근무현황판</span>
+        </div>
+      }
+      styles={{ body: { padding: 0, overflow: 'hidden' } }}
+    >
       {/* 월 네비 + 범례 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -406,7 +408,7 @@ function ScheduleTab() {
           >
             {isDirty ? '● 저장' : '저장'}
           </Button>
-          <Button size="small" type="text" icon={<ReloadOutlined style={{ fontSize: 13 }} />}
+          <Button size="small" type="text" icon={<ReloadOutlined style={{ fontSize: 14}} />}
             onClick={fetchData} style={{ color: 'var(--nowa-text-muted)', marginLeft: 2, height: 32, width: 32 }} />
         </div>
 
@@ -420,14 +422,14 @@ function ScheduleTab() {
                 padding: '3px 10px', borderRadius: 20,
                 background: m.bg, color: m.color,
                 border: `1px solid ${m.border}`,
-                fontSize: 11, fontWeight: 700,
+                fontSize: 14, fontWeight: 700,
               }}>
-                {(k === '1' || k === '2') && <span style={{ opacity: 0.55, fontSize: 10 }}>{k}</span>}
+                {(k === '1' || k === '2') && <span style={{ opacity: 0.55, fontSize: 14}}>{k}</span>}
                 {m.label}
               </span>
             )
           })}
-          <span style={{ fontSize: 11, color: 'rgba(148,163,184,0.4)', marginLeft: 4 }}>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.4)', marginLeft: 4 }}>
             ※ 셀 클릭으로 근무 유형 변경
           </span>
         </div>
@@ -460,7 +462,7 @@ function ScheduleTab() {
                     return (
                       <TH key={`dh-${d.valueOf()}`}
                         style={{
-                          color: isWe ? '#f87171' : 'rgba(245,158,11,0.8)', fontSize: 11,
+                          color: isWe ? '#f87171' : 'rgba(245,158,11,0.8)', fontSize: 14,
                           ...(isMon && { borderLeft: '2.5px solid #000' }),
                         }}>
                         {d.format('M/D')}
@@ -478,7 +480,7 @@ function ScheduleTab() {
                 <tr>
                   <TH style={{
                     position: 'sticky', left: 0, zIndex: 5,
-                    background: 'rgba(245,158,11,0.04)', color: 'rgba(196,210,224,0.75)', fontSize: 11,
+                    background: 'rgba(245,158,11,0.04)', color: 'rgba(196,210,224,0.75)', fontSize: 14,
                   }}>요일</TH>
                   {dateList.map((d) => {
                     const isWe = d.day() === 0 || d.day() === 6
@@ -488,7 +490,7 @@ function ScheduleTab() {
                         style={{
                           background: 'rgba(245,158,11,0.03)',
                           color: isWe ? '#f87171' : 'rgba(196,210,224,0.75)',
-                          fontSize: 11, fontWeight: 600,
+                          fontSize: 14, fontWeight: 600,
                           ...(isMon && { borderLeft: '2.5px solid #000' }),
                         }}>
                         {weekdayLabels[d.day()]}
@@ -497,7 +499,7 @@ function ScheduleTab() {
                   })}
                   {summaryKeys.map((s) => (
                     <TH key={`sw-${s.key}`}
-                      style={{ background: 'rgba(245,158,11,0.04)', color: 'rgba(196,210,224,0.6)', fontSize: 10 }}>
+                      style={{ background: 'rgba(245,158,11,0.04)', color: 'rgba(196,210,224,0.6)', fontSize: 14}}>
                       집계
                     </TH>
                   ))}
@@ -513,10 +515,10 @@ function ScheduleTab() {
                       {/* 이름 셀 */}
                       <td style={{
                         position: 'sticky', left: 0, zIndex: 3,
-                        background: '#13161e',
+                        background: '#212535',
                         border: '1px solid rgba(245,158,11,0.1)',
                         padding: '7px 8px',
-                        fontWeight: 700, fontSize: 13,
+                        fontWeight: 700, fontSize: 14,
                         color: 'rgba(245,158,11,0.9)',
                         height: 46,
                         textAlign: 'center',
@@ -541,7 +543,7 @@ function ScheduleTab() {
                               border: '1px solid rgba(255,255,255,0.1)',
                               ...(isMon && { borderLeft: '2.5px solid #000' }),
                               textAlign: 'center',
-                              fontSize: val.length > 1 ? 10 : 12,
+                              fontSize: 14,
                               fontWeight: 700,
                               cursor: 'pointer',
                               transition: 'opacity 0.12s',
@@ -563,7 +565,7 @@ function ScheduleTab() {
                           border: '1px solid rgba(255,255,255,0.1)',
                           background: 'rgba(245,158,11,0.05)',
                           color: s.color,
-                          fontSize: 13, fontWeight: 700,
+                          fontSize: 14, fontWeight: 700,
                         }}>
                           {summary[s.key] || 0}
                         </td>
@@ -580,7 +582,7 @@ function ScheduleTab() {
                           onConfirm={() => deleteMember(member.id)}
                           okText="제거" cancelText="취소" okButtonProps={{ danger: true }}
                         >
-                          <DeleteOutlined style={{ color: 'rgba(248,113,113,0.55)', fontSize: 12, cursor: 'pointer' }} />
+                          <DeleteOutlined style={{ color: 'rgba(248,113,113,0.55)', fontSize: 14, cursor: 'pointer' }} />
                         </Popconfirm>
                       </td>
                     </tr>
@@ -596,7 +598,7 @@ function ScheduleTab() {
                       height: 36, textAlign: 'center', cursor: 'pointer',
                       background: 'rgba(245,158,11,0.04)',
                       border: '1px dashed rgba(245,158,11,0.25)',
-                      color: 'rgba(245,158,11,0.55)', fontSize: 12, fontWeight: 700,
+                      color: 'rgba(245,158,11,0.55)', fontSize: 14, fontWeight: 700,
                       letterSpacing: 1,
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.09)'; e.currentTarget.style.color = '#f59e0b' }}
@@ -622,11 +624,11 @@ function ScheduleTab() {
                     <tr key={key}>
                       <td style={{
                         position: 'sticky', left: 0, zIndex: 3,
-                        background: '#13161e',
+                        background: '#212535',
                         border: '1px solid rgba(245,158,11,0.1)',
                         padding: '7px 10px',
                         textAlign: 'center',
-                        fontWeight: 700, fontSize: 12, color,
+                        fontWeight: 700, fontSize: 14, color,
                         height: 46,
                       }}>
                         {label}
@@ -640,7 +642,7 @@ function ScheduleTab() {
                             border: '1px solid rgba(255,255,255,0.1)',
                             ...(isMon && { borderLeft: '2.5px solid #000' }),
                             textAlign: 'center',
-                            fontSize: 12, fontWeight: val > 0 ? 700 : 400,
+                            fontSize: 14, fontWeight: val > 0 ? 700 : 400,
                             background: val > 0 ? rowBg : 'transparent',
                             color: val > 0 ? color : 'rgba(196,210,224,0.45)',
                             height: 46,
@@ -661,7 +663,7 @@ function ScheduleTab() {
                       }}>
                         <DeleteOutlined
                           onClick={() => setSummaryRowKeys((prev) => prev.filter((k) => k !== key))}
-                          style={{ color: 'rgba(248,113,113,0.55)', fontSize: 12, cursor: 'pointer' }}
+                          style={{ color: 'rgba(248,113,113,0.55)', fontSize: 14, cursor: 'pointer' }}
                         />
                       </td>
                     </tr>
@@ -681,7 +683,7 @@ function ScheduleTab() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, color: 'rgba(245,158,11,0.45)', marginRight: 4 }}>+ 항목 추가:</span>
+                        <span style={{ fontSize: 14, color: 'rgba(245,158,11,0.45)', marginRight: 4 }}>+ 항목 추가:</span>
                         {shiftCycle.filter((k) => !activeSummaryRowKeys.includes(k)).map((k) => {
                           const legend = shiftLegend[k] ?? {}
                           return (
@@ -693,7 +695,7 @@ function ScheduleTab() {
                                 background: legend.bg ?? 'rgba(245,158,11,0.1)',
                                 color: legend.color ?? '#f59e0b',
                                 border: `1px solid ${legend.border ?? 'rgba(245,158,11,0.3)'}`,
-                                fontSize: 11, fontWeight: 700,
+                                fontSize: 14, fontWeight: 700,
                               }}
                             >
                               {legend.label ?? k}
@@ -712,7 +714,7 @@ function ScheduleTab() {
           <div style={{ padding: '16px 14px 4px' }}>
             <div style={{
               borderLeft: '3px solid #f59e0b', paddingLeft: 10,
-              color: 'var(--nowa-text)', fontSize: 13, fontWeight: 700, marginBottom: 10,
+              color: 'var(--nowa-text)', fontSize: 14, fontWeight: 700, marginBottom: 10,
             }}>
               일별 근무 인원 현황
             </div>
@@ -730,7 +732,7 @@ function ScheduleTab() {
         okText={`추가 (${selectedPids.length}명)`}
         width={520}
       >
-        <div style={{ fontSize: 12, color: 'rgba(148,163,184,0.55)', marginBottom: 14 }}>
+        <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.55)', marginBottom: 14 }}>
           인원관리에 등록된 직원을 선택하면 근무표에 추가됩니다.
         </div>
         {personnelGroups.vendors.map((vendor) => {
@@ -740,7 +742,7 @@ function ScheduleTab() {
           if (!available.length) return null
           return (
             <div key={vendor.id} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(245,158,11,0.65)', marginBottom: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(245,158,11,0.65)', marginBottom: 6 }}>
                 {vendor.name}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -754,7 +756,7 @@ function ScheduleTab() {
                         border: `1px solid ${sel ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
                         background: sel ? 'rgba(245,158,11,0.15)' : 'transparent',
                         color: sel ? '#f59e0b' : 'var(--nowa-text)',
-                        fontSize: 13, fontWeight: sel ? 700 : 400, transition: 'all 0.15s',
+                        fontSize: 14, fontWeight: sel ? 700 : 400, transition: 'all 0.15s',
                       }}>
                       {m.name}
                     </div>
@@ -765,251 +767,41 @@ function ScheduleTab() {
           )
         })}
         {personnelGroups.members.every((m) => m.already_added) && (
-          <div style={{ textAlign: 'center', color: 'rgba(148,163,184,0.45)', padding: '20px 0' }}>
+          <div style={{ textAlign: 'center', color: 'rgba(196,210,226,0.45)', padding: '20px 0' }}>
             추가 가능한 인원이 없습니다.
           </div>
         )}
       </Modal>
-    </div>
+    </Card>
   )
 }
 
-
-// ── 근무인원 ────────────────────────────────────────────────────────
-function MemberPanel() {
-  const [members, setMembers]                 = useState([])
-  const [loading, setLoading]                 = useState(true)
-  const [importOpen, setImportOpen]           = useState(false)
-  const [personnelGroups, setPersonnelGroups] = useState({ vendors: [], members: [] })
-  const [importLoading, setImportLoading]     = useState(false)
-  const [selectedPids, setSelectedPids]       = useState([])
-
-  const fetchMembers = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res  = await apiFetch('/members')
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setMembers(Array.isArray(data) ? data : [])
-    } catch {
-      message.error('멤버 목록을 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { fetchMembers() }, [fetchMembers])
-
-  const handleDelete = async (id) => {
-    try {
-      const res = await apiFetch(`/members/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error()
-      message.success('삭제했습니다.')
-      fetchMembers()
-    } catch {
-      message.error('삭제에 실패했습니다.')
-    }
-  }
-
-  const openImport = async () => {
-    setImportOpen(true)
-    setSelectedPids([])
-    try {
-      const res = await apiFetch('/personnel-groups')
-      if (!res.ok) throw new Error()
-      setPersonnelGroups(await res.json())
-    } catch {
-      message.error('인원관리 데이터를 불러오지 못했습니다.')
-    }
-  }
-
-  const handleImport = async () => {
-    if (!selectedPids.length) { message.warning('선택된 인원이 없습니다.'); return }
-    setImportLoading(true)
-    try {
-      const res = await apiFetch('/import-from-personnel', {
-        method: 'POST',
-        body: JSON.stringify({ personnel_member_ids: selectedPids }),
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      message.success(`${data.added}명 추가됐습니다.`)
-      setImportOpen(false)
-      fetchMembers()
-    } catch {
-      message.error('가져오기에 실패했습니다.')
-    } finally {
-      setImportLoading(false)
-    }
-  }
-
-  const personnelByVendor = useMemo(() => {
-    const map = {}
-    personnelGroups.members.forEach((m) => {
-      const vendor = personnelGroups.vendors.find((v) => v.id === m.vendor_id)
-      const key    = vendor?.name || '기타'
-      if (!map[key]) map[key] = []
-      map[key].push(m)
-    })
-    return map
-  }, [personnelGroups])
-
-  if (loading) return <div style={{ minHeight: 200, display: 'grid', placeItems: 'center' }}><Spin /></div>
-
-  return (
-    <div style={{
-      background: 'var(--nowa-card-bg, #161921)',
-      border: '1px solid rgba(245,158,11,0.12)',
-      borderRadius: 16,
-      padding: '14px 16px',
-    }}>
-      {/* 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontSize: 13, color: 'rgba(148,163,184,0.6)', fontWeight: 600 }}>
-          총 <span style={{ color: '#f59e0b', fontWeight: 800 }}>{members.length}</span>명 등록
-        </span>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Button
-            type="text" size="small"
-            icon={<ReloadOutlined style={{ fontSize: 13 }} />}
-            onClick={fetchMembers}
-            style={{ color: 'rgba(148,163,184,0.5)' }}
-          />
-          <Button
-            type="primary" size="small"
-            icon={<span style={{ fontSize: 14, marginRight: 3 }}>+</span>}
-            onClick={openImport}
-            style={{ background: '#f59e0b', borderColor: '#f59e0b', color: '#000', fontWeight: 700, borderRadius: 8 }}
-          >
-            직원 추가
-          </Button>
-        </div>
-      </div>
-
-      {/* 카드 목록 */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-        {members.map((m) => {
-          const initial = m.name?.[0] || '?'
-          return (
-            <div
-              key={m.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 0,
-                background: '#1a1d28',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 16,
-                minWidth: 200,
-                overflow: 'hidden',
-                borderLeft: '3px solid #f59e0b',
-              }}
-            >
-              {/* 아바타 - 원형, 단색 다크 */}
-              <div style={{
-                width: 44, height: 44, borderRadius: '50%',
-                background: '#2d3348',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-                margin: '12px 12px 12px 10px',
-                border: '1.5px solid rgba(255,255,255,0.1)',
-              }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: '#e2e8f0', lineHeight: 1 }}>{initial}</span>
-              </div>
-
-              {/* 이름 */}
-              <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {m.name}
-                </div>
-                <div style={{ fontSize: 11, color: 'rgba(148,163,184,0.45)', marginTop: 3 }}>
-                  {m.vendor_name || '미지정'}
-                </div>
-              </div>
-
-              {/* 액션 */}
-              <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, paddingRight: 12, justifyContent: 'center' }}>
-                <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDelete(m.id)} okText="삭제" cancelText="취소">
-                  <DeleteOutlined style={{ color: '#f87171', fontSize: 16, cursor: 'pointer', opacity: 0.85 }} />
-                </Popconfirm>
-              </div>
-            </div>
-          )
-        })}
-
-        {/* + 직원 추가 카드 */}
-        <div
-          onClick={openImport}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minWidth: 190, height: 70,
-            border: '2px dashed rgba(245,158,11,0.35)',
-            borderRadius: 14,
-            cursor: 'pointer',
-            color: 'rgba(245,158,11,0.55)',
-            fontSize: 13, fontWeight: 700,
-            gap: 6,
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(245,158,11,0.7)'; e.currentTarget.style.color = '#f59e0b' }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(245,158,11,0.35)'; e.currentTarget.style.color = 'rgba(245,158,11,0.55)' }}
-        >
-          <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
-          직원 추가
-        </div>
-      </div>
-
-      {/* 연동 모달 */}
-      <Modal
-        title={<span><LinkOutlined style={{ color: '#f59e0b', marginRight: 8 }} />직원 추가 (인원관리 연동)</span>}
-        open={importOpen}
-        onCancel={() => setImportOpen(false)}
-        onOk={handleImport}
-        okText={`추가 (${selectedPids.length}명)`}
-        confirmLoading={importLoading}
-        width={520}
-      >
-        <div style={{ fontSize: 12, color: 'rgba(148,163,184,0.55)', marginBottom: 14 }}>
-          인원관리에 등록된 직원을 선택하면 근무표에 추가됩니다.
-        </div>
-        {Object.entries(personnelByVendor).map(([vendor, list]) => {
-          const available = list.filter((m) => !m.already_added)
-          if (!available.length) return null
-          return (
-            <div key={vendor} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(245,158,11,0.65)', marginBottom: 6 }}>{vendor}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {available.map((m) => {
-                  const sel = selectedPids.includes(m.id)
-                  return (
-                    <div key={m.id}
-                      onClick={() => setSelectedPids((p) => sel ? p.filter((x) => x !== m.id) : [...p, m.id])}
-                      style={{
-                        padding: '5px 12px', borderRadius: 8, cursor: 'pointer',
-                        border: `1px solid ${sel ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
-                        background: sel ? 'rgba(245,158,11,0.15)' : 'transparent',
-                        color: sel ? '#f59e0b' : 'var(--nowa-text)',
-                        fontSize: 13, fontWeight: sel ? 700 : 400,
-                        transition: 'all 0.15s',
-                      }}>
-                      {m.name}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-        {Object.keys(personnelByVendor).length === 0 && (
-          <div style={{ textAlign: 'center', color: 'rgba(148,163,184,0.45)', padding: '20px 0' }}>
-            추가 가능한 인원이 없습니다.
-          </div>
-        )}
-      </Modal>
-    </div>
-  )
-}
 
 // ── 업체/인원 데이터 공유 래퍼 ─────────────────────────────────────
-function PersonnelDataPanel({ tabKey }) {
+function PersonnelDataPanel({ tabKey, vendors, members, refreshAll }) {
+  const props = { vendors, members, refreshAll }
+  const isVendors = tabKey === 'vendors'
+  return (
+    <Card
+      className="nowa-card"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#f59e0b', fontSize: 15 }}>
+            {isVendors ? <ShopOutlined /> : <UserOutlined />}
+          </span>
+          <span style={{ fontWeight: 800 }}>{isVendors ? '업체 관리' : '인원 관리'}</span>
+        </div>
+      }
+      styles={{ body: { padding: '16px' } }}
+    >
+      {isVendors ? <VendorTab {...props} /> : <MemberTab {...props} />}
+    </Card>
+  )
+}
+
+// ── ShiftSchedule (메인) ────────────────────────────────────────────
+function ShiftSchedule() {
+  const [activeTab, setActiveTab] = useState('schedule')
   const [vendors, setVendors] = useState([])
   const [members, setMembers] = useState([])
 
@@ -1026,24 +818,6 @@ function PersonnelDataPanel({ tabKey }) {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  const props = { vendors, members, refreshAll: fetchAll }
-
-  return (
-    <div style={{
-      background: 'var(--nowa-card-bg, #161921)',
-      border: '1px solid rgba(245,158,11,0.12)',
-      borderRadius: 16,
-      padding: '14px 16px',
-    }}>
-      {tabKey === 'vendors' ? <VendorTab {...props} /> : <MemberTab {...props} />}
-    </div>
-  )
-}
-
-// ── ShiftSchedule (메인) ────────────────────────────────────────────
-function ShiftSchedule() {
-  const [activeTab, setActiveTab] = useState('schedule')
-
   const tabWrap = (children) => (
     <div style={{ padding: '12px 0 0' }}>{children}</div>
   )
@@ -1055,40 +829,27 @@ function ShiftSchedule() {
       children: tabWrap(<ScheduleTab />),
     },
     {
-      key: 'members',
-      label: <span><TeamOutlined style={{ marginRight: 5 }} />근무인원</span>,
-      children: tabWrap(<MemberPanel />),
-    },
-    {
       key: 'vendors',
       label: <span><ShopOutlined style={{ marginRight: 5 }} />업체 관리</span>,
-      children: tabWrap(<PersonnelDataPanel tabKey="vendors" />),
+      children: tabWrap(<PersonnelDataPanel tabKey="vendors" vendors={vendors} members={members} refreshAll={fetchAll} />),
     },
     {
       key: 'personnel',
       label: <span><UserOutlined style={{ marginRight: 5 }} />인원 관리</span>,
-      children: tabWrap(<PersonnelDataPanel tabKey="personnel" />),
+      children: tabWrap(<PersonnelDataPanel tabKey="personnel" vendors={vendors} members={members} refreshAll={fetchAll} />),
     },
   ]
 
   return (
     <div className="page-shell">
-      <div className="nowa-card" style={{ overflow: 'hidden' }}>
-        <div className="nowa-card__header">
-          <div className="nowa-card__title">인원 관리</div>
-          <div className="nowa-card__meta">MOCVD 근무표 · 근무인원 · 인원관리</div>
-        </div>
-        <div className="nowa-card__body" style={{ padding: 0 }}>
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabs}
-            tabBarStyle={tabBarStyle}
-            style={{ padding: '0 4px' }}
-            tabPaneMotion={false}
-          />
-        </div>
-      </div>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={tabs}
+        tabBarStyle={tabBarStyle}
+        style={{ padding: '0 4px' }}
+        tabPaneMotion={false}
+      />
     </div>
   )
 }

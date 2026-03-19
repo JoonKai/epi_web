@@ -318,7 +318,7 @@ function SystemSettingsTab() {
     block: '목록에 있는 IP의 접속을 차단합니다. 목록 외 IP는 허용됩니다.',
   }
 
-  const modeColor = { off: '#94a3b8', allow: '#22c55e', block: '#ef4444' }
+  const modeColor = { off: '#b0c0d0', allow: '#22c55e', block: '#ef4444' }
 
   return (
     <div style={{ maxWidth: 640 }}>

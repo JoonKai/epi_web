@@ -3,20 +3,20 @@
   color-scheme: dark;
 
   /* Base */
-  --nowa-bg: #0f1117;
-  --nowa-bg-raised: #161921;
-  --nowa-panel: #161921;
-  --nowa-panel-alt: #1c1f2a;
-  --nowa-panel-hover: #22242f;
+  --nowa-bg: #171b26;
+  --nowa-bg-raised: #1e222e;
+  --nowa-panel: #1e222e;
+  --nowa-panel-alt: #242834;
+  --nowa-panel-hover: #2a2d3b;
 
   /* Border */
   --nowa-border: rgba(245, 158, 11, 0.15);
   --nowa-border-strong: rgba(245, 158, 11, 0.4);
 
   /* Text */
-  --nowa-text: #c4cdd8;
-  --nowa-text-soft: rgba(180, 196, 210, 0.82);
-  --nowa-text-muted: rgba(100, 116, 132, 0.85);
+  --nowa-text: #cdd6e0;
+  --nowa-text-soft: rgba(196, 212, 224, 0.85);
+  --nowa-text-muted: rgba(148, 168, 188, 0.92);
 
   /* Brand / Primary */
   --nowa-primary: #f59e0b;
@@ -43,17 +43,20 @@
   --grad-indigo: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   --grad-green:  linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
 
+  /* Card background alias */
+  --nowa-card-bg: #1e222e;
+
   /* Layout */
-  --nowa-sider-bg: #0c0e16;
-  --nowa-header-bg: rgba(12, 14, 22, 0.92);
-  --nowa-content-bg: #0f1117;
-  --nowa-shell-border: rgba(245, 158, 11, 0.12);
-  --nowa-button-bg: rgba(255, 255, 255, 0.055);
+  --nowa-sider-bg: #131620;
+  --nowa-header-bg: rgba(20, 23, 34, 0.92);
+  --nowa-content-bg: #171b26;
+  --nowa-shell-border: rgba(245, 158, 11, 0.14);
+  --nowa-button-bg: rgba(255, 255, 255, 0.07);
 
   /* Shadows */
-  --nowa-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255,255,255,0.05) inset;
-  --nowa-shadow-strong: 0 20px 48px rgba(0, 0, 0, 0.6);
-  --nowa-shadow-medium: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --nowa-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255,255,255,0.06) inset;
+  --nowa-shadow-strong: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --nowa-shadow-medium: 0 8px 28px rgba(0, 0, 0, 0.32);
   --nowa-shadow-primary: 0 8px 24px rgba(245, 158, 11, 0.4);
   --nowa-hero-bg: linear-gradient(135deg, rgba(28,24,16,0.95) 0%, rgba(20,18,14,0.95) 100%);
   --nowa-soft-fill: rgba(255,255,255,0.025);
@@ -206,7 +209,7 @@ a { color: inherit; }
 .nowa-menu.ant-menu {
   background: transparent !important;
   border-inline-end: none !important;
-  color: rgba(148, 163, 184, 0.7) !important;
+  color: rgba(203, 213, 225, 0.82) !important;
 }
 
 .nowa-menu.ant-menu .ant-menu-item,
@@ -219,7 +222,39 @@ a { color: inherit; }
   font-size: 13.5px;
   font-weight: 500;
   transition: all 0.18s ease;
-  color: rgba(148, 163, 184, 0.7) !important;
+  color: rgba(196, 210, 226, 0.78) !important;
+}
+
+/* 개별 메뉴 아이템 색상 */
+.console-menu.ant-menu .menu-color-amber.ant-menu-submenu > .ant-menu-submenu-title,
+.console-menu.ant-menu .menu-color-amber.ant-menu-item,
+.nowa-menu.ant-menu .menu-color-amber.ant-menu-submenu > .ant-menu-submenu-title,
+.nowa-menu.ant-menu .menu-color-amber.ant-menu-item {
+  color: rgba(245, 180, 80, 0.88) !important; font-weight: 600 !important;
+}
+.console-menu.ant-menu .menu-color-teal.ant-menu-submenu > .ant-menu-submenu-title,
+.nowa-menu.ant-menu .menu-color-teal.ant-menu-submenu > .ant-menu-submenu-title {
+  color: rgba(45, 212, 191, 0.82) !important; font-weight: 600 !important;
+}
+.console-menu.ant-menu .menu-color-blue.ant-menu-submenu > .ant-menu-submenu-title,
+.nowa-menu.ant-menu .menu-color-blue.ant-menu-submenu > .ant-menu-submenu-title {
+  color: rgba(96, 165, 250, 0.82) !important; font-weight: 600 !important;
+}
+.console-menu.ant-menu .menu-color-violet.ant-menu-submenu > .ant-menu-submenu-title,
+.nowa-menu.ant-menu .menu-color-violet.ant-menu-submenu > .ant-menu-submenu-title {
+  color: rgba(167, 139, 250, 0.82) !important; font-weight: 600 !important;
+}
+.console-menu.ant-menu .menu-color-green.ant-menu-submenu > .ant-menu-submenu-title,
+.nowa-menu.ant-menu .menu-color-green.ant-menu-submenu > .ant-menu-submenu-title {
+  color: rgba(74, 222, 128, 0.82) !important; font-weight: 600 !important;
+}
+.console-menu.ant-menu .menu-color-orange.ant-menu-item,
+.nowa-menu.ant-menu .menu-color-orange.ant-menu-item {
+  color: rgba(251, 146, 60, 0.85) !important; font-weight: 600 !important;
+}
+.console-menu.ant-menu .menu-color-cyan.ant-menu-item,
+.nowa-menu.ant-menu .menu-color-cyan.ant-menu-item {
+  color: rgba(34, 211, 238, 0.82) !important; font-weight: 600 !important;
 }
 
 .nowa-menu.ant-menu .ant-menu-item-selected {
@@ -241,7 +276,7 @@ a { color: inherit; }
 }
 
 .nowa-menu.ant-menu .ant-menu-submenu-arrow {
-  color: rgba(148,163,184,0.5) !important;
+  color: rgba(203,213,225,0.65) !important;
 }
 
 .nowa-menu.ant-menu .ant-menu-sub {
@@ -261,7 +296,7 @@ a { color: inherit; }
 .console-menu.ant-menu {
   background: transparent !important;
   border-inline-end: none !important;
-  color: rgba(148, 163, 184, 0.7) !important;
+  color: rgba(196, 210, 226, 0.78) !important;
 }
 .console-menu.ant-menu .ant-menu-item,
 .console-menu.ant-menu .ant-menu-submenu-title {
@@ -273,7 +308,19 @@ a { color: inherit; }
   font-size: 13.5px;
   font-weight: 500;
   transition: all 0.18s ease;
-  color: rgba(148, 163, 184, 0.7) !important;
+  color: rgba(196, 210, 226, 0.78) !important;
+}
+
+/* 상위 폴더 메뉴 - amber warm tone */
+.console-menu.ant-menu > .ant-menu-submenu > .ant-menu-submenu-title {
+  color: rgba(240, 210, 150, 0.82) !important;
+  font-weight: 600 !important;
+}
+
+/* 2depth 폴더 */
+.console-menu.ant-menu .ant-menu-submenu .ant-menu-submenu > .ant-menu-submenu-title {
+  color: rgba(224, 200, 140, 0.75) !important;
+  font-weight: 600 !important;
 }
 .console-menu.ant-menu .ant-menu-item-selected {
   background: linear-gradient(90deg, rgba(245,158,11,0.18) 0%, rgba(249,115,22,0.10) 100%) !important;
@@ -293,7 +340,7 @@ a { color: inherit; }
 .console-menu.ant-menu .ant-menu-submenu-arrow { color: rgba(148,163,184,0.5) !important; }
 
 .console-menu-popup.ant-menu-submenu-popup .ant-menu {
-  background: linear-gradient(180deg, rgba(18, 20, 28, 0.98) 0%, rgba(12, 14, 20, 0.98) 100%) !important;
+  background: linear-gradient(180deg, rgba(26, 29, 42, 0.98) 0%, rgba(19, 22, 32, 0.98) 100%) !important;
   border: 1px solid rgba(245, 158, 11, 0.18) !important;
   border-radius: 22px !important;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(245, 158, 11, 0.06) !important;
@@ -308,7 +355,7 @@ a { color: inherit; }
   margin: 4px 10px !important;
   width: calc(100% - 20px) !important;
   border-radius: 14px !important;
-  color: rgba(226, 232, 240, 0.78) !important;
+  color: rgba(226, 232, 240, 0.92) !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
 }
@@ -332,7 +379,7 @@ a { color: inherit; }
 
 .console-menu-popup.ant-menu-submenu-popup .ant-menu-submenu-arrow,
 .console-menu-popup.ant-menu-submenu-popup .anticon {
-  color: rgba(148, 163, 184, 0.72) !important;
+  color: rgba(203, 213, 225, 0.85) !important;
 }
 
 .ant-tooltip.console-collapsed-tooltip .ant-tooltip-inner,
@@ -738,7 +785,7 @@ a { color: inherit; }
 
 /* Dark mode modal */
 :root:not([data-theme='light']) .ant-modal-content {
-  background: #161921 !important;
+  background: #1e222e !important;
   border: 1px solid rgba(245,158,11,0.18) !important;
   box-shadow: 0 24px 60px rgba(0,0,0,0.7) !important;
   border-radius: 16px !important;
@@ -916,7 +963,7 @@ a { color: inherit; }
 
 /* ── Select dropdown polish (dark) ──────────────────────────────── */
 :root:not([data-theme='light']) .ant-select-dropdown {
-  background: #161921 !important;
+  background: #1e222e !important;
   border: 1px solid rgba(245,158,11,0.2) !important;
   box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
   border-radius: 12px !important;
@@ -952,7 +999,7 @@ a { color: inherit; }
 
 /* ── DatePicker dropdown (dark) ──────────────────────────────────── */
 :root:not([data-theme='light']) .ant-picker-dropdown .ant-picker-panel-container {
-  background: #161921 !important;
+  background: #1e222e !important;
   border: 1px solid rgba(245,158,11,0.2) !important;
   box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
   border-radius: 12px !important;

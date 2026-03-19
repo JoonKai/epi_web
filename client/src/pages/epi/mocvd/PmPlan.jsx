@@ -30,7 +30,7 @@ const PM_GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
 const pmHeadBase = {
   position: 'sticky',
   top: 0,
-  background: '#1c1f2a',
+  background: '#242834',
   border: PM_BORDER,
   padding: '0 6px',
   textAlign: 'center',
@@ -114,7 +114,7 @@ function SummaryCard({ label, value, suffix, sub, accent, gradient = 'linear-gra
         padding: '16px 18px',
         borderRadius: 18,
         background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-        border: '1px solid rgba(148,163,184,0.16)',
+        border: '1px solid rgba(196,210,226,0.16)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
         position: 'relative',
         overflow: 'hidden',
@@ -282,9 +282,9 @@ function PmInputSheet({ rows, onChange }) {
                 ...pmHeadBase,
                 left: 0,
                 zIndex: 12,
-                background: '#0f1117',
+                background: '#171b26',
                 width: 160,
-                color: 'rgba(148,163,184,0.6)',
+                color: 'rgba(196,210,226,0.6)',
               }}
             >
               호기
@@ -298,7 +298,7 @@ function PmInputSheet({ rows, onChange }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.key}>
-              <td style={{ ...pmLabelBase, background: '#0f1117', color: '#fbbf24', borderRight: PM_GROUP_BORDER, textAlign: 'left', paddingLeft: 14 }}>
+              <td style={{ ...pmLabelBase, background: '#171b26', color: '#fbbf24', borderRight: PM_GROUP_BORDER, textAlign: 'left', paddingLeft: 14 }}>
                 {formatMachineLabel(row.machine_no)}
               </td>
               <td style={{ ...pmCellBase, borderLeft: PM_GROUP_BORDER, background: '#081019' }}>
@@ -691,7 +691,7 @@ function PmInputTab() {
                         ].join('<br/>')
                       },
                     },
-                    legend: { top: 0, textStyle: { color: '#94a3b8', fontSize: 11 } },
+                    legend: { top: 0, textStyle: { color: '#b0c0d0', fontSize: 11 } },
                     xAxis: {
                       type: 'value',
                       minInterval: 1,
@@ -702,7 +702,7 @@ function PmInputTab() {
                       type: 'category',
                       data: chartRows.map((row) => row.label),
                       inverse: true,
-                      axisLabel: { color: '#94a3b8', fontSize: 11 },
+                      axisLabel: { color: '#b0c0d0', fontSize: 11 },
                       axisLine: { lineStyle: { color: '#1e2a3c' } },
                     },
                     series: [

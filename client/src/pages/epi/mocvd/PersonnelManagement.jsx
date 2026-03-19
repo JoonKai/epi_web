@@ -321,7 +321,7 @@ function MemberTab({ vendors, members, refreshAll }) {
                     display: 'inline-block',
                   }} />
                   <span style={{ fontWeight: 800, fontSize: 15, color: '#f59e0b' }}>{vendor.name}</span>
-                  <span style={{ fontSize: 13, color: 'rgba(148,163,184,0.5)' }}>{groupMembers.length}명</span>
+                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.5)' }}>{groupMembers.length}명</span>
                 </div>
                 <button
                   onClick={() => openCreate(vendor.id)}
@@ -341,14 +341,14 @@ function MemberTab({ vendors, members, refreshAll }) {
               {/* 멤버 카드 */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {groupMembers.length === 0 && (
-                  <span style={{ fontSize: 13, color: 'rgba(148,163,184,0.35)', padding: '8px 4px' }}>등록된 인원이 없습니다.</span>
+                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '8px 4px' }}>등록된 인원이 없습니다.</span>
                 )}
                 {groupMembers.map((m) => (
                   <div
                     key={m.id}
                     style={{
                       display: 'flex', alignItems: 'center',
-                      background: '#1a1d28',
+                      background: '#212535',
                       border: '1px solid rgba(255,255,255,0.08)',
                       borderRadius: 16, minWidth: 220, overflow: 'hidden',
                       borderLeft: `3px solid ${m.is_active ? '#f59e0b' : '#475569'}`,
@@ -357,7 +357,7 @@ function MemberTab({ vendors, members, refreshAll }) {
                   >
                     {/* 아바타 */}
                     <div style={{
-                      width: 44, height: 44, borderRadius: '50%', background: '#2d3348',
+                      width: 44, height: 44, borderRadius: '50%', background: '#343850',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0, margin: '12px 12px 12px 10px',
                       border: '1.5px solid rgba(255,255,255,0.1)',
@@ -371,7 +371,7 @@ function MemberTab({ vendors, members, refreshAll }) {
                       {(m.position || m.shift) && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
                           {m.position && <Tag style={{ margin: 0, fontSize: 11 }}>{m.position}</Tag>}
-                          {m.shift && <span style={{ fontSize: 12, color: 'rgba(148,163,184,0.5)' }}>{m.shift}조</span>}
+                          {m.shift && <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.5)' }}>{m.shift}조</span>}
                         </div>
                       )}
                     </div>

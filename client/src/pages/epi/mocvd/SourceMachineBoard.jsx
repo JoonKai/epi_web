@@ -163,7 +163,7 @@ export default function SourceMachineBoard() {
                       height: 44,
                       padding: '0 20px',
                       borderRadius: 999,
-                      border: `2px solid ${active ? option.color : light ? '#cbd5e1' : 'rgba(148,163,184,0.28)'}`,
+                      border: `2px solid ${active ? option.color : light ? '#cbd5e1' : 'rgba(196,210,226,0.28)'}`,
                       background: active
                         ? light
                           ? `${option.color}14`
@@ -294,7 +294,7 @@ export default function SourceMachineBoard() {
                         <Progress
                           percent={percent}
                           showInfo={false}
-                          strokeColor={item.key === 'normal' ? 'rgba(148,163,184,0.55)' : itemMeta.color}
+                          strokeColor={item.key === 'normal' ? 'rgba(196,210,226,0.55)' : itemMeta.color}
                           trailColor={light ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)'}
                           size={['100%', 6]}
                         />

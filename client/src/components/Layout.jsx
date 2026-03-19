@@ -34,11 +34,12 @@ const { Header, Sider, Content } = AntLayout
 
 function buildMenuItems(isAdmin) {
   const items = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: 'EPI 현황판' },
+    { key: '/dashboard', icon: <DashboardOutlined />, label: 'EPI 현황판', className: 'menu-color-amber' },
     {
       key: 'equipment',
       icon: <ToolOutlined />,
       label: '설비',
+      className: 'menu-color-amber',
       children: [
         {
           key: 'epi-mocvd',
@@ -61,18 +62,21 @@ function buildMenuItems(isAdmin) {
       key: 'process',
       icon: <ApiOutlined />,
       label: '공정',
+      className: 'menu-color-teal',
       children: [{ key: 'process-ready', label: '추가 예정', disabled: true }],
     },
     {
       key: 'manufacturing',
       icon: <BuildOutlined />,
       label: '제조',
+      className: 'menu-color-blue',
       children: [{ key: 'manufacturing-ready', label: '추가 예정', disabled: true }],
     },
     {
       key: 'analysis',
       icon: <BarChartOutlined />,
       label: '분석',
+      className: 'menu-color-violet',
       children: [
         { key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼맵' },
         { key: '/run-comparison', icon: <SwapOutlined />, label: 'Run 비교' },
@@ -82,14 +86,15 @@ function buildMenuItems(isAdmin) {
       key: 'cost',
       icon: <DollarOutlined />,
       label: '비용',
+      className: 'menu-color-green',
       children: [
         { key: '/cost/purchase-request', icon: <ShoppingCartOutlined />, label: '구매요청' },
         { key: '/cost/repair-status', icon: <ToolOutlined />, label: '수리현황' },
         { key: '/cost/master-data', icon: <AppstoreAddOutlined />, label: '기준정보등록' },
       ],
     },
-    { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터' },
-    { key: '/grid', icon: <TableOutlined />, label: '레포트' },
+    { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터', className: 'menu-color-orange' },
+    { key: '/grid', icon: <TableOutlined />, label: '보고서', className: 'menu-color-cyan' },
   ]
 
   if (isAdmin) {
@@ -214,7 +219,7 @@ function Layout({ children, isDark, onThemeToggle }) {
         trigger={null}
         style={{
           background: isDark
-            ? 'linear-gradient(180deg, #0c0e16 0%, #0e1018 60%, #0b0d14 100%)'
+            ? 'linear-gradient(180deg, #131620 0%, #151820 60%, #121520 100%)'
             : 'linear-gradient(180deg, #1a1c24 0%, #171920 60%, #141618 100%)',
           borderRight: '1px solid rgba(245,158,11,0.15)',
           display: 'flex',
