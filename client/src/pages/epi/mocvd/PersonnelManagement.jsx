@@ -165,9 +165,10 @@ function VendorTab({ vendors, members, refreshAll }) {
         title={editingRow ? '업체 수정' : '업체 추가'}
         open={open}
         onCancel={() => setOpen(false)}
-        onOk={() => form.submit()}
-        okText="저장"
-        confirmLoading={saving}
+        footer={[
+          <Button key="cancel" onClick={() => setOpen(false)}>취소</Button>,
+          <Button key="save" type="primary" loading={saving} onClick={() => form.submit()}>저장</Button>,
+        ]}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={{ is_active: true }} style={{ marginTop: 16 }}>
           <Form.Item name="name" label="업체명" rules={[{ required: true, message: '업체명을 입력하세요.' }]}>
@@ -212,10 +213,10 @@ function MemberTab({ vendors, members, refreshAll }) {
     })
   }, [members, searchText, vendorFilter])
 
-  const openCreate = () => {
+  const openCreate = (vendorId = null) => {
     setEditingRow(null)
     form.resetFields()
-    form.setFieldsValue({ is_active: true, vendor_id: vendors[0]?.id })
+    form.setFieldsValue({ is_active: true, vendor_id: vendorId ?? vendors[0]?.id })
     setOpen(true)
   }
 
@@ -281,79 +282,126 @@ function MemberTab({ vendors, members, refreshAll }) {
     }
   }
 
-  const columns = [
-    { title: '업체', dataIndex: 'vendor_name', width: 160 },
-    { title: '이름', dataIndex: 'name', width: 100 },
-    { title: '사번', dataIndex: 'employee_no', width: 110, render: (value) => value || '-' },
-    { title: '부서', dataIndex: 'department', width: 120, render: (value) => value || '-' },
-    { title: '직무', dataIndex: 'position', width: 120, render: (value) => value || '-' },
-    { title: '연락처', dataIndex: 'phone', width: 140, render: (value) => value || '-' },
-    { title: '근무조', dataIndex: 'shift', width: 100, render: (value) => value || '-' },
-    { title: '교육만료일', dataIndex: 'training_due_date', width: 120, render: (value) => value || '-' },
-    {
-      title: '상태',
-      width: 90,
-      render: (_, row) => row.is_active ? <Tag color="green">사용</Tag> : <Tag color="default">비활성</Tag>,
-    },
-    {
-      title: '사용',
-      width: 90,
-      render: (_, row) => <Switch size="small" checked={row.is_active} onChange={(checked) => handleToggle(row, checked)} />,
-    },
-    {
-      title: '관리',
-      width: 140,
-      render: (_, row) => (
-        <Space size={6}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>수정</Button>
-          <Popconfirm title="인원을 삭제합니다." onConfirm={() => handleDelete(row)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
-
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Space wrap>
-          <Select
-            value={vendorFilter}
-            onChange={setVendorFilter}
-            options={[{ label: '전체 업체', value: 'all' }, ...vendorOptions]}
-            style={{ width: 180 }}
-          />
-          <Input
-            allowClear
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
-            placeholder="이름/사번/업체 검색"
-            style={{ width: 220 }}
-          />
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} disabled={vendors.length === 0}>
-          인원 추가
-        </Button>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <Select
+          value={vendorFilter}
+          onChange={setVendorFilter}
+          options={[{ label: '전체 업체', value: 'all' }, ...vendorOptions]}
+          style={{ width: 180 }}
+        />
+        <Input
+          allowClear
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
+          placeholder="이름/사번/업체 검색"
+          style={{ width: 220 }}
+        />
       </div>
 
-      <Table
-        rowKey="id"
-        bordered
-        size="middle"
-        scroll={{ x: 1200 }}
-        pagination={{ pageSize: 12 }}
-        columns={columns}
-        dataSource={filteredMembers}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {vendors.filter((v) => {
+          if (vendorFilter !== 'all' && v.id !== vendorFilter) return false
+          return true
+        }).map((vendor) => {
+          const groupMembers = filteredMembers.filter((m) => m.vendor_id === vendor.id)
+          return (
+            <div key={vendor.id}>
+              {/* 업체 헤더 */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 10, paddingBottom: 6,
+                borderBottom: '1px solid rgba(245,158,11,0.18)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: vendor.is_active ? '#f59e0b' : '#475569', flexShrink: 0,
+                    display: 'inline-block',
+                  }} />
+                  <span style={{ fontWeight: 800, fontSize: 15, color: '#f59e0b' }}>{vendor.name}</span>
+                  <span style={{ fontSize: 13, color: 'rgba(148,163,184,0.5)' }}>{groupMembers.length}명</span>
+                </div>
+                <button
+                  onClick={() => openCreate(vendor.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
+                    borderRadius: 8, padding: '3px 12px', cursor: 'pointer',
+                    color: 'rgba(245,158,11,0.7)', fontSize: 13, fontWeight: 700,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.7)' }}
+                >
+                  + 인원 추가
+                </button>
+              </div>
+
+              {/* 멤버 카드 */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {groupMembers.length === 0 && (
+                  <span style={{ fontSize: 13, color: 'rgba(148,163,184,0.35)', padding: '8px 4px' }}>등록된 인원이 없습니다.</span>
+                )}
+                {groupMembers.map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      display: 'flex', alignItems: 'center',
+                      background: '#1a1d28',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 16, minWidth: 220, overflow: 'hidden',
+                      borderLeft: `3px solid ${m.is_active ? '#f59e0b' : '#475569'}`,
+                      opacity: m.is_active ? 1 : 0.55,
+                    }}
+                  >
+                    {/* 아바타 */}
+                    <div style={{
+                      width: 44, height: 44, borderRadius: '50%', background: '#2d3348',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0, margin: '12px 12px 12px 10px',
+                      border: '1.5px solid rgba(255,255,255,0.1)',
+                    }}>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: '#e2e8f0', lineHeight: 1 }}>{m.name?.[0] || '?'}</span>
+                    </div>
+
+                    {/* 정보 */}
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: 8, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{m.name}</span>
+                      {(m.position || m.shift) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                          {m.position && <Tag style={{ margin: 0, fontSize: 11 }}>{m.position}</Tag>}
+                          {m.shift && <span style={{ fontSize: 12, color: 'rgba(148,163,184,0.5)' }}>{m.shift}조</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 액션 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, paddingRight: 12, alignItems: 'center' }}>
+                      <Switch size="small" checked={m.is_active} onChange={(checked) => handleToggle(m, checked)} />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <EditOutlined onClick={() => openEdit(m)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                        <Popconfirm title="인원을 삭제합니다." onConfirm={() => handleDelete(m)}>
+                          <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                        </Popconfirm>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
       <Modal
         title={editingRow ? '인원 수정' : '인원 추가'}
         open={open}
         onCancel={() => setOpen(false)}
-        onOk={() => form.submit()}
-        okText="저장"
-        confirmLoading={saving}
+        footer={[
+          <Button key="cancel" onClick={() => setOpen(false)}>취소</Button>,
+          <Button key="save" type="primary" loading={saving} onClick={() => form.submit()}>저장</Button>,
+        ]}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={{ is_active: true }} style={{ marginTop: 16 }}>
           <Form.Item name="vendor_id" label="소속 업체" rules={[{ required: true, message: '업체를 선택하세요.' }]}>
