@@ -538,14 +538,18 @@ function HolidayTab() {
     setLoading(true)
     try {
       const res = await authFetch(`/api/admin/holidays${year ? `?year=${year}` : ''}`)
+      if (!res.ok) throw new Error(`서버 오류 (${res.status})`)
       const data = await res.json()
-      setHolidays(Array.isArray(data) ? data : [])
+      if (!Array.isArray(data)) throw new Error('응답 형식 오류')
+      setHolidays(data)
+    } catch (err) {
+      message.error(`공휴일 조회 실패: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchHolidays(currentYear) }, [])
+  useEffect(() => { fetchHolidays() }, [])
 
   const saveApiKey = () => {
     localStorage.setItem('gov_holiday_api_key', apiKeyInput)
@@ -565,13 +569,12 @@ function HolidayTab() {
       const allItems = []
       for (let month = 1; month <= 12; month++) {
         const params = new URLSearchParams({
-          ServiceKey: apiKey,
           solYear: String(year),
           solMonth: String(month).padStart(2, '0'),
           _type: 'json',
           numOfRows: '50',
         })
-        const res = await fetch(`${BASE}?${params}`)
+        const res = await fetch(`${BASE}?ServiceKey=${apiKey}&${params}`)
         if (!res.ok) throw new Error(`${month}월 API 오류 (${res.status}) — API 키를 확인하세요.`)
         const json = await res.json()
         const errCode = json?.response?.header?.resultCode
@@ -601,7 +604,7 @@ function HolidayTab() {
       const subCount = allItems.filter(h => h.is_substitute).length
       setSyncLog({ year, total: allItems.length, sub: subCount, new: result.new })
       message.success(`${year}년 공휴일 ${allItems.length}건 동기화 완료 (대체공휴일 ${subCount}건 포함)`)
-      fetchHolidays(currentYear)
+      fetchHolidays()
     } catch (err) {
       message.error(err.message || '동기화 실패')
     } finally {
@@ -615,7 +618,7 @@ function HolidayTab() {
     try {
       await authFetch(`/api/admin/holidays/year/${year}`, { method: 'DELETE' })
       message.success(`${year}년 공휴일 삭제 완료`)
-      fetchHolidays(currentYear)
+      fetchHolidays()
     } catch {
       message.error('삭제 실패')
     }
@@ -675,18 +678,27 @@ function HolidayTab() {
       {/* 동기화 버튼 */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>공휴일 업데이트:</span>
-        {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
+        {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
           <Button
             key={y}
             icon={<SyncOutlined spin={syncing && syncYear === y} />}
             onClick={() => syncFromGov(y)}
             loading={syncing && syncYear === y}
             disabled={!apiKey || (syncing && syncYear !== y)}
-            type={y === currentYear || y === currentYear + 1 ? 'primary' : 'default'}
+            type={y === currentYear ? 'primary' : 'default'}
           >
             {y}년
           </Button>
         ))}
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => fetchHolidays()}
+          loading={loading}
+          disabled={syncing}
+          title="DB에 저장된 공휴일 다시 불러오기"
+        >
+          새로고침
+        </Button>
       </div>
 
       {syncing && <Progress percent={progress} status="active" strokeColor="#f59e0b" />}

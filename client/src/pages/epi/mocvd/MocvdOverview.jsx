@@ -423,11 +423,29 @@ function NoticeBoard() {
 
 function AttendanceCard() {
   const [items, setItems] = useState([])
+  const [allItems, setAllItems] = useState([]) // 해당월 전체 (휴가류 포함)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedDay, setSelectedDay] = useState(dayjs())
+  const [dayCounts, setDayCounts] = useState({})   // { dateStr: { typeName: count } }
+  const [typeMap, setTypeMap] = useState({})        // { typeName: { label, color } }
+  const [holidays, setHolidays] = useState({})      // { dateStr: holidayName }
   const today = dayjs()
   const isToday = selectedDay.isSame(today, 'day')
+
+  // 공휴일 (연도 변경 시 재로드)
+  useEffect(() => {
+    authFetch(`/api/shift/holidays?year=${selectedDay.year()}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const map = {}
+          data.forEach((h) => { map[h.date] = h.name })
+          setHolidays(map)
+        }
+      })
+      .catch(() => {})
+  }, [selectedDay.year()])
 
   useEffect(() => {
     async function load() {
@@ -442,6 +460,17 @@ function AttendanceCard() {
         const members = Array.isArray(memberJson) ? memberJson : []
         const activeMemberIds = new Set(members.map((m) => m.id))
         const memberMap = Object.fromEntries(members.map((m) => [m.id, m.name]))
+        const tm = Object.fromEntries(typeJson.map((t) => [t.name, { label: t.label, color: t.color, order: t.order_idx }]))
+        setTypeMap(tm)
+
+        // 캘린더용 일별 시프트타입별 카운트
+        const dc = {}
+        schedJson.filter((s) => activeMemberIds.has(s.member_id)).forEach((s) => {
+          if (!dc[s.work_date]) dc[s.work_date] = {}
+          dc[s.work_date][s.shift_type] = (dc[s.work_date][s.shift_type] || 0) + 1
+        })
+        setDayCounts(dc)
+
         const dayStr = selectedDay.format('YYYY-MM-DD')
         const counts = {}
         const namesByType = {}
@@ -452,39 +481,37 @@ function AttendanceCard() {
             if (!namesByType[s.shift_type]) namesByType[s.shift_type] = []
             namesByType[s.shift_type].push(memberMap[s.member_id] || '?')
           })
+
+        // 출근 타입 vs 휴가 타입 분리 (근무 타입: 숫자 코드, 휴가류: 한글)
+        const WORK_CODES = typeJson.filter((t) => /^\d+$/.test(t.name)).map((t) => t.name)
         const result = typeJson
           .filter((t) => t.is_active && counts[t.name])
-          .map((t) => ({ name: t.label, value: counts[t.name], color: t.color, bg: t.bg_color, names: namesByType[t.name] || [] }))
-          .sort((a, b) => b.value - a.value)
+          .map((t) => ({
+            name: t.label, code: t.name, value: counts[t.name],
+            color: t.color, bg: t.bg_color, names: namesByType[t.name] || [],
+            isWork: WORK_CODES.includes(t.name),
+          }))
+          .sort((a, b) => (b.isWork - a.isWork) || (b.value - a.value))
+
         setItems(result)
-        setTotal(result.reduce((s, d) => s + d.value, 0))
+        setAllItems(result)
+        const workTotal = result.filter((r) => r.isWork).reduce((s, d) => s + d.value, 0)
+        setTotal(workTotal)
       } catch {}
       finally { setLoading(false) }
     }
     load()
   }, [selectedDay])
 
-  const chartOption = {
-    backgroundColor: 'transparent',
-    grid: { top: 8, right: 60, bottom: 8, left: 8, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { show: false }, axisLine: { show: false }, splitLine: { show: false } },
-    yAxis: {
-      type: 'category',
-      data: items.map((d) => d.name),
-      axisLabel: { color: 'rgba(214,222,232,0.8)', fontSize: 12, fontWeight: 700 },
-      axisLine: { show: false }, axisTick: { show: false },
-    },
-    series: [{
-      type: 'bar',
-      data: items.map((d) => ({
-        value: d.value,
-        itemStyle: { color: d.color, borderRadius: [0, 6, 6, 0] },
-        label: { show: true, position: 'right', color: d.color, fontWeight: 700, fontSize: 13, formatter: '{c}명' },
-      })),
-      barMaxWidth: 22,
-    }],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#242834', borderColor: 'rgba(245,158,11,0.2)', textStyle: { color: '#e2e8f0' } },
-  }
+  // 미니 캘린더 계산
+  const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
+  const calStart = selectedDay.startOf('month')
+  const firstDow = calStart.day()
+  const daysInMonth = selectedDay.daysInMonth()
+  const cells = []
+  for (let i = 0; i < firstDow; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+  while (cells.length % 7 !== 0) cells.push(null)
 
   const navBtn = (label, onClick, active) => (
     <button onClick={onClick} style={{
@@ -496,6 +523,111 @@ function AttendanceCard() {
     }}>{label}</button>
   )
 
+  const miniCal = (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {/* 월 네비게이션 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <button onClick={() => setSelectedDay((d) => d.subtract(1, 'month'))}
+          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '3px 10px', borderRadius: 6 }}>‹</button>
+        <span style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b', letterSpacing: 1 }}>{selectedDay.format('YYYY년 M월')}</span>
+        <button onClick={() => setSelectedDay((d) => d.add(1, 'month'))}
+          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '3px 10px', borderRadius: 6 }}>›</button>
+      </div>
+      {/* 요일 헤더 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(245,158,11,0.08)', borderRadius: '8px 8px 0 0', border: '1px solid rgba(245,158,11,0.15)', borderBottom: 'none' }}>
+        {DOW_LABELS.map((lbl, i) => (
+          <div key={lbl} style={{
+            textAlign: 'center', fontSize: 12, fontWeight: 800, padding: '6px 0',
+            color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(214,222,232,0.7)',
+          }}>{lbl}</div>
+        ))}
+      </div>
+      {/* 날짜 셀 그리드 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+        {cells.map((day, idx) => {
+          if (!day) return (
+            <div key={`e${idx}`} style={{ borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', minHeight: 60, background: 'rgba(0,0,0,0.15)' }} />
+          )
+          const dow = (firstDow + day - 1) % 7
+          const dateStr = calStart.date(day).format('YYYY-MM-DD')
+          const isSel = selectedDay.date() === day
+          const isT = today.format('YYYY-MM-DD') === dateStr
+          const dayData = dayCounts[dateStr] || {}
+          const totalCnt = Object.values(dayData).reduce((s, v) => s + v, 0)
+          const isSat = dow === 6
+          const isSun = dow === 0
+          const holiday = holidays[dateStr]
+          const isHoliday = !!holiday || isSun
+          const dateColor = isSel ? '#1a1a00' : (isHoliday ? '#f87171' : isSat ? '#7dd3fc' : '#e2e8f0')
+          return (
+            <div
+              key={day}
+              onClick={() => setSelectedDay(calStart.date(day))}
+              style={{
+                padding: '5px 6px 4px',
+                cursor: 'pointer',
+                minHeight: 60,
+                borderRight: '1px solid rgba(255,255,255,0.05)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                background: isSel
+                  ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                  : isT
+                  ? 'rgba(245,158,11,0.15)'
+                  : isSat
+                  ? 'rgba(125,211,252,0.07)'
+                  : isHoliday
+                  ? 'rgba(248,113,113,0.09)'
+                  : 'rgba(255,255,255,0.02)',
+                boxShadow: isT && !isSel ? 'inset 0 0 0 1.5px rgba(245,158,11,0.55)' : 'none',
+                transition: 'background 0.12s',
+              }}
+            >
+              {/* 날짜 숫자 */}
+              <div style={{ fontSize: 13, fontWeight: isSel ? 900 : 700, color: dateColor, lineHeight: 1.2 }}>{day}</div>
+              {/* 공휴일 이름 */}
+              {holiday && (
+                <div style={{
+                  fontSize: 9, fontWeight: 700, lineHeight: 1.1, marginTop: 1,
+                  color: isSel ? '#00000080' : '#f87171',
+                  overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                  maxWidth: '100%',
+                }}>{holiday}</div>
+              )}
+              {/* 시프트별 인원 */}
+              {totalCnt > 0 && (
+                <div style={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {Object.entries(dayData)
+                    .sort((a, b) => (typeMap[a[0]]?.order ?? 99) - (typeMap[b[0]]?.order ?? 99))
+                    .map(([typeName, cnt]) => {
+                      const ti = typeMap[typeName]
+                      const label = ti?.label || typeName
+                      const color = isSel ? '#1a1a0099' : (ti?.color || '#f59e0b')
+                      return (
+                        <div key={typeName} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          background: isSel ? 'rgba(0,0,0,0.12)' : `${ti?.color || '#f59e0b'}18`,
+                          border: `1px solid ${isSel ? 'rgba(0,0,0,0.15)' : `${ti?.color || '#f59e0b'}35`}`,
+                          borderRadius: 4, padding: '1px 4px',
+                        }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1.4 }}>{label}</span>
+                          <span style={{ fontSize: 9, fontWeight: 900, color, lineHeight: 1.4 }}>{cnt}</span>
+                        </div>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  // 근무 / 휴가 분리
+  const workItems = items.filter((d) => d.isWork)
+  const leaveItems = items.filter((d) => !d.isWork)
+  const selectedHoliday = holidays[selectedDay.format('YYYY-MM-DD')]
+
   return (
     <SectionCard
       title={
@@ -503,10 +635,16 @@ function AttendanceCard() {
           출근 인원
           <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.7)' }}>
             {selectedDay.format('M월 D일 (ddd)')}
+            {selectedHoliday && <span style={{ marginLeft: 6, fontSize: 11, color: '#f87171', fontWeight: 700 }}>({selectedHoliday})</span>}
           </span>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>
-            총 {total}<span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.65)', marginLeft: 3 }}>명</span>
+            출근 {total}<span style={{ fontSize: 12, color: 'rgba(245,158,11,0.6)', marginLeft: 2 }}>명</span>
           </span>
+          {leaveItems.length > 0 && (
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(148,163,184,0.8)' }}>
+              · 부재 {leaveItems.reduce((s, d) => s + d.value, 0)}<span style={{ fontSize: 12, marginLeft: 2 }}>명</span>
+            </span>
+          )}
         </span>
       }
       icon={<TeamOutlined />}
@@ -519,35 +657,79 @@ function AttendanceCard() {
       }
     >
       {loading ? (
-        <Skeleton active paragraph={{ rows: 2 }} />
-      ) : items.length === 0 ? (
-        <Empty description="등록된 근무 데이터가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <Skeleton active paragraph={{ rows: 4 }} />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {items.map((d) => (
-            <div key={d.name} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '8px 12px', borderRadius: 10,
-              background: `${d.bg}`,
-              borderLeft: `4px solid ${d.color}`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 72, flexShrink: 0 }}>
-                <span style={{ fontSize: 20, fontWeight: 900, color: d.color, lineHeight: 1 }}>{d.value}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: d.color, opacity: 0.75 }}>{d.name}</span>
-              </div>
-              <div style={{ width: 1, height: 20, background: `${d.color}40`, flexShrink: 0 }} />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px' }}>
-                {d.names.map((n) => (
-                  <span key={n} style={{
-                    fontSize: 14, fontWeight: 600, color: d.color,
-                    padding: '1px 10px', borderRadius: 20,
-                    background: `${d.color}18`,
-                    border: `1px solid ${d.color}30`,
-                  }}>{n}</span>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+          {/* 좌측: 미니 캘린더 */}
+          {miniCal}
+          {/* 구분선 */}
+          <div style={{ width: 1, background: 'rgba(245,158,11,0.12)', alignSelf: 'stretch', flexShrink: 0 }} />
+          {/* 우측: 출근 상세 */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {items.length === 0 ? (
+              <Empty description="등록된 근무 데이터가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <>
+                {/* 근무 그룹 */}
+                {workItems.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1, textTransform: 'uppercase' }}>근무</div>
+                    {workItems.map((d) => (
+                      <div key={d.name} style={{
+                        borderRadius: 10, background: d.bg,
+                        border: `1px solid ${d.color}22`,
+                        borderLeft: `4px solid ${d.color}`,
+                        overflow: 'hidden',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px' }}>
+                          <span style={{ fontSize: 22, fontWeight: 900, color: d.color, lineHeight: 1, minWidth: 28 }}>{d.value}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: d.color, opacity: 0.8, minWidth: 40 }}>{d.name}</span>
+                          <div style={{ width: 1, height: 18, background: `${d.color}30`, flexShrink: 0 }} />
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 8px' }}>
+                            {d.names.map((n) => (
+                              <span key={n} style={{
+                                fontSize: 13, fontWeight: 600, color: d.color,
+                                padding: '1px 9px', borderRadius: 20,
+                                background: `${d.color}15`, border: `1px solid ${d.color}28`,
+                              }}>{n}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 부재/휴가 그룹 */}
+                {leaveItems.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1 }}>부재 / 휴가</div>
+                    <div style={{
+                      borderRadius: 10, background: 'rgba(100,116,139,0.08)',
+                      border: '1px solid rgba(100,116,139,0.18)',
+                      padding: '8px 12px',
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                    }}>
+                      {leaveItems.map((d) => (
+                        <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, color: d.color,
+                            padding: '1px 7px', borderRadius: 20, background: `${d.color}18`,
+                            border: `1px solid ${d.color}30`, minWidth: 36, textAlign: 'center',
+                          }}>{d.name}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: d.color }}>{d.value}명</span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 6px' }}>
+                            {d.names.map((n) => (
+                              <span key={n} style={{ fontSize: 12, color: 'rgba(148,163,184,0.85)', fontWeight: 500 }}>{n}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </SectionCard>
