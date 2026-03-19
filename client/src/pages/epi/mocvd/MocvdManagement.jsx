@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Alert, Button, Card, Col, Input, Row, Skeleton, Switch, Tabs, Tag, Tooltip, message } from 'antd'
+import dayjs from 'dayjs'
+import { Alert, Button, Card, Col, DatePicker, Empty, Form, Input, Modal, Popconfirm, Row, Select, Skeleton, Switch, Tabs, Tag, Tooltip, message } from 'antd'
 import {
   AlertOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   DashboardOutlined,
+  DeleteOutlined,
+  EditOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  PlusOutlined,
   PoweroffOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -214,6 +218,346 @@ function SummaryCard({ label, value, suffix, gradient, accent, icon, sub }) {
         {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${resolvedAccent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
       </div>
       {sub ? <div style={{ color: `${resolvedAccent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
+    </div>
+  )
+}
+
+// ── 장비 이력 ──────────────────────────────────────────────────────────
+
+const EVENT_META = {
+  failure: { label: '고장', color: '#f43f5e', bg: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.3)', icon: '⚠' },
+  repair:  { label: '수리/교체', color: '#fb923c', bg: 'rgba(251,146,60,0.12)', border: 'rgba(251,146,60,0.3)', icon: '🔧' },
+  pm:      { label: '정기점검', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.3)', icon: '📋' },
+  issue:   { label: '이슈', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', icon: '❗' },
+  action:  { label: '조치', color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.3)', icon: '✅' },
+  other:   { label: '기타', color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.22)', icon: '📌' },
+}
+
+const SEVERITY_META = {
+  high:   { label: '심각', color: '#f43f5e' },
+  medium: { label: '보통', color: '#f59e0b' },
+  low:    { label: '경미', color: '#34d399' },
+}
+
+const EVENT_TYPE_OPTIONS = Object.entries(EVENT_META).map(([value, { label }]) => ({ value, label }))
+const SEVERITY_OPTIONS = Object.entries(SEVERITY_META).map(([value, { label }]) => ({ value, label }))
+
+function EquipmentHistoryTab({ machineList }) {
+  const [selectedMachineNo, setSelectedMachineNo] = useState(null)
+  const [histories, setHistories] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
+  const [form] = Form.useForm()
+
+  const activeMachines = useMemo(() => machineList.filter((m) => m.is_active), [machineList])
+
+  useEffect(() => {
+    if (!selectedMachineNo && activeMachines.length > 0) {
+      setSelectedMachineNo(activeMachines[0].machine_no)
+    }
+  }, [activeMachines, selectedMachineNo])
+
+  const fetchHistory = useCallback(async (machineNo) => {
+    if (!machineNo) return
+    setLoading(true)
+    try {
+      const res = await authFetch(`/api/mocvd/equipment-history?machine_no=${machineNo}`)
+      const json = await res.json()
+      setHistories(Array.isArray(json) ? json : [])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchHistory(selectedMachineNo)
+  }, [selectedMachineNo, fetchHistory])
+
+  const filtered = useMemo(() => {
+    if (typeFilter === 'all') return histories
+    return histories.filter((h) => h.event_type === typeFilter)
+  }, [histories, typeFilter])
+
+  // 월별 그룹
+  const grouped = useMemo(() => {
+    const map = new Map()
+    filtered.forEach((h) => {
+      const key = dayjs(h.occurred_at).format('YYYY년 MM월')
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push(h)
+    })
+    return [...map.entries()]
+  }, [filtered])
+
+  const openCreate = () => {
+    setEditingItem(null)
+    form.resetFields()
+    form.setFieldsValue({ event_type: 'failure', severity: 'medium', occurred_at: dayjs() })
+    setModalOpen(true)
+  }
+
+  const openEdit = (item) => {
+    setEditingItem(item)
+    form.setFieldsValue({
+      event_type: item.event_type,
+      severity: item.severity,
+      title: item.title,
+      detail: item.detail,
+      actor: item.actor,
+      occurred_at: item.occurred_at ? dayjs(item.occurred_at) : null,
+      resolved_at: item.resolved_at ? dayjs(item.resolved_at) : null,
+    })
+    setModalOpen(true)
+  }
+
+  const handleSubmit = async (values) => {
+    const payload = {
+      machine_no: selectedMachineNo,
+      event_type: values.event_type,
+      severity: values.severity,
+      title: values.title,
+      detail: values.detail || '',
+      actor: values.actor || '',
+      occurred_at: values.occurred_at ? values.occurred_at.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+      resolved_at: values.resolved_at ? values.resolved_at.format('YYYY-MM-DD') : null,
+    }
+    try {
+      if (editingItem) {
+        await authFetch(`/api/mocvd/equipment-history/${editingItem.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        })
+        message.success('이력을 수정했습니다.')
+      } else {
+        await authFetch('/api/mocvd/equipment-history', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        })
+        message.success('이력을 추가했습니다.')
+      }
+      setModalOpen(false)
+      fetchHistory(selectedMachineNo)
+    } catch {
+      message.error('저장에 실패했습니다.')
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await authFetch(`/api/mocvd/equipment-history/${id}`, { method: 'DELETE' })
+      message.success('이력을 삭제했습니다.')
+      fetchHistory(selectedMachineNo)
+    } catch {
+      message.error('삭제에 실패했습니다.')
+    }
+  }
+
+  const selectedMachine = activeMachines.find((m) => m.machine_no === selectedMachineNo)
+
+  return (
+    <div style={{ display: 'flex', gap: 16, minHeight: 600 }}>
+      {/* 좌측 설비 선택 패널 */}
+      <div style={{ width: 200, flexShrink: 0 }}>
+        <Card className="nowa-card" styles={{ body: { padding: 0 } }}>
+          <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(245,158,11,0.14)', fontSize: 12, fontWeight: 700, color: 'rgba(245,158,11,0.8)', letterSpacing: 1 }}>
+            설비 선택
+          </div>
+          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+            {activeMachines.map((m) => {
+              const selected = m.machine_no === selectedMachineNo
+              return (
+                <div
+                  key={m.machine_no}
+                  onClick={() => setSelectedMachineNo(m.machine_no)}
+                  style={{
+                    padding: '10px 16px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid rgba(196,210,226,0.07)',
+                    background: selected ? 'rgba(245,158,11,0.12)' : 'transparent',
+                    borderLeft: selected ? '3px solid #f59e0b' : '3px solid transparent',
+                    transition: 'all 0.12s',
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                  }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: 14, color: selected ? '#fbbf24' : 'var(--nowa-text)' }}>
+                    {formatMachineLabel(m.machine_no)}
+                  </span>
+                  {m.description && (
+                    <span style={{ fontSize: 11, color: 'var(--nowa-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.description}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      </div>
+
+      {/* 우측 타임라인 */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Card
+          className="nowa-card"
+          styles={{ body: { padding: '16px 20px' } }}
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <HistoryOutlined style={{ color: '#f59e0b' }} />
+              <span style={{ fontWeight: 800, fontSize: 16 }}>
+                {selectedMachine ? formatMachineLabel(selectedMachine.machine_no) : '-'} 장비 이력
+              </span>
+              <Tag style={{ marginLeft: 4, borderRadius: 99 }}>{filtered.length}건</Tag>
+            </div>
+          }
+          extra={
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Select
+                value={typeFilter}
+                onChange={setTypeFilter}
+                size="small"
+                style={{ width: 110 }}
+                options={[{ value: 'all', label: '전체 유형' }, ...EVENT_TYPE_OPTIONS]}
+              />
+              <Button type="primary" icon={<PlusOutlined />} size="small" onClick={openCreate} disabled={!selectedMachineNo}>
+                이력 추가
+              </Button>
+              <Button icon={<ReloadOutlined />} size="small" onClick={() => fetchHistory(selectedMachineNo)} />
+            </div>
+          }
+        >
+          {loading ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : filtered.length === 0 ? (
+            <Empty description="등록된 이력이 없습니다." style={{ padding: '48px 0' }} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {grouped.map(([month, items]) => (
+                <div key={month}>
+                  {/* 월 구분선 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 16px' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(245,158,11,0.5)', flexShrink: 0, marginLeft: 3 }} />
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'rgba(245,158,11,0.8)' }}>{month}</span>
+                    <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.15)' }} />
+                    <span style={{ fontSize: 11, color: 'var(--nowa-text-muted)' }}>{items.length}건</span>
+                  </div>
+
+                  {/* 타임라인 아이템들 */}
+                  <div style={{ paddingLeft: 8 }}>
+                    {items.map((item, idx) => {
+                      const meta = EVENT_META[item.event_type] ?? EVENT_META.other
+                      const sev = SEVERITY_META[item.severity] ?? SEVERITY_META.medium
+                      const isLast = idx === items.length - 1
+                      return (
+                        <div key={item.id} style={{ display: 'flex', gap: 0, position: 'relative' }}>
+                          {/* 타임라인 세로선 */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
+                            <div style={{
+                              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                              background: meta.bg, border: `2px solid ${meta.border}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 13, zIndex: 1,
+                            }}>
+                              {meta.icon}
+                            </div>
+                            {!isLast && (
+                              <div style={{ flex: 1, width: 2, background: 'rgba(196,210,226,0.12)', minHeight: 20, margin: '4px 0' }} />
+                            )}
+                          </div>
+
+                          {/* 카드 */}
+                          <div style={{
+                            flex: 1, marginLeft: 12, marginBottom: isLast ? 4 : 16,
+                            background: meta.bg, border: `1px solid ${meta.border}`,
+                            borderRadius: 12, padding: '12px 14px',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                                  <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11, fontWeight: 700, color: meta.color, background: 'transparent', border: `1px solid ${meta.border}`, padding: '0 8px' }}>
+                                    {meta.label}
+                                  </Tag>
+                                  <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11, fontWeight: 700, color: sev.color, background: 'transparent', border: `1px solid ${sev.color}55`, padding: '0 8px' }}>
+                                    {sev.label}
+                                  </Tag>
+                                  {item.resolved_at && (
+                                    <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', padding: '0 8px' }}>
+                                      해결됨
+                                    </Tag>
+                                  )}
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--nowa-text)', marginBottom: 4 }}>{item.title}</div>
+                                {item.detail && (
+                                  <div style={{ fontSize: 13, color: 'var(--nowa-text-muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.detail}</div>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(item)} style={{ borderRadius: 6 }} />
+                                <Popconfirm title="이 이력을 삭제하시겠습니까?" onConfirm={() => handleDelete(item.id)} okText="삭제" okButtonProps={{ danger: true }}>
+                                  <Button size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 6 }} />
+                                </Popconfirm>
+                              </div>
+                            </div>
+                            <div style={{ marginTop: 8, display: 'flex', gap: 16, fontSize: 11, color: 'var(--nowa-text-muted)', flexWrap: 'wrap' }}>
+                              <span>📅 발생: <b style={{ color: meta.color }}>{dayjs(item.occurred_at).format('YYYY-MM-DD')}</b></span>
+                              {item.resolved_at && <span>✅ 해결: <b style={{ color: '#34d399' }}>{dayjs(item.resolved_at).format('YYYY-MM-DD')}</b></span>}
+                              {item.actor && <span>👤 {item.actor}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* 이력 추가/수정 모달 */}
+      <Modal
+        title={editingItem ? '이력 수정' : '이력 추가'}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={() => form.submit()}
+        okText={editingItem ? '수정' : '추가'}
+        width={520}
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="event_type" label="유형" rules={[{ required: true }]}>
+                <Select options={EVENT_TYPE_OPTIONS} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="severity" label="심각도" rules={[{ required: true }]}>
+                <Select options={SEVERITY_OPTIONS} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
+            <Input placeholder="예: TMGa 소스 공급 이상 발생" />
+          </Form.Item>
+          <Form.Item name="detail" label="상세 내용">
+            <Input.TextArea rows={4} placeholder="발생 경위, 조치 내용 등 상세하게 입력하세요." />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="occurred_at" label="발생일" rules={[{ required: true, message: '발생일을 선택하세요.' }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="resolved_at" label="해결일 (선택)">
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="actor" label="작성자">
+            <Input placeholder="담당자 이름" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }
@@ -639,11 +983,7 @@ export default function MocvdManagement() {
         {
           key: 'equipment-history',
           label: <span><HistoryOutlined /> 장비 이력</span>,
-          children: (
-            <div style={{ paddingTop: 24, textAlign: 'center', color: 'rgba(196,210,226,0.4)', fontSize: 14 }}>
-              장비 이력 기능이 추가될 예정입니다.
-            </div>
-          ),
+          children: <EquipmentHistoryTab machineList={machineList} />,
         },
       ]}
     />

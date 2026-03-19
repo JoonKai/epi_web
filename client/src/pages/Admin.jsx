@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
   Button,
   Empty,
   Form,
   Input,
   Modal,
   Popconfirm,
+  Progress,
   Radio,
   Select,
   Space,
@@ -15,7 +17,8 @@ import {
   Tag,
   message,
 } from 'antd'
-import { DeleteOutlined, HistoryOutlined, KeyOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons'
+import { CalendarOutlined, DeleteOutlined, HistoryOutlined, KeyOutlined, PlusOutlined, ReloadOutlined, SettingOutlined, SyncOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
 import { authFetch } from '../context/AuthContext'
 
 const SESSION_OPTIONS = [
@@ -485,6 +488,257 @@ function LogTab() {
   )
 }
 
+// ── 공휴일 관리 탭 ────────────────────────────────────────────────────────
+
+// 공공데이터포털 한국천문연구원 특일 정보 API 파서
+async function fetchKoreanHolidaysFromGov(year, apiKey) {
+  const BASE = 'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo'
+  const allItems = []
+
+  for (let month = 1; month <= 12; month++) {
+    const params = new URLSearchParams({
+      ServiceKey: apiKey,
+      solYear: String(year),
+      solMonth: String(month).padStart(2, '0'),
+      _type: 'json',
+      numOfRows: '50',
+    })
+    const res = await fetch(`${BASE}?${params}`)
+    if (!res.ok) throw new Error(`${month}월 API 오류 (${res.status})`)
+    const json = await res.json()
+    const body = json?.response?.body
+    if (!body) throw new Error(`${month}월 응답 형식 오류`)
+    const items = body.items?.item
+    if (!items) continue
+    const arr = Array.isArray(items) ? items : [items]
+    arr.forEach((item) => {
+      const dateStr = String(item.locdate)  // 20260101
+      const date = `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`
+      const name = item.dateName || ''
+      const isSub = item.isSubstitute === 'Y' || item.remark?.includes('대체')
+      allItems.push({ date, name, is_substitute: !!isSub })
+    })
+  }
+
+  return allItems.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+function HolidayTab() {
+  const currentYear = dayjs().year()
+  const [holidays, setHolidays] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncYear, setSyncYear] = useState(null)
+  const [syncLog, setSyncLog] = useState(null)
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gov_holiday_api_key') || '')
+  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('gov_holiday_api_key') || '')
+  const [progress, setProgress] = useState(0)
+
+  const fetchHolidays = async (year) => {
+    setLoading(true)
+    try {
+      const res = await authFetch(`/api/admin/holidays${year ? `?year=${year}` : ''}`)
+      const data = await res.json()
+      setHolidays(Array.isArray(data) ? data : [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchHolidays(currentYear) }, [])
+
+  const saveApiKey = () => {
+    localStorage.setItem('gov_holiday_api_key', apiKeyInput)
+    setApiKey(apiKeyInput)
+    message.success('API 키 저장됨')
+  }
+
+  const syncFromGov = async (year) => {
+    if (!apiKey) { message.warning('API 키를 먼저 입력하세요.'); return }
+    setSyncing(true)
+    setSyncYear(year)
+    setSyncLog(null)
+    setProgress(0)
+    try {
+      // 월별로 가져오며 진행률 표시
+      const BASE = 'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo'
+      const allItems = []
+      for (let month = 1; month <= 12; month++) {
+        const params = new URLSearchParams({
+          ServiceKey: apiKey,
+          solYear: String(year),
+          solMonth: String(month).padStart(2, '0'),
+          _type: 'json',
+          numOfRows: '50',
+        })
+        const res = await fetch(`${BASE}?${params}`)
+        if (!res.ok) throw new Error(`${month}월 API 오류 (${res.status}) — API 키를 확인하세요.`)
+        const json = await res.json()
+        const errCode = json?.response?.header?.resultCode
+        if (errCode && errCode !== '00') throw new Error(`API 오류 코드 ${errCode}: API 키가 올바른지 확인하세요.`)
+        const items = json?.response?.body?.items?.item
+        if (items) {
+          const arr = Array.isArray(items) ? items : [items]
+          arr.forEach((item) => {
+            const ds = String(item.locdate)
+            const date = `${ds.slice(0,4)}-${ds.slice(4,6)}-${ds.slice(6,8)}`
+            const isSub = item.isSubstitute === 'Y'
+            allItems.push({ date, name: item.dateName || '', is_substitute: isSub })
+          })
+        }
+        setProgress(Math.round((month / 12) * 100))
+      }
+
+      if (allItems.length === 0) throw new Error('가져온 공휴일 데이터가 없습니다.')
+
+      const saveRes = await authFetch('/api/admin/holidays/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(allItems),
+      })
+      if (!saveRes.ok) throw new Error('서버 저장 실패')
+      const result = await saveRes.json()
+      const subCount = allItems.filter(h => h.is_substitute).length
+      setSyncLog({ year, total: allItems.length, sub: subCount, new: result.new })
+      message.success(`${year}년 공휴일 ${allItems.length}건 동기화 완료 (대체공휴일 ${subCount}건 포함)`)
+      fetchHolidays(currentYear)
+    } catch (err) {
+      message.error(err.message || '동기화 실패')
+    } finally {
+      setSyncing(false)
+      setSyncYear(null)
+      setProgress(0)
+    }
+  }
+
+  const deleteYear = async (year) => {
+    try {
+      await authFetch(`/api/admin/holidays/year/${year}`, { method: 'DELETE' })
+      message.success(`${year}년 공휴일 삭제 완료`)
+      fetchHolidays(currentYear)
+    } catch {
+      message.error('삭제 실패')
+    }
+  }
+
+  const yearGroups = useMemo(() => {
+    const map = new Map()
+    holidays.forEach((h) => {
+      const y = h.date.slice(0, 4)
+      if (!map.has(y)) map.set(y, [])
+      map.get(y).push(h)
+    })
+    return [...map.entries()].sort((a, b) => b[0] - a[0])
+  }, [holidays])
+
+  const columns = [
+    { title: '날짜', dataIndex: 'date', width: 120, render: (v) => <span style={{ fontWeight: 700 }}>{v}</span> },
+    { title: '요일', dataIndex: 'date', width: 60, render: (v) => {
+      const d = dayjs(v).day()
+      const labels = ['일','월','화','수','목','금','토']
+      return <span style={{ color: d === 0 || d === 6 ? '#f87171' : 'var(--nowa-text-muted)' }}>{labels[d]}</span>
+    }},
+    { title: '공휴일명', dataIndex: 'name' },
+    { title: '구분', dataIndex: 'is_substitute', width: 100, render: (v) =>
+      v ? <Tag color="orange">대체공휴일</Tag> : <Tag color="red">공휴일</Tag>
+    },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* API 키 설정 */}
+      <Alert
+        type="info"
+        showIcon
+        message={
+          <span>
+            <b>공공데이터포털 API 키 필요</b> —{' '}
+            <a href="https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15012690" target="_blank" rel="noreferrer">
+              data.go.kr 한국천문연구원 특일 정보
+            </a>에서 무료 발급 후 입력하세요. (대체공휴일 공식 포함)
+          </span>
+        }
+      />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <Input.Password
+          value={apiKeyInput}
+          onChange={(e) => setApiKeyInput(e.target.value)}
+          placeholder="공공데이터포털 Encoding Service Key 입력"
+          style={{ flex: 1, maxWidth: 520 }}
+        />
+        <Button type="primary" onClick={saveApiKey} disabled={!apiKeyInput}>
+          API 키 저장
+        </Button>
+        {apiKey && <Tag color="green">키 등록됨</Tag>}
+      </div>
+
+      {/* 동기화 버튼 */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>공휴일 업데이트:</span>
+        {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
+          <Button
+            key={y}
+            icon={<SyncOutlined spin={syncing && syncYear === y} />}
+            onClick={() => syncFromGov(y)}
+            loading={syncing && syncYear === y}
+            disabled={!apiKey || (syncing && syncYear !== y)}
+            type={y === currentYear || y === currentYear + 1 ? 'primary' : 'default'}
+          >
+            {y}년
+          </Button>
+        ))}
+      </div>
+
+      {syncing && <Progress percent={progress} status="active" strokeColor="#f59e0b" />}
+
+      {syncLog && (
+        <Alert type="success" showIcon closable
+          message={`${syncLog.year}년 동기화 완료 — 총 ${syncLog.total}건 (대체공휴일 ${syncLog.sub}건 포함, 신규 ${syncLog.new}건)`}
+          onClose={() => setSyncLog(null)}
+        />
+      )}
+
+      {/* 연도별 탭 */}
+      {yearGroups.length === 0 ? (
+        <Empty description="저장된 공휴일이 없습니다. API 키 입력 후 동기화하세요." />
+      ) : (
+        <Tabs
+          items={yearGroups.map(([year, items]) => ({
+            key: year,
+            label: (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CalendarOutlined />{year}년
+                <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11 }}>{items.length}</Tag>
+              </span>
+            ),
+            children: (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                  <Popconfirm
+                    title={`${year}년 공휴일 전체를 삭제하시겠습니까?`}
+                    onConfirm={() => deleteYear(year)}
+                    okText="삭제" okButtonProps={{ danger: true }}
+                  >
+                    <Button danger icon={<DeleteOutlined />} size="small">{year}년 삭제</Button>
+                  </Popconfirm>
+                </div>
+                <Table
+                  rowKey="date"
+                  size="small"
+                  dataSource={items}
+                  columns={columns}
+                  pagination={false}
+                  bordered
+                />
+              </div>
+            ),
+          }))}
+        />
+      )}
+    </div>
+  )
+}
+
 function Admin() {
   return (
     <div>
@@ -493,6 +747,7 @@ function Admin() {
         items={[
           { key: 'users', label: '사용자 관리', children: <UserTab /> },
           { key: 'system', label: '시스템 설정', children: <SystemSettingsTab /> },
+          { key: 'holidays', label: <span><CalendarOutlined /> 공휴일 관리</span>, children: <HolidayTab /> },
           { key: 'log', label: 'Log', children: <LogTab /> },
         ]}
       />

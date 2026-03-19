@@ -78,6 +78,7 @@ function buildMenuItems(isAdmin) {
       label: '분석',
       className: 'menu-color-violet',
       children: [
+        { key: '/pl-trend', icon: <BarChartOutlined />, label: 'PL 트렌드' },
         { key: '/wafermap', icon: <HeatMapOutlined />, label: '웨이퍼맵' },
         { key: '/run-comparison', icon: <SwapOutlined />, label: 'Run 비교' },
       ],
@@ -138,6 +139,7 @@ const PAGE_COLOR = {
   '/epi/mocvd/master-data': '#f97316',
   '/epi/measurement': '#3b82f6',
   '/epi/simulator': '#f59e0b',
+  '/pl-trend': '#a78bfa',
   '/wafermap': '#ec4899',
   '/run-comparison': '#f43f5e',
   '/cost/purchase-request': '#f59e0b',

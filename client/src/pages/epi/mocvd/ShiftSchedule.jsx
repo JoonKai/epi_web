@@ -67,6 +67,7 @@ function ScheduleTab() {
   const [personnelGroups, setPersonnelGroups] = useState({ vendors: [], members: [] })
   const [selectedPids, setSelectedPids] = useState([])
   const [shiftTypes, setShiftTypes]     = useState([])
+  const [holidays, setHolidays]         = useState({})   // { 'YYYY-MM-DD': name }
   const [summaryRowKeys, setSummaryRowKeys] = useState(
     () => JSON.parse(localStorage.getItem('shift_summary_rows') || 'null') ?? ['1', '2', '휴무']
   )
@@ -135,6 +136,20 @@ function ScheduleTab() {
   }, [year, month])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // 공휴일 로드
+  useEffect(() => {
+    apiFetch(`/holidays?year=${year}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const map = {}
+          data.forEach((h) => { map[h.date] = h.name })
+          setHolidays(map)
+        }
+      })
+      .catch(() => {})
+  }, [year])
 
   // 셀 클릭 → 로컬만 변경 (저장 버튼으로 DB 일괄 저장)
   const saveCell = useCallback((memberId, workDate, shiftType) => {
@@ -457,15 +472,19 @@ function ScheduleTab() {
                 <tr>
                   <TH style={{ position: 'sticky', left: 0, zIndex: 5 }}>이름 / 조</TH>
                   {dateList.map((d) => {
-                    const isWe = d.day() === 0 || d.day() === 6
+                    const dk = d.format('YYYY-MM-DD')
+                    const isSat = d.day() === 6
+                    const isSun = d.day() === 0
+                    const isHoliday = !!holidays[dk]
                     const isMon = d.day() === 1
+                    const color = isHoliday || isSun ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(245,158,11,0.8)'
+                    const bg = isHoliday ? 'rgba(248,113,113,0.12)' : isSat ? 'rgba(125,211,252,0.08)' : undefined
                     return (
                       <TH key={`dh-${d.valueOf()}`}
-                        style={{
-                          color: isWe ? '#f87171' : 'rgba(245,158,11,0.8)', fontSize: 14,
-                          ...(isMon && { borderLeft: '2.5px solid #000' }),
-                        }}>
+                        title={holidays[dk] || undefined}
+                        style={{ color, background: bg, fontSize: 14, ...(isMon && { borderLeft: '2.5px solid #000' }) }}>
                         {d.format('M/D')}
+                        {isHoliday && <div style={{ fontSize: 9, color: '#f87171', lineHeight: 1.1, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holidays[dk]}</div>}
                       </TH>
                     )
                   })}
@@ -483,16 +502,16 @@ function ScheduleTab() {
                     background: 'rgba(245,158,11,0.04)', color: 'rgba(196,210,224,0.75)', fontSize: 14,
                   }}>요일</TH>
                   {dateList.map((d) => {
-                    const isWe = d.day() === 0 || d.day() === 6
+                    const dk = d.format('YYYY-MM-DD')
+                    const isSat = d.day() === 6
+                    const isSun = d.day() === 0
+                    const isHoliday = !!holidays[dk]
                     const isMon = d.day() === 1
+                    const color = isHoliday || isSun ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,224,0.75)'
+                    const bg = isHoliday ? 'rgba(248,113,113,0.12)' : isSat ? 'rgba(125,211,252,0.08)' : 'rgba(245,158,11,0.03)'
                     return (
                       <TH key={`wh-${d.valueOf()}`}
-                        style={{
-                          background: 'rgba(245,158,11,0.03)',
-                          color: isWe ? '#f87171' : 'rgba(196,210,224,0.75)',
-                          fontSize: 14, fontWeight: 600,
-                          ...(isMon && { borderLeft: '2.5px solid #000' }),
-                        }}>
+                        style={{ background: bg, color, fontSize: 14, fontWeight: 600, ...(isMon && { borderLeft: '2.5px solid #000' }) }}>
                         {weekdayLabels[d.day()]}
                       </TH>
                     )

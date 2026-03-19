@@ -30,6 +30,7 @@ import {
   TeamOutlined,
   SwapOutlined,
   ToolOutlined,
+  UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
@@ -771,7 +772,7 @@ function HandoverBoard() {
                     <div>
                       <div style={{ color: 'var(--nowa-text)', fontWeight: 800, fontSize: 14 }}>{note.title || '인수인계'}</div>
                       <div style={{ color: 'rgba(245,158,11,0.85)', fontSize: 11, marginTop: 3 }}>
-                        {note.author || '-'} / {note.handover_date}
+                        {note.author || '-'} / {note.handover_date}{note.updated_at || note.created_at ? ` ${dayjs(note.updated_at || note.created_at).format('HH:mm')}` : ''}
                       </div>
                     </div>
                     {canManageNote(note) ? (
@@ -860,7 +861,7 @@ function HandoverBoard() {
                       onClick={() => setPreviewNote(note)}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '48px 18px minmax(0, 1fr)',
+                        gridTemplateColumns: '72px 18px minmax(0, 1fr)',
                         gap: 10,
                         padding: '8px 0',
                         border: 'none',
@@ -871,8 +872,14 @@ function HandoverBoard() {
                         width: '100%',
                       }}
                     >
-                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, paddingTop: 1 }}>
-                        {timeLabel}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 1 }}>
+                        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700 }}>{timeLabel}</div>
+                        {note.author && (
+                          <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <UserOutlined style={{ color: 'rgba(214,222,232,0.85)', fontSize: 11 }} />
+                            <span style={{ color: 'rgba(245,158,11,0.85)' }}>{note.author}</span>
+                          </div>
+                        )}
                       </div>
                       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
                         <span

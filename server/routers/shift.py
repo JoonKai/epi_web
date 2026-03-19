@@ -5,7 +5,8 @@ from typing import Optional
 
 from database import get_db
 import json
-from models import PersonnelMember, PersonnelVendor, ShiftMember, ShiftScheduleEntry, ShiftType, SystemSetting
+from auth import get_current_user
+from models import KoreanHoliday, PersonnelMember, PersonnelVendor, ShiftMember, ShiftScheduleEntry, ShiftType, SystemSetting
 
 router = APIRouter(prefix="/api/shift", tags=["shift"])
 
@@ -316,3 +317,17 @@ def import_from_personnel(body: ImportMembersBody, db: Session = Depends(get_db)
 
     db.commit()
     return {"ok": True, "added": added}
+
+
+# ── 공휴일 조회 (읽기 전용, 일반 사용자도 가능) ──────────────────────────
+
+@router.get("/holidays")
+def get_holidays_for_shift(year: int | None = None, month: int | None = None,
+                            db: Session = Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(KoreanHoliday)
+    if year:
+        q = q.filter(KoreanHoliday.date.like(f"{year}-%"))
+    if month:
+        q = q.filter(KoreanHoliday.date.like(f"%-{str(month).zfill(2)}-%"))
+    rows = q.order_by(KoreanHoliday.date).all()
+    return [{"date": r.date, "name": r.name, "is_substitute": r.is_substitute} for r in rows]

@@ -9,6 +9,7 @@ from audit_log import write_audit_log
 from database import get_db
 from models import (
     AuditLog,
+    KoreanHoliday,
     MocvdMachine,
     PersonnelMember,
     PersonnelVendor,
@@ -485,3 +486,42 @@ def save_ip_filter(body: IpFilterBody, db: Session = Depends(get_db), _=Depends(
         db.add(SystemSetting(key=IP_FILTER_KEY, value=value))
     db.commit()
     return {"ok": True}
+
+
+# ── 한국 공휴일 ─────────────────────────────────────────────────────────
+
+class HolidayItem(BaseModel):
+    date: str          # YYYY-MM-DD
+    name: str
+    is_substitute: bool = False
+
+
+@router.get("/holidays")
+def get_holidays(year: int | None = None, db: Session = Depends(get_db), _=Depends(require_admin)):
+    q = db.query(KoreanHoliday)
+    if year:
+        q = q.filter(KoreanHoliday.date.like(f"{year}-%"))
+    rows = q.order_by(KoreanHoliday.date).all()
+    return [{"date": r.date, "name": r.name, "is_substitute": r.is_substitute} for r in rows]
+
+
+@router.post("/holidays/bulk")
+def upsert_holidays(items: List[HolidayItem], db: Session = Depends(get_db), _=Depends(require_admin)):
+    count = 0
+    for h in items:
+        existing = db.query(KoreanHoliday).filter(KoreanHoliday.date == h.date).first()
+        if existing:
+            existing.name = h.name
+            existing.is_substitute = h.is_substitute
+        else:
+            db.add(KoreanHoliday(date=h.date, name=h.name, is_substitute=h.is_substitute))
+            count += 1
+    db.commit()
+    return {"upserted": len(items), "new": count}
+
+
+@router.delete("/holidays/year/{year}")
+def delete_holidays_by_year(year: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    deleted = db.query(KoreanHoliday).filter(KoreanHoliday.date.like(f"{year}-%")).delete(synchronize_session=False)
+    db.commit()
+    return {"deleted": deleted}

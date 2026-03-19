@@ -11,6 +11,7 @@ import DataGrid from './pages/DataGrid'
 import Admin from './pages/Admin'
 import Login from './pages/Login'
 import WaferMap from './pages/WaferMap'
+import PLTrend from './pages/PLTrend'
 import RunComparison from './pages/RunComparison'
 import Measurement from './pages/epi/Measurement'
 import MocvdMasterData from './pages/epi/mocvd/MasterData'
@@ -100,6 +101,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           {user.role === 'admin' && <Route path="/epi/mocvd/master-data" element={<MocvdMasterData />} />}
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />
+          <Route path="/pl-trend" element={<PLTrend />} />
           <Route path="/wafermap" element={<WaferMap />} />
           <Route path="/run-comparison" element={<RunComparison />} />
           <Route path="/grid" element={<DataGrid />} />

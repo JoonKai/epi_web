@@ -19,7 +19,8 @@
       "Bash(do)",
       "Bash(sed -i \"s/#0f1117/#171b26/g;      s/#161921/#1e222e/g;      s/#13161e/#1a1d28/g;      s/#1a1d28/#212535/g;      s/#1c1f2a/#242834/g;      s/#22242f/#2a2d3b/g;      s/#0c0e16/#131620/g;      s/#0b0d14/#121520/g;      s/#0e1018/#151820/g\" \"$f\")",
       "Bash(echo \"Updated: $f\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(curl -s \"https://date.nager.at/api/v3/PublicHolidays/2026/KR\")"
     ]
   }
 }

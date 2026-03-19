@@ -267,3 +267,27 @@ class AuditLog(Base):
     target = Column(String(100), default="")
     detail = Column(String(500), default="")
     created_at = Column(DateTime, default=func.now(), index=True)
+
+
+class KoreanHoliday(Base):
+    __tablename__ = "korean_holiday"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(String(10), nullable=False, unique=True, index=True)   # YYYY-MM-DD
+    name = Column(String(100), nullable=False)
+    is_substitute = Column(Boolean, default=False)
+
+
+class EquipmentHistory(Base):
+    __tablename__ = "equipment_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    machine_no = Column(Integer, nullable=False, index=True)
+    event_type = Column(String(20), nullable=False, default="other")   # failure / repair / pm / issue / action / other
+    severity = Column(String(10), nullable=False, default="medium")    # low / medium / high
+    title = Column(String(200), nullable=False)
+    detail = Column(String(2000), default="")
+    occurred_at = Column(DateTime, nullable=False)
+    resolved_at = Column(DateTime, nullable=True)
+    actor = Column(String(50), default="")
+    created_at = Column(DateTime, default=func.now())

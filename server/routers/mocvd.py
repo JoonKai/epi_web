@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from models import MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, SourceChangeLog, SourceType, SystemSetting
+from datetime import datetime
+from models import EquipmentHistory, MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, SourceChangeLog, SourceType, SystemSetting
 from source_status import (
     DEFAULT_OVERDUE_DAYS,
     DEFAULT_THRESHOLD_RATIO,
@@ -673,6 +674,114 @@ def delete_source_change_log(log_id: int, db: Session = Depends(get_db), _=Depen
     row = db.query(SourceChangeLog).filter(SourceChangeLog.id == log_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="작업 일지를 찾을 수 없습니다.")
+    db.delete(row)
+    db.commit()
+    return {"result": "ok"}
+
+
+# ── 장비 이력 ──────────────────────────────────────────────────────────
+
+class EquipmentHistoryCreate(BaseModel):
+    machine_no: int
+    event_type: str = "other"
+    severity: str = "medium"
+    title: str
+    detail: str = ""
+    occurred_at: str        # ISO date string
+    resolved_at: str | None = None
+    actor: str = ""
+
+class EquipmentHistoryUpdate(BaseModel):
+    event_type: str | None = None
+    severity: str | None = None
+    title: str | None = None
+    detail: str | None = None
+    occurred_at: str | None = None
+    resolved_at: str | None = None
+    actor: str | None = None
+
+
+def _parse_dt(s: str | None):
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _row_to_dict(row: EquipmentHistory):
+    return {
+        "id": row.id,
+        "machine_no": row.machine_no,
+        "event_type": row.event_type,
+        "severity": row.severity,
+        "title": row.title,
+        "detail": row.detail,
+        "occurred_at": row.occurred_at.isoformat() if row.occurred_at else None,
+        "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,
+        "actor": row.actor,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+    }
+
+
+@router.get("/equipment-history")
+def list_equipment_history(machine_no: int | None = None, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(EquipmentHistory)
+    if machine_no is not None:
+        q = q.filter(EquipmentHistory.machine_no == machine_no)
+    rows = q.order_by(EquipmentHistory.occurred_at.desc()).all()
+    return [_row_to_dict(r) for r in rows]
+
+
+@router.post("/equipment-history")
+def create_equipment_history(body: EquipmentHistoryCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    row = EquipmentHistory(
+        machine_no=body.machine_no,
+        event_type=body.event_type,
+        severity=body.severity,
+        title=body.title,
+        detail=body.detail,
+        occurred_at=_parse_dt(body.occurred_at),
+        resolved_at=_parse_dt(body.resolved_at),
+        actor=body.actor or user.username,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _row_to_dict(row)
+
+
+@router.put("/equipment-history/{history_id}")
+def update_equipment_history(history_id: int, body: EquipmentHistoryUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = db.query(EquipmentHistory).filter(EquipmentHistory.id == history_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="이력을 찾을 수 없습니다.")
+    if body.event_type is not None:
+        row.event_type = body.event_type
+    if body.severity is not None:
+        row.severity = body.severity
+    if body.title is not None:
+        row.title = body.title
+    if body.detail is not None:
+        row.detail = body.detail
+    if body.occurred_at is not None:
+        row.occurred_at = _parse_dt(body.occurred_at)
+    # resolved_at은 null 포함 항상 덮어씀 (해제 지원)
+    row.resolved_at = _parse_dt(body.resolved_at)
+    if body.actor is not None:
+        row.actor = body.actor
+    db.commit()
+    return _row_to_dict(row)
+
+
+@router.delete("/equipment-history/{history_id}")
+def delete_equipment_history(history_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = db.query(EquipmentHistory).filter(EquipmentHistory.id == history_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="이력을 찾을 수 없습니다.")
     db.delete(row)
     db.commit()
     return {"result": "ok"}
