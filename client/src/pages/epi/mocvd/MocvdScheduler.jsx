@@ -29,12 +29,12 @@ const navBtnStyle = {
 }
 
 /* ── 자동 일정 생성 알고리즘 ────────────────────────────────── */
-function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month }) {
+function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays = {} }) {
   const {
     includePmCritical, includePmUrgent,
     includeFilterCritical, includeFilterUrgent,
     includeSourceOverdue, includeSourceUrgent,
-    includeSun, includeSat,
+    includeSun, includeSat, includeHoliday = false,
     maxPerDay,
     pmPersonCount = 2, filterPersonCount = 2, sourcePersonCount = 1,
   } = config
@@ -82,9 +82,11 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
   for (let d = 1; d <= ms.daysInMonth(); d++) {
     const dd = ms.date(d)
     const dow = dd.day()
+    const ds = dd.format('YYYY-MM-DD')
     if (dow === 0 && !includeSun) continue
     if (dow === 6 && !includeSat) continue
-    workingDays.push(dd.format('YYYY-MM-DD'))
+    if (!includeHoliday && holidays[ds]) continue  // 공휴일 제외
+    workingDays.push(ds)
   }
   if (workingDays.length === 0) return []
 
@@ -115,12 +117,12 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
 }
 
 /* ── 자동 생성 모달 ─────────────────────────────────────────── */
-function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year, month, onConfirm }) {
+function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year, month, holidays, onConfirm }) {
   const [config, setConfig] = useState({
     includePmCritical: true,     includePmUrgent: false,
     includeFilterCritical: true, includeFilterUrgent: false,
     includeSourceOverdue: false, includeSourceUrgent: false,
-    includeSat: true, includeSun: false,
+    includeSat: true, includeSun: false, includeHoliday: false,
     maxPerDay: 2,
     pmPersonCount: 2,
     filterPersonCount: 2,
@@ -145,7 +147,7 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
   const filterUrgent   = pmCounters.filter(r => { const v = r.filter_base_count - r.filter_count; return v > thresholds.critical && v <= thresholds.urgent })
 
   const handlePreview = () => {
-    const result = autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month })
+    const result = autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays })
     setPreview(result)
   }
 
@@ -304,6 +306,9 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
               <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13 }}>
                 <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
               </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13 }}>
+                <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일 포함
+              </label>
             </div>
           </div>
           {pmMembers.length > 0 && (
@@ -404,6 +409,7 @@ export default function MocvdScheduler() {
   const [pmCounters, setPmCounters] = useState([])
   const [sourceStatus, setSourceStatus] = useState(null)
   const [events, setEvents] = useState([])
+  const [holidays, setHolidays] = useState({}) // { 'YYYY-MM-DD': '공휴일명' }
 
   const [manualOpen, setManualOpen] = useState(false)
   const [autoOpen, setAutoOpen] = useState(false)
@@ -412,13 +418,14 @@ export default function MocvdScheduler() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [mRes, mbRes, paRes, evRes, pcRes, ssRes] = await Promise.all([
+      const [mRes, mbRes, paRes, evRes, pcRes, ssRes, hdRes] = await Promise.all([
         authFetch('/api/admin/machines'),
         authFetch('/api/admin/personnel/members'),
         authFetch('/api/admin/personnel/pm-assign'),
         authFetch('/api/mocvd/equipment-history'),
         authFetch('/api/mocvd/pm-counters'),
         authFetch('/api/mocvd/source-status'),
+        authFetch(`/api/shift/holidays?year=${today.year()}`),
       ])
       if (mRes.ok) setMachines(await mRes.json())
       if (mbRes.ok) setMembers(await mbRes.json())
@@ -431,6 +438,12 @@ export default function MocvdScheduler() {
       if (evRes.ok) setEvents(await evRes.json())
       if (pcRes.ok) setPmCounters(await pcRes.json())
       if (ssRes.ok) setSourceStatus(await ssRes.json())
+      if (hdRes.ok) {
+        const list = await hdRes.json()
+        const map = {}
+        list.forEach(({ date, name }) => { map[date] = name })
+        setHolidays(map)
+      }
     } catch {}
   }, [])
 
@@ -519,7 +532,7 @@ export default function MocvdScheduler() {
   }
 
   const machineOptions = machines.filter(m => m.is_active).map(m => ({ label: formatMachineLabel(m.machine_no), value: m.machine_no }))
-  const memberOptions = pmMembers.map(m => ({ label: `${m.name}${pmAssign[m.id] ? ` (${pmAssign[m.id]})` : ''}`, value: m.name }))
+  const memberOptions = members.filter(m => m.is_active).map(m => ({ label: m.name, value: m.name }))
 
   const monthStr = `${year}-${String(month).padStart(2, '0')}`
   const monthEvents = events.filter(e => e.occurred_at?.startsWith(monthStr))
@@ -657,27 +670,33 @@ export default function MocvdScheduler() {
               const isSelected = dateStr === selectedDate
               const dayEvents = eventsByDate[dateStr] || []
               const dow = idx % 7
+              const holidayName = holidays[dateStr]
+              const isHoliday = !!holidayName
+              const isRed = dow === 0 || isHoliday
               return (
                 <div
                   key={dateStr + idx}
                   onClick={() => setSelectedDate(dateStr)}
                   style={{
-                    background: isSelected ? 'rgba(125,211,252,0.06)' : 'var(--nowa-panel)',
-                    border: `1px solid ${isSelected ? 'rgba(125,211,252,0.4)' : isToday ? 'rgba(245,158,11,0.35)' : 'var(--nowa-border)'}`,
+                    background: isSelected ? 'rgba(125,211,252,0.06)' : isHoliday ? 'rgba(248,113,113,0.04)' : 'var(--nowa-panel)',
+                    border: `1px solid ${isSelected ? 'rgba(125,211,252,0.4)' : isToday ? 'rgba(245,158,11,0.35)' : isHoliday ? 'rgba(248,113,113,0.2)' : 'var(--nowa-border)'}`,
                     borderRadius: 8, padding: '6px 7px', cursor: 'pointer',
                     minHeight: 82, display: 'flex', flexDirection: 'column', gap: 2,
                     opacity: isCurrentMonth ? 1 : 0.3, transition: 'border-color 0.12s',
                   }}
                   onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(125,211,252,0.2)' }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = isToday ? 'rgba(245,158,11,0.35)' : 'rgba(245,158,11,0.15)' }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = isToday ? 'rgba(245,158,11,0.35)' : isHoliday ? 'rgba(248,113,113,0.2)' : 'rgba(245,158,11,0.15)' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                     <span style={isToday ? {
                       background: '#f59e0b', color: '#171b26', width: 22, height: 22,
                       borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800,
-                    } : { fontSize: 13, fontWeight: 600, color: dow === 0 ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.65)' }}>{d.date()}</span>
+                    } : { fontSize: 13, fontWeight: 600, color: isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.65)' }}>{d.date()}</span>
                     {dayEvents.length > 0 && isCurrentMonth && <span style={{ fontSize: 9, color: 'rgba(196,210,226,0.3)' }}>{dayEvents.length}</span>}
                   </div>
+                  {holidayName && isCurrentMonth && (
+                    <div style={{ fontSize: 9, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 1 }}>{holidayName}</div>
+                  )}
                   {dayEvents.slice(0, 3).map(ev => {
                     const cfg = evtCfg(ev.event_type)
                     return (
@@ -784,6 +803,7 @@ export default function MocvdScheduler() {
         pmMembers={pmMembers}
         year={year}
         month={month}
+        holidays={holidays}
         onConfirm={fetchAll}
       />
     </div>

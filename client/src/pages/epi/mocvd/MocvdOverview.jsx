@@ -134,6 +134,17 @@ function SectionCard({ title, icon, extra, children }) {
   )
 }
 
+const cardBtnStyle = {
+  appearance: 'none', WebkitAppearance: 'none',
+  background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+  color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+  cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
+}
+
+function CardBtn({ children, onClick }) {
+  return <button style={cardBtnStyle} onClick={onClick}>{children}</button>
+}
+
 function LinkButton({ label, onClick, icon }) {
   return (
     <Button onClick={onClick} icon={icon} style={{ justifyContent: 'flex-start' }}>
@@ -781,6 +792,170 @@ function AttendanceCard() {
   )
 }
 
+const SCHED_EVENT_CONFIG = {
+  pm:            { label: 'PM',   color: '#7dd3fc', bg: 'rgba(125,211,252,0.12)', border: 'rgba(125,211,252,0.35)' },
+  filter:        { label: '필터', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.35)' },
+  bm:            { label: 'BM',   color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)' },
+  source_change: { label: '소스', color: '#a3e635', bg: 'rgba(163,230,53,0.12)',  border: 'rgba(163,230,53,0.35)'  },
+  other:         { label: '기타', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.35)'  },
+}
+const WEEK_DAYS_KO = ['일', '월', '화', '수', '목', '금', '토']
+
+function SchedulerMiniCalCard() {
+  const navigate = useNavigate()
+  const today = dayjs()
+  const [year, setYear] = useState(today.year())
+  const [month, setMonth] = useState(today.month() + 1)
+  const [events, setEvents] = useState([])
+  const [selectedDate, setSelectedDate] = useState(today.format('YYYY-MM-DD'))
+  const [holidays, setHolidays] = useState({})
+
+  useEffect(() => {
+    authFetch('/api/mocvd/equipment-history')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setEvents(data || []))
+      .catch(() => {})
+    authFetch(`/api/shift/holidays?year=${today.year()}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(list => {
+        const map = {}
+        list.forEach(({ date, name }) => { map[date] = name })
+        setHolidays(map)
+      })
+      .catch(() => {})
+  }, [])
+
+  const eventsByDate = useMemo(() => {
+    const map = {}
+    events.forEach(ev => {
+      const d = ev.occurred_at?.slice(0, 10)
+      if (!d) return
+      if (!map[d]) map[d] = []
+      map[d].push(ev)
+    })
+    return map
+  }, [events])
+
+  const calDays = useMemo(() => {
+    const first = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
+    const startDow = first.day()
+    const days = []
+    for (let i = 0; i < startDow; i++) days.push({ date: first.subtract(startDow - i, 'day'), cur: false })
+    for (let i = 0; i < first.daysInMonth(); i++) days.push({ date: first.add(i, 'day'), cur: true })
+    while (days.length % 7 !== 0) days.push({ date: days[days.length - 1].date.add(1, 'day'), cur: false })
+    return days
+  }, [year, month])
+
+  const navMonth = (dir) => {
+    let m = month + dir, y = year
+    if (m > 12) { m = 1; y++ }
+    if (m < 1) { m = 12; y-- }
+    setMonth(m); setYear(y)
+  }
+
+  const selectedEvents = eventsByDate[selectedDate] || []
+
+  return (
+    <SectionCard
+      title="PM/BM 스케줄"
+      icon={<CalendarOutlined />}
+      extra={
+        <CardBtn onClick={() => navigate('/epi/mocvd/scheduler')}>스케줄러 열기</CardBtn>
+      }
+    >
+      <div style={{ display: 'flex', gap: 20 }}>
+        {/* 캘린더 */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* 월 네비 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
+            <button onClick={() => navMonth(-1)} style={{ background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+            <span style={{ fontWeight: 800, fontSize: 18, color: 'var(--nowa-text)' }}>{year}년 {month}월</span>
+            <button onClick={() => navMonth(1)} style={{ background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+          </div>
+          {/* 요일 헤더 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
+            {WEEK_DAYS_KO.map((d, i) => (
+              <div key={d} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.45)', paddingBottom: 6 }}>{d}</div>
+            ))}
+          </div>
+          {/* 날짜 그리드 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+            {calDays.map(({ date, cur }, idx) => {
+              const ds = date.format('YYYY-MM-DD')
+              const isToday = ds === today.format('YYYY-MM-DD')
+              const isSelected = ds === selectedDate
+              const dayEvts = eventsByDate[ds] || []
+              const dow = idx % 7
+              const holidayName = holidays[ds]
+              const isHoliday = !!holidayName
+              const isRed = dow === 0 || isHoliday
+              return (
+                <div
+                  key={ds + idx}
+                  onClick={() => setSelectedDate(ds)}
+                  style={{
+                    borderRadius: 8, padding: '6px 6px 5px', cursor: 'pointer', minHeight: 72,
+                    background: isSelected ? 'rgba(125,211,252,0.08)' : isHoliday ? 'rgba(248,113,113,0.04)' : 'var(--nowa-panel)',
+                    border: `1px solid ${isSelected ? 'rgba(125,211,252,0.5)' : isToday ? 'rgba(245,158,11,0.45)' : isHoliday ? 'rgba(248,113,113,0.2)' : 'var(--nowa-border)'}`,
+                    opacity: cur ? 1 : 0.25,
+                    transition: 'border-color 0.1s',
+                  }}
+                >
+                  <div style={{
+                    fontSize: 13, fontWeight: 700, marginBottom: 2,
+                    color: isToday ? '#f59e0b' : isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.75)',
+                  }}>{date.date()}</div>
+                  {holidayName && cur && (
+                    <div style={{ fontSize: 9, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{holidayName}</div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {dayEvts.slice(0, 3).map(ev => {
+                      const cfg = SCHED_EVENT_CONFIG[ev.event_type] || SCHED_EVENT_CONFIG.other
+                      return (
+                        <div key={ev.id} style={{ fontSize: 10, borderRadius: 3, padding: '1px 4px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '14px' }}>
+                          <span style={{ fontWeight: 700 }}>{cfg.label}</span>{ev.machine_no ? ` ${formatMachineLabel(ev.machine_no)}` : ''}
+                        </div>
+                      )
+                    })}
+                    {dayEvts.length > 3 && <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.35)', paddingLeft: 2 }}>+{dayEvts.length - 3}건</div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 선택일 일정 목록 */}
+        <div style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--nowa-text)' }}>
+            {dayjs(selectedDate).format('M월 D일 (ddd)')}
+            <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(196,210,226,0.45)', marginLeft: 8 }}>{selectedEvents.length}건</span>
+          </div>
+          {selectedEvents.length === 0 ? (
+            <Empty description="일정이 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', maxHeight: 420 }}>
+              {selectedEvents.map(ev => {
+                const cfg = SCHED_EVENT_CONFIG[ev.event_type] || SCHED_EVENT_CONFIG.other
+                return (
+                  <div key={ev.id} style={{ padding: '10px 12px', borderRadius: 10, background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `3px solid ${cfg.color}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 3, padding: '1px 6px', color: cfg.color, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+                      {ev.machine_no && <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.6)', fontWeight: 600 }}>{formatMachineLabel(ev.machine_no)}</span>}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--nowa-text)' }}>{ev.title || '-'}</div>
+                    {ev.actor && <div style={{ fontSize: 12, color: 'rgba(196,210,226,0.5)', marginTop: 4 }}>담당: {ev.actor}</div>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
 function HandoverBoard() {
   const { user } = useAuth()
   const [form] = Form.useForm()
@@ -1272,6 +1447,8 @@ export default function MocvdOverview() {
 
       <AttendanceCard />
 
+      <SchedulerMiniCalCard />
+
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={14}>
           <SectionCard
@@ -1280,9 +1457,7 @@ export default function MocvdOverview() {
             extra={
               <Space>
                 <Tag color="processing">{todayItems.length}건 표시</Tag>
-                <Button size="small" onClick={() => navigate('/epi/mocvd/source?tab=status-board')}>
-                  현황 보기
-                </Button>
+                <CardBtn onClick={() => navigate('/epi/mocvd/source?tab=status-board')}>현황 보기</CardBtn>
               </Space>
             }
           >
@@ -1319,7 +1494,7 @@ export default function MocvdOverview() {
         </Col>
 
         <Col xs={24} xl={10}>
-          <SectionCard title="설비별 위험도 Top" icon={<WarningOutlined />} extra={<Button size="small" onClick={() => navigate('/epi/mocvd/source?tab=machine-board')}>설비별 소스현황</Button>}>
+          <SectionCard title="설비별 위험도 Top" icon={<WarningOutlined />} extra={<CardBtn onClick={() => navigate('/epi/mocvd/source?tab=machine-board')}>설비별 소스현황</CardBtn>}>
             {machineRows.length === 0 ? (
               <Empty description="표시할 설비가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
