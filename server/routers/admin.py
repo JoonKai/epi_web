@@ -116,9 +116,9 @@ def update_user(user_id: int, body: UserUpdate, db: Session = Depends(get_db), _
         log_type="system",
         actor="admin",
         category="계정",
-        action="사용자 생성",
-        target=body.username,
-        detail=f"관리자 권한으로 {body.username} 계정을 추가했습니다.",
+        action="사용자 수정",
+        target=user.username,
+        detail=f"관리자 권한으로 {user.username} 계정을 수정했습니다.",
     )
     return {"result": "ok"}
 
