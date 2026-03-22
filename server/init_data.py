@@ -113,6 +113,15 @@ def ensure_system_settings(db) -> None:
         for row in db.query(SystemSetting).all()
     }
 
+    # 더 이상 사용하지 않는 설정 키 제거
+    obsolete_keys = ["shift_summary_rows"]
+    removed = 0
+    for key in obsolete_keys:
+        row = existing.get(key)
+        if row is not None:
+            db.delete(row)
+            removed += 1
+
     added = 0
     for key, value in DEFAULT_SETTINGS.items():
         row = existing.get(key)
@@ -120,7 +129,7 @@ def ensure_system_settings(db) -> None:
             db.add(SystemSetting(key=key, value=value))
             added += 1
 
-    print(f"[ok] system settings ensured: +{added} / total target {len(DEFAULT_SETTINGS)}")
+    print(f"[ok] system settings ensured: +{added} added / -{removed} obsolete removed / total target {len(DEFAULT_SETTINGS)}")
 
 
 def ensure_pm_counters(db) -> None:
@@ -140,7 +149,7 @@ def ensure_pm_counters(db) -> None:
         db.add(
             MocvdPmCounter(
                 machine_no=machine_no,
-                pm_count=0.0,
+                chamber_count=0.0,
                 pm_base_count=0.0,
                 filter_count=0.0,
                 filter_base_count=0.0,

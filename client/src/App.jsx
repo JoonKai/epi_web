@@ -20,6 +20,7 @@ import MocvdManagement from './pages/epi/mocvd/MocvdManagement'
 import PersonnelManagement from './pages/epi/mocvd/PersonnelManagement'
 import PmPlan from './pages/epi/mocvd/PmPlan'
 import ShiftSchedule from './pages/epi/mocvd/ShiftSchedule'
+import MocvdScheduler from './pages/epi/mocvd/MocvdScheduler'
 import MocvdSource from './pages/epi/mocvd/Source'
 import Simulator from './pages/epi/Simulator'
 import PurchaseRequest from './pages/cost/PurchaseRequest'
@@ -97,7 +98,8 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/epi/mocvd/pm-plan" element={<PmPlan />} />
           <Route path="/epi/mocvd/management" element={<MocvdManagement />} />
           <Route path="/epi/mocvd/shift-schedule" element={<ShiftSchedule />} />
-          <Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
+          <Route path="/epi/mocvd/scheduler" element={<MocvdScheduler />} />
+<Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
           {user.role === 'admin' && <Route path="/epi/mocvd/master-data" element={<MocvdMasterData />} />}
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />

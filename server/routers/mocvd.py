@@ -95,7 +95,7 @@ class NoticeUpdate(NoticeCreate):
 
 class PmCounterUpdateItem(BaseModel):
     machine_no: int
-    pm_count: float = 0.0
+    chamber_count: float = 0.0
     pm_base_count: float = 0.0
     filter_count: float = 0.0
     filter_base_count: float = 0.0
@@ -198,7 +198,7 @@ def get_pm_counters(db: Session = Depends(get_db), _=Depends(get_current_user)):
             {
                 "machine_no": machine.machine_no,
                 "description": machine.description or "",
-                "pm_count": row.pm_count if row and row.pm_count is not None else 0.0,
+                "chamber_count": row.chamber_count if row and row.chamber_count is not None else 0.0,
                 "pm_base_count": row.pm_base_count if row and row.pm_base_count is not None else 0.0,
                 "filter_count": row.filter_count if row and row.filter_count is not None else 0.0,
                 "filter_base_count": row.filter_base_count if row and row.filter_base_count is not None else 0.0,
@@ -226,7 +226,7 @@ def update_pm_counters(items: list[PmCounterUpdateItem], db: Session = Depends(g
 
         row = existing.get(item.machine_no)
         if row:
-            row.pm_count = item.pm_count
+            row.chamber_count = item.chamber_count
             row.pm_base_count = item.pm_base_count
             row.filter_count = item.filter_count
             row.filter_base_count = item.filter_base_count
@@ -234,7 +234,7 @@ def update_pm_counters(items: list[PmCounterUpdateItem], db: Session = Depends(g
             db.add(
                 MocvdPmCounter(
                     machine_no=item.machine_no,
-                    pm_count=item.pm_count,
+                    chamber_count=item.chamber_count,
                     pm_base_count=item.pm_base_count,
                     filter_count=item.filter_count,
                     filter_base_count=item.filter_base_count,

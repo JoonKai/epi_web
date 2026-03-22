@@ -27,6 +27,7 @@ BuildOutlined,
   UserOutlined,
   BulbOutlined,
   MoonOutlined,
+  ScheduleOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../context/AuthContext'
 
@@ -51,7 +52,8 @@ function buildMenuItems(isAdmin) {
             { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스 관리' },
             { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM/BM 관리' },
             { key: '/epi/mocvd/shift-schedule', icon: <UserOutlined />, label: '인원 관리' },
-{ key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 관리' },
+            { key: '/epi/mocvd/scheduler', icon: <ScheduleOutlined />, label: '스케줄러' },
+            { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 관리' },
           ],
         },
         { key: '/epi/bake', icon: <FireOutlined />, label: '베이크', disabled: true },

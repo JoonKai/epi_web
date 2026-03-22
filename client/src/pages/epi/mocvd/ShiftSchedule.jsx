@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Modal, Popconfirm, Spin, Tabs, message } from 'antd'
+import { Button, Card, Input, Modal, Popconfirm, Select, Spin, Switch, Tabs, message } from 'antd'
 import {
   CalendarOutlined,
   ClearOutlined,
@@ -7,6 +7,7 @@ import {
   ReloadOutlined,
   UserOutlined,
   ShopOutlined,
+  ToolOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
@@ -68,47 +69,23 @@ function ScheduleTab() {
   const [selectedPids, setSelectedPids] = useState([])
   const [shiftTypes, setShiftTypes]     = useState([])
   const [holidays, setHolidays]         = useState({})   // { 'YYYY-MM-DD': name }
-  const [summaryRowKeys, setSummaryRowKeys] = useState(
-    () => JSON.parse(localStorage.getItem('shift_summary_rows') || 'null') ?? ['1', '2', '휴무']
-  )
-  const [summaryRowsLoaded, setSummaryRowsLoaded] = useState(false)
+  const [weekendExcluded, setWeekendExcluded] = useState(false)
+  const [holidayExcluded, setHolidayExcluded] = useState(false)
 
   const year  = currentMonth.year()
   const month = currentMonth.month() + 1
 
-  // DB 기준정보에서 근무 유형 + 집계 행 설정 로드
+  // DB 기준정보에서 근무 유형 로드
   useEffect(() => {
     apiFetch('/shift-types')
       .then((r) => r.json())
       .then((data) => setShiftTypes(Array.isArray(data) ? data : []))
       .catch(() => {})
-
-    apiFetch('/settings/summary-rows')
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.value)) {
-          setSummaryRowKeys(data.value)
-          localStorage.setItem('shift_summary_rows', JSON.stringify(data.value))
-        }
-        setSummaryRowsLoaded(true)
-      })
-      .catch(() => setSummaryRowsLoaded(true))
   }, [])
-
-  // summaryRowKeys 변경 시 localStorage 동기화
-  useEffect(() => {
-    localStorage.setItem('shift_summary_rows', JSON.stringify(summaryRowKeys))
-  }, [summaryRowKeys])
 
   const { cycle: shiftCycle, cellStyle: shiftCellStyle, legend: shiftLegend } = useMemo(
     () => buildShiftMaps(shiftTypes),
     [shiftTypes]
-  )
-
-  // DB에 실제 존재하는 유형만 (삭제된 유형 자동 제거) - 모든 hooks보다 앞에 선언
-  const activeSummaryRowKeys = useMemo(
-    () => summaryRowKeys.filter((k) => shiftCycle.includes(k)),
-    [summaryRowKeys, shiftCycle]
   )
 
   const dateList = useMemo(() => {
@@ -128,6 +105,8 @@ function ScheduleTab() {
       setMembers(Array.isArray(mData) ? mData : [])
       setScheduleMap(normalizeRows(sData))
       setIsDirty(false)
+      setWeekendExcluded(false)
+      setHolidayExcluded(false)
     } catch {
       message.error('근무표 데이터를 불러오지 못했습니다.')
     } finally {
@@ -158,7 +137,26 @@ function ScheduleTab() {
     setIsDirty(true)
   }, [])
 
-  // DB 일괄 저장
+  // 오버레이 맵: 토글 상태를 scheduleMap 위에 덮어씌워 표시/저장에 사용
+  const displayScheduleMap = useMemo(() => {
+    if (!weekendExcluded && !holidayExcluded) return scheduleMap
+    const result = { ...scheduleMap }
+    members.forEach((m) => {
+      dateList.forEach((d) => {
+        const dk  = d.format('YYYY-MM-DD')
+        const dow = d.day()
+        const isWeekend = dow === 0 || dow === 6
+        if (weekendExcluded && isWeekend) {
+          result[`${m.id}-${dk}`] = '휴무'
+        } else if (holidayExcluded && holidays[dk] && !isWeekend) {
+          result[`${m.id}-${dk}`] = '휴무'
+        }
+      })
+    })
+    return result
+  }, [scheduleMap, weekendExcluded, holidayExcluded, dateList, members, holidays])
+
+  // DB 일괄 저장 — displayScheduleMap 기준으로 저장
   const saveAll = useCallback(async () => {
     setIsSaving(true)
     try {
@@ -169,15 +167,16 @@ function ScheduleTab() {
           entries.push({
             member_id: m.id,
             work_date: dk,
-            shift_type: scheduleMap[`${m.id}-${dk}`] || shiftCycle[0] || '1',
+            shift_type: displayScheduleMap[`${m.id}-${dk}`] || shiftCycle[0] || '1',
           })
         })
       })
-      const [res] = await Promise.all([
-        apiFetch('/schedules/bulk', { method: 'POST', body: JSON.stringify({ entries }) }),
-        apiFetch('/settings/summary-rows', { method: 'PUT', body: JSON.stringify({ value: summaryRowKeys }) }),
-      ])
+      const res = await apiFetch('/schedules/bulk', { method: 'POST', body: JSON.stringify({ entries }) })
       if (!res.ok) throw new Error()
+      // 저장된 값으로 scheduleMap 갱신 (토글 off 시 DB값 정확히 반영)
+      const newMap = {}
+      entries.forEach((e) => { newMap[`${e.member_id}-${e.work_date}`] = e.shift_type })
+      setScheduleMap(newMap)
       setIsDirty(false)
       message.success('저장 완료')
     } catch {
@@ -185,7 +184,7 @@ function ScheduleTab() {
     } finally {
       setIsSaving(false)
     }
-  }, [members, dateList, scheduleMap, shiftCycle, activeSummaryRowKeys])
+  }, [members, dateList, displayScheduleMap, shiftCycle])
 
   // 멤버 삭제
   const deleteMember = useCallback(async (id) => {
@@ -230,6 +229,18 @@ function ScheduleTab() {
     }
   }, [selectedPids, fetchData])
 
+  // 주말 제외 토글 — scheduleMap을 직접 변경하지 않고 displayScheduleMap 오버레이로 처리
+  const toggleWeekend = useCallback(() => {
+    setWeekendExcluded(prev => !prev)
+    setIsDirty(true)
+  }, [])
+
+  // 공휴일 제외 토글 (주말과 겹치는 공휴일은 주말 제외에 포함)
+  const toggleHoliday = useCallback(() => {
+    setHolidayExcluded(prev => !prev)
+    setIsDirty(true)
+  }, [])
+
   // 초기화 (전원 1로)
   const resetAll = useCallback(async () => {
     const entries = []
@@ -245,7 +256,7 @@ function ScheduleTab() {
       })
       if (!res.ok) throw new Error()
       const newMap = {}
-      entries.forEach((e) => { newMap[`${e.member_id}-${e.work_date}`] = '1' })
+      entries.forEach((e) => { newMap[`${e.member_id}-${e.work_date}`] = e.shift_type })
       setScheduleMap(newMap)
       setIsDirty(false)
       message.success('전체 초기화 완료')
@@ -253,21 +264,6 @@ function ScheduleTab() {
       message.error('초기화에 실패했습니다.')
     }
   }, [members, dateList])
-
-  // 개인별 월간 집계
-  const memberSummary = useMemo(() => {
-    const top4 = activeSummaryRowKeys
-    const r = {}
-    members.forEach((m) => {
-      const c = Object.fromEntries(top4.map((k) => [k, 0]))
-      dateList.forEach((d) => {
-        const v = scheduleMap[`${m.id}-${d.format('YYYY-MM-DD')}`] || shiftCycle[0] || '1'
-        if (c[v] !== undefined) c[v]++
-      })
-      r[m.id] = c
-    })
-    return r
-  }, [members, dateList, scheduleMap, shiftCycle, activeSummaryRowKeys])
 
   // 일별 집계 (전체) - 모든 활성 근무 유형 대상
   const daySummary = useMemo(() => {
@@ -277,12 +273,34 @@ function ScheduleTab() {
       const dk = d.format('YYYY-MM-DD')
       shiftCycle.forEach((k) => { s[k][dk] = 0 })
       members.forEach((m) => {
-        const v = scheduleMap[`${m.id}-${dk}`] || shiftCycle[0] || '1'
+        const v = displayScheduleMap[`${m.id}-${dk}`] || shiftCycle[0] || '1'
         if (s[v] !== undefined) s[v][dk]++
       })
     })
     return s
-  }, [dateList, members, scheduleMap, shiftCycle])
+  }, [dateList, members, displayScheduleMap, shiftCycle])
+
+  // 스케줄에 실제로 존재하는 근무 유형만 자동으로 집계 행에 표시
+  const activeSummaryRowKeys = useMemo(
+    () => shiftCycle.filter((k) =>
+      dateList.some(d => (daySummary[k]?.[d.format('YYYY-MM-DD')] || 0) > 0)
+    ),
+    [shiftCycle, daySummary, dateList]
+  )
+
+  // 개인별 월간 집계
+  const memberSummary = useMemo(() => {
+    const r = {}
+    members.forEach((m) => {
+      const c = Object.fromEntries(activeSummaryRowKeys.map((k) => [k, 0]))
+      dateList.forEach((d) => {
+        const v = displayScheduleMap[`${m.id}-${d.format('YYYY-MM-DD')}`] || shiftCycle[0] || '1'
+        if (c[v] !== undefined) c[v]++
+      })
+      r[m.id] = c
+    })
+    return r
+  }, [members, dateList, displayScheduleMap, shiftCycle, activeSummaryRowKeys])
 
 
   // ECharts - 앞 3개 근무 유형 표시
@@ -336,7 +354,7 @@ function ScheduleTab() {
         textStyle: { color: '#e2e8f0', fontSize: 14},
       },
     }
-  }, [dateList, daySummary, shiftCycle, shiftLegend, summaryRowKeys])
+  }, [dateList, daySummary, shiftCycle, shiftLegend, activeSummaryRowKeys])
 
   // 공통 th 스타일
   const TH = ({ children, style = {}, ...rest }) => (
@@ -374,6 +392,33 @@ function ScheduleTab() {
           <span style={{ fontWeight: 800 }}>근무현황판</span>
         </div>
       }
+      extra={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Popconfirm
+            title={`${currentMonth.format('YYYY년 M월')} 전체를 주간(1)으로 초기화 하시겠습니까?`}
+            onConfirm={resetAll}
+            okText="초기화" cancelText="취소" okButtonProps={{ danger: true }}
+          >
+            <Button icon={<ClearOutlined />} danger size="small" style={{ fontWeight: 700 }}>
+              초기화
+            </Button>
+          </Popconfirm>
+          <Button
+            type="primary"
+            size="small"
+            loading={isSaving}
+            onClick={saveAll}
+            style={{
+              background: isDirty ? '#f59e0b' : undefined,
+              borderColor: isDirty ? '#f59e0b' : undefined,
+              fontWeight: 700,
+              minWidth: 64,
+            }}
+          >
+            {isDirty ? '● 저장' : '저장'}
+          </Button>
+        </div>
+      }
       styles={{ body: { padding: 0, overflow: 'hidden' } }}
     >
       {/* 월 네비 + 범례 */}
@@ -398,33 +443,28 @@ function ScheduleTab() {
           >
             이번달
           </Button>
-          <Popconfirm
-            title={`${currentMonth.format('YYYY년 M월')} 전체를 주간(1)으로 초기화 하시겠습니까?`}
-            onConfirm={resetAll}
-            okText="초기화" cancelText="취소" okButtonProps={{ danger: true }}
-          >
-            <Button icon={<ClearOutlined />} danger style={{ marginLeft: 4, height: 32, padding: '0 14px', fontSize: 14 }}>
-              초기화
-            </Button>
-          </Popconfirm>
           <Button
-            type="primary"
-            loading={isSaving}
-            onClick={saveAll}
+            onClick={toggleWeekend}
             style={{
-              marginLeft: 4,
-              background: isDirty ? '#f59e0b' : undefined,
-              borderColor: isDirty ? '#f59e0b' : undefined,
-              fontWeight: 700,
-              height: 32,
-              padding: '0 18px',
-              fontSize: 14,
+              borderColor: weekendExcluded ? '#7dd3fc' : 'rgba(125,211,252,0.4)',
+              color: '#7dd3fc',
+              background: weekendExcluded ? 'rgba(125,211,252,0.2)' : 'rgba(125,211,252,0.08)',
+              fontWeight: 700, height: 32, padding: '0 14px', fontSize: 14,
             }}
           >
-            {isDirty ? '● 저장' : '저장'}
+            {weekendExcluded ? '● 주말 제외' : '주말 제외'}
           </Button>
-          <Button size="small" type="text" icon={<ReloadOutlined style={{ fontSize: 14}} />}
-            onClick={fetchData} style={{ color: 'var(--nowa-text-muted)', marginLeft: 2, height: 32, width: 32 }} />
+          <Button
+            onClick={toggleHoliday}
+            style={{
+              borderColor: holidayExcluded ? '#f87171' : 'rgba(248,113,113,0.4)',
+              color: '#f87171',
+              background: holidayExcluded ? 'rgba(248,113,113,0.18)' : 'rgba(248,113,113,0.06)',
+              fontWeight: 700, height: 32, padding: '0 14px', fontSize: 14,
+            }}
+          >
+            {holidayExcluded ? '● 공휴일 제외' : '공휴일 제외'}
+          </Button>
         </div>
 
         {/* 오른쪽: 범례 */}
@@ -473,10 +513,11 @@ function ScheduleTab() {
                   <TH style={{ position: 'sticky', left: 0, zIndex: 5 }}>이름 / 조</TH>
                   {dateList.map((d) => {
                     const dk = d.format('YYYY-MM-DD')
-                    const isSat = d.day() === 6
-                    const isSun = d.day() === 0
+                    const dow = d.day()
+                    const isSat = dow === 6
+                    const isSun = dow === 0
                     const isHoliday = !!holidays[dk]
-                    const isMon = d.day() === 1
+                    const isMon = dow === 1
                     const color = isHoliday || isSun ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(245,158,11,0.8)'
                     const bg = isHoliday ? 'rgba(248,113,113,0.12)' : isSat ? 'rgba(125,211,252,0.08)' : undefined
                     return (
@@ -503,16 +544,17 @@ function ScheduleTab() {
                   }}>요일</TH>
                   {dateList.map((d) => {
                     const dk = d.format('YYYY-MM-DD')
-                    const isSat = d.day() === 6
-                    const isSun = d.day() === 0
+                    const dow = d.day()
+                    const isSat = dow === 6
+                    const isSun = dow === 0
                     const isHoliday = !!holidays[dk]
-                    const isMon = d.day() === 1
+                    const isMon = dow === 1
                     const color = isHoliday || isSun ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,224,0.75)'
                     const bg = isHoliday ? 'rgba(248,113,113,0.12)' : isSat ? 'rgba(125,211,252,0.08)' : 'rgba(245,158,11,0.03)'
                     return (
                       <TH key={`wh-${d.valueOf()}`}
                         style={{ background: bg, color, fontSize: 14, fontWeight: 600, ...(isMon && { borderLeft: '2.5px solid #000' }) }}>
-                        {weekdayLabels[d.day()]}
+                        {weekdayLabels[dow]}
                       </TH>
                     )
                   })}
@@ -548,11 +590,12 @@ function ScheduleTab() {
                       {/* 날짜 셀 */}
                       {dateList.map((d) => {
                         const dk  = d.format('YYYY-MM-DD')
+                        const dow = d.day()
                         const ck  = `${member.id}-${dk}`
-                        const val = scheduleMap[ck] || '1'
+                        const val = displayScheduleMap[ck] || '1'
                         const cs  = shiftCellStyle[val] || shiftCellStyle['1']
                         const saving = savingKey === ck
-                        const isMon = d.day() === 1
+                        const isMon = dow === 1
                         return (
                           <td
                             key={ck}
@@ -601,7 +644,7 @@ function ScheduleTab() {
                           onConfirm={() => deleteMember(member.id)}
                           okText="제거" cancelText="취소" okButtonProps={{ danger: true }}
                         >
-                          <DeleteOutlined style={{ color: 'rgba(248,113,113,0.55)', fontSize: 14, cursor: 'pointer' }} />
+                          <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer' }} />
                         </Popconfirm>
                       </td>
                     </tr>
@@ -674,57 +717,10 @@ function ScheduleTab() {
                         <td key={`dss-${key}-${s.key}`}
                           style={{ background: 'rgba(245,158,11,0.03)', border: '1px solid rgba(255,255,255,0.1)', height: 46 }} />
                       ))}
-                      {/* 삭제 버튼 */}
-                      <td style={{
-                        textAlign: 'center',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(245,158,11,0.03)',
-                      }}>
-                        <DeleteOutlined
-                          onClick={() => setSummaryRowKeys((prev) => prev.filter((k) => k !== key))}
-                          style={{ color: 'rgba(248,113,113,0.55)', fontSize: 14, cursor: 'pointer' }}
-                        />
-                      </td>
+                      <td style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(245,158,11,0.03)' }} />
                     </tr>
                   )
                 })}
-
-                {/* + 항목 추가 행 */}
-                {shiftCycle.filter((k) => !activeSummaryRowKeys.includes(k)).length > 0 && (
-                  <tr>
-                    <td
-                      colSpan={dateList.length + summaryKeys.length + 2}
-                      style={{
-                        height: 34, textAlign: 'center', cursor: 'default',
-                        background: 'rgba(245,158,11,0.02)',
-                        border: '1px dashed rgba(245,158,11,0.2)',
-                        padding: '0 8px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 14, color: 'rgba(245,158,11,0.45)', marginRight: 4 }}>+ 항목 추가:</span>
-                        {shiftCycle.filter((k) => !activeSummaryRowKeys.includes(k)).map((k) => {
-                          const legend = shiftLegend[k] ?? {}
-                          return (
-                            <span
-                              key={k}
-                              onClick={() => setSummaryRowKeys((prev) => [...prev, k])}
-                              style={{
-                                padding: '2px 10px', borderRadius: 20, cursor: 'pointer',
-                                background: legend.bg ?? 'rgba(245,158,11,0.1)',
-                                color: legend.color ?? '#f59e0b',
-                                border: `1px solid ${legend.border ?? 'rgba(245,158,11,0.3)'}`,
-                                fontSize: 14, fontWeight: 700,
-                              }}
-                            >
-                              {legend.label ?? k}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -796,6 +792,275 @@ function ScheduleTab() {
 }
 
 
+// ── PM 인원 구성 ────────────────────────────────────────────────────
+const PM_ROLES = ['PM 담당', 'Filter 담당', 'PM 보조', '기타']
+
+function PmPersonnelTab({ vendors, members }) {
+  // pmAssign: { [memberId]: role_string } — key 존재 = PM팀 포함
+  const [savedAssign, setSavedAssign] = useState({})  // 서버 기준
+  const [pmAssign, setPmAssign] = useState({})         // 로컬 편집 중
+  const [saving, setSaving] = useState(false)
+  const [saveOk, setSaveOk] = useState(false)
+  const [poolSearch, setPoolSearch] = useState('')
+  const [poolVendor, setPoolVendor] = useState('all')
+
+  // 서버에서 로드
+  useEffect(() => {
+    authFetch('/api/admin/personnel/pm-assign')
+      .then(r => r.ok ? r.json() : [])
+      .then(list => {
+        const map = {}
+        list.forEach(({ member_id, role }) => { map[member_id] = role || '' })
+        setSavedAssign(map)
+        setPmAssign(map)
+      })
+      .catch(() => {})
+  }, [])
+
+  const isDirty = JSON.stringify(pmAssign) !== JSON.stringify(savedAssign)
+
+  // 서버에 저장
+  const saveToServer = async () => {
+    setSaving(true)
+    try {
+      const body = Object.entries(pmAssign).map(([member_id, role]) => ({ member_id: Number(member_id), role }))
+      const res = await authFetch('/api/admin/personnel/pm-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        setSavedAssign({ ...pmAssign })
+        setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 2000)
+      }
+    } catch {}
+    setSaving(false)
+  }
+
+  const addMember = (id) => setPmAssign(prev => ({ ...prev, [id]: '' }))
+  const removeMember = (id) => setPmAssign(prev => { const n = { ...prev }; delete n[id]; return n })
+  const setRole = (id, role) => setPmAssign(prev => ({ ...prev, [id]: role || '' }))
+  const resetAll = () => setPmAssign({})
+
+  const activeMembers = useMemo(() => members.filter(m => m.is_active), [members])
+  const vendorOptions = useMemo(() =>
+    vendors.filter(v => v.is_active).map(v => ({ label: v.name, value: v.id }))
+  , [vendors])
+
+  // PM팀 목록
+  const pmList = useMemo(() =>
+    activeMembers.filter(m => Object.prototype.hasOwnProperty.call(pmAssign, m.id))
+  , [activeMembers, pmAssign])
+
+  // PM팀에 없는 인원 풀 (검색+업체 필터)
+  const poolList = useMemo(() => {
+    const kw = poolSearch.trim().toLowerCase()
+    return activeMembers.filter(m => {
+      if (Object.prototype.hasOwnProperty.call(pmAssign, m.id)) return false
+      if (poolVendor !== 'all' && m.vendor_id !== poolVendor) return false
+      if (!kw) return true
+      return [m.name, m.position, m.shift, m.vendor_name].filter(Boolean).some(s => s.toLowerCase().includes(kw))
+    })
+  }, [activeMembers, pmAssign, poolSearch, poolVendor])
+
+  // 풀 업체별 그룹
+  const poolGroups = useMemo(() => {
+    const map = new Map()
+    vendors.filter(v => v.is_active).forEach(v => map.set(v.id, { vendor: v, members: [] }))
+    poolList.forEach(m => { if (map.has(m.vendor_id)) map.get(m.vendor_id).members.push(m) })
+    return [...map.values()].filter(g => g.members.length > 0)
+  }, [vendors, poolList])
+
+  const avatarStyle = (color, bg) => ({
+    width: 38, height: 38, borderRadius: '50%',
+    background: bg, border: `1.5px solid ${color}`,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+    fontSize: 16, fontWeight: 800, color,
+  })
+
+  return (
+    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+
+      {/* ── 왼쪽: 인원 풀 ────────────────────────────────── */}
+      <div style={{ width: 300, flexShrink: 0 }}>
+        <Card className="nowa-card" styles={{ body: { padding: 14 } }}
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserOutlined style={{ color: '#94a3b8' }} />
+              <span style={{ fontWeight: 700, fontSize: 14 }}>인원 풀</span>
+              <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.45)', marginLeft: 2 }}>{poolList.length}명</span>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+            <Select value={poolVendor} onChange={setPoolVendor} size="small" style={{ width: '100%' }}
+              options={[{ label: '전체 업체', value: 'all' }, ...vendorOptions]} />
+            <Input allowClear size="small" value={poolSearch} onChange={e => setPoolSearch(e.target.value)}
+              placeholder="이름/직무 검색" />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
+            {poolGroups.length === 0 && (
+              <div style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', textAlign: 'center', padding: '20px 0' }}>
+                추가할 인원이 없습니다.
+              </div>
+            )}
+            {poolGroups.map(({ vendor, members: gm }) => (
+              <div key={vendor.id}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                  {vendor.name}
+                  <span style={{ color: 'rgba(196,210,226,0.4)', fontWeight: 400 }}>{gm.length}명</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {gm.map(m => (
+                    <div key={m.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      background: '#1e2235', borderRadius: 10,
+                      padding: '8px 10px',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.15s',
+                    }}
+                      onClick={() => addMember(m.id)}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(125,211,252,0.4)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
+                    >
+                      <div style={avatarStyle('rgba(196,210,226,0.5)', '#2a2f45')}>
+                        {m.name?.[0] || '?'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.45)', marginTop: 1 }}>
+                          {[m.position, m.shift && `${m.shift}조`].filter(Boolean).join(' · ')}
+                        </div>
+                      </div>
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: 'rgba(125,211,252,0.1)', border: '1px solid rgba(125,211,252,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, color: '#7dd3fc', fontSize: 13, fontWeight: 700,
+                      }}>+</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* ── 오른쪽: PM 투입 인원 ─────────────────────────── */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Card className="nowa-card" styles={{ body: { padding: 16 } }}
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ToolOutlined style={{ color: '#7dd3fc' }} />
+              <span style={{ fontWeight: 700, fontSize: 14 }}>PM 투입 인원</span>
+              <span style={{
+                fontSize: 12, fontWeight: 700,
+                background: pmList.length > 0 ? 'rgba(125,211,252,0.15)' : 'rgba(255,255,255,0.06)',
+                color: pmList.length > 0 ? '#7dd3fc' : 'rgba(196,210,226,0.4)',
+                padding: '1px 8px', borderRadius: 10, marginLeft: 4,
+              }}>{pmList.length}명</span>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {saveOk && <span style={{ fontSize: 12, color: '#4ade80' }}>저장 완료</span>}
+                {pmList.length > 0 && (
+                  <div onClick={resetAll} style={{
+                    fontSize: 12, color: '#f87171', cursor: 'pointer',
+                    padding: '3px 12px', borderRadius: 6,
+                    border: '1px solid rgba(248,113,113,0.3)',
+                    background: 'rgba(248,113,113,0.08)',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.18)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
+                  >초기화</div>
+                )}
+                <div onClick={!saving && isDirty ? saveToServer : undefined} style={{
+                  fontSize: 12, fontWeight: 700,
+                  color: isDirty ? '#fff' : 'rgba(196,210,226,0.35)',
+                  cursor: isDirty && !saving ? 'pointer' : 'default',
+                  padding: '3px 14px', borderRadius: 6,
+                  border: `1px solid ${isDirty ? 'rgba(125,211,252,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  background: isDirty ? 'rgba(125,211,252,0.15)' : 'rgba(255,255,255,0.04)',
+                  transition: 'all 0.15s',
+                }}
+                  onMouseEnter={e => { if (isDirty) e.currentTarget.style.background = 'rgba(125,211,252,0.28)' }}
+                  onMouseLeave={e => { if (isDirty) e.currentTarget.style.background = 'rgba(125,211,252,0.15)' }}
+                >{saving ? '저장 중...' : '저장'}</div>
+              </div>
+            </div>
+          }
+        >
+          {pmList.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '48px 0', gap: 10,
+              color: 'rgba(196,210,226,0.3)', fontSize: 14,
+              border: '2px dashed rgba(125,211,252,0.12)', borderRadius: 12,
+            }}>
+              <UserOutlined style={{ fontSize: 32, opacity: 0.4 }} />
+              <span>왼쪽 인원 풀에서 추가하세요</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {pmList.map(m => {
+                const role = pmAssign[m.id] || ''
+                return (
+                  <div key={m.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: '#1e2235',
+                    border: '1px solid rgba(125,211,252,0.2)',
+                    borderLeft: '3px solid #7dd3fc',
+                    borderRadius: 12, padding: '10px 12px',
+                    minWidth: 240,
+                  }}>
+                    <div style={avatarStyle('#7dd3fc', 'rgba(125,211,252,0.1)')}>
+                      {m.name?.[0] || '?'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--nowa-text)' }}>{m.name}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.45)', marginTop: 1 }}>
+                        {m.vendor_name || ''}
+                        {m.position && ` · ${m.position}`}
+                        {m.shift && ` · ${m.shift}조`}
+                      </div>
+                    </div>
+                    <Select
+                      size="small"
+                      value={role || null}
+                      placeholder="역할 미지정"
+                      allowClear
+                      style={{ width: 110, flexShrink: 0 }}
+                      options={PM_ROLES.map(r => ({ label: r, value: r }))}
+                      onChange={v => setRole(m.id, v)}
+                      styles={{ popup: { root: { zIndex: 2000 } } }}
+                    />
+                    <div
+                      onClick={() => removeMember(m.id)}
+                      style={{
+                        width: 24, height: 24, borderRadius: '50%',
+                        background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: '#f87171', fontSize: 13, fontWeight: 700, flexShrink: 0,
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.22)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.1)'}
+                    >×</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 // ── 업체/인원 데이터 공유 래퍼 ─────────────────────────────────────
 function PersonnelDataPanel({ tabKey, vendors, members, refreshAll }) {
   const props = { vendors, members, refreshAll }
@@ -856,6 +1121,11 @@ function ShiftSchedule() {
       key: 'personnel',
       label: <span><UserOutlined style={{ marginRight: 5 }} />인원 관리</span>,
       children: tabWrap(<PersonnelDataPanel tabKey="personnel" vendors={vendors} members={members} refreshAll={fetchAll} />),
+    },
+    {
+      key: 'pm-personnel',
+      label: <span><ToolOutlined style={{ marginRight: 5 }} />PM 인원 구성</span>,
+      children: tabWrap(<PmPersonnelTab vendors={vendors} members={members} />),
     },
   ]
 

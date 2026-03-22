@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
@@ -17,11 +17,9 @@ import {
   Space,
   Table,
   Tag,
-  Typography,
 } from 'antd'
 import {
   AlertOutlined,
-  CalendarOutlined,
   FilterOutlined,
   LeftOutlined,
   NodeIndexOutlined,
@@ -29,7 +27,6 @@ import {
   RightOutlined,
   SearchOutlined,
   ToolOutlined,
-  UnorderedListOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
@@ -37,7 +34,7 @@ import { formatMachineLabel } from './machineLabel'
 import { useThemeMode } from '../../../theme/useThemeMode'
 
 const STATUS_META = {
-  overdue: { color: '#f87171', bg: 'rgba(248,113,113,0.12)', label: '부족' },
+  overdue: { color: '#f87171', bg: 'rgba(248,113,113,0.12)', label: '긴급' },
   urgent: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', label: '임박' },
   upcoming: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', label: '예정' },
   normal: { color: '#34d399', bg: 'rgba(52,211,153,0.12)', label: '정상' },
@@ -121,13 +118,14 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
   )
 }
 
-function SectionCard({ title, extra, children, bodyStyle }) {
+function SectionCard({ title, extra, children, bodyStyle, style }) {
   return (
     <Card
       className="nowa-card"
       title={<span style={{ fontSize: 16, fontWeight: 800 }}>{title}</span>}
       extra={extra}
       styles={{ body: { padding: 24, ...bodyStyle }, header: { minHeight: 56 } }}
+      style={style}
     >
       {children}
     </Card>
@@ -141,13 +139,38 @@ function SourceStatusBoard() {
   const [data, setData] = useState(null)
   const [selectedDate, setSelectedDate] = useState(dayjs())
   const [viewMode, setViewMode] = useState('month')
-  const [displayMode, setDisplayMode] = useState('calendar')
+  const calendarColRef = useRef(null)
+  const blockPanelChangeRef = useRef(false)
+  const [calendarHeight, setCalendarHeight] = useState(null)
+  const [holidays, setHolidays] = useState({}) // { 'YYYY-MM-DD': name }
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
 
   useEffect(() => {
     dayjs.locale('ko')
+  }, [])
+
+  useEffect(() => {
+    authFetch(`/api/shift/holidays?year=${selectedDate.year()}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const map = {}
+          data.forEach(h => { map[h.date] = h.name })
+          setHolidays(map)
+        }
+      })
+      .catch(() => {})
+  }, [selectedDate.year()])
+
+  useEffect(() => {
+    if (!calendarColRef.current) return
+    const observer = new ResizeObserver(entries => {
+      setCalendarHeight(entries[0].contentRect.height)
+    })
+    observer.observe(calendarColRef.current)
+    return () => observer.disconnect()
   }, [])
 
   const fetchStatus = async () => {
@@ -282,34 +305,6 @@ function SourceStatusBoard() {
     [eventsByDate, selectedDate],
   )
 
-  const visibleListEvents = useMemo(() => {
-    const prefix = viewMode === 'year' ? selectedDate.format('YYYY') : selectedDate.format('YYYY-MM')
-    return filteredEvents.filter((item) => item.projected_replacement_date?.startsWith(prefix))
-  }, [filteredEvents, selectedDate, viewMode])
-
-  const groupedVisibleListEvents = useMemo(() => {
-    const map = new Map()
-
-    visibleListEvents.forEach((item) => {
-      const key = item.projected_replacement_date
-      if (!key) return
-      const bucket = map.get(key) ?? []
-      bucket.push(item)
-      map.set(key, bucket)
-    })
-
-    return [...map.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, items]) => ({
-        date,
-        items: [...items].sort((a, b) => {
-          const riskDiff = getRiskOrder(a.status) - getRiskOrder(b.status)
-          if (riskDiff !== 0) return riskDiff
-          return a.machine_no - b.machine_no
-        }),
-      }))
-  }, [visibleListEvents])
-
   const machineColumns = [
     {
       title: '호기',
@@ -355,55 +350,114 @@ function SourceStatusBoard() {
   ]
 
   const renderDateCell = (current) => {
-    const items = eventsByDate.get(current.format('YYYY-MM-DD')) ?? []
+    const dateStr = current.format('YYYY-MM-DD')
+    const items = eventsByDate.get(dateStr) ?? []
     const isCurrentMonth = current.month() === selectedDate.month()
-    const isSelected = current.format('YYYY-MM-DD') === selectedDate.format('YYYY-MM-DD')
-    const isToday = current.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')
+
+    if (!isCurrentMonth) return <div style={{ minHeight: 110 }} />
+
+    const isSelected = dateStr === selectedDate.format('YYYY-MM-DD')
+    const isToday = dateStr === dayjs().format('YYYY-MM-DD')
+    const dow = current.day()
+    const isSat = dow === 6
+    const isSun = dow === 0
+    const holiday = holidays[dateStr]
+    const isHoliday = !!holiday || isSun
+
+    const dateNumColor = isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'var(--nowa-text)'
+
+    let bg = 'transparent'
+    if (isSelected) bg = 'rgba(245,158,11,0.08)'
+    else if (isToday) bg = 'rgba(99,179,237,0.06)'
+    else if (isHoliday) bg = 'rgba(248,113,113,0.04)'
+    else if (isSat) bg = 'rgba(125,211,252,0.03)'
 
     return (
       <div
         style={{
-          minHeight: 122,
+          minHeight: 110,
           height: '100%',
-          padding: 8,
-          borderRadius: 14,
-          border: isSelected
-            ? '1px solid rgba(99,102,241,0.65)'
-            : isCurrentMonth
-              ? '1px solid var(--nowa-border)'
-              : '1px solid rgba(255,255,255,0.03)',
-          background: isSelected
-            ? 'rgba(99,102,241,0.12)'
-            : isCurrentMonth
-              ? 'rgba(255,255,255,0.02)'
-              : 'transparent',
-          boxShadow: isSelected ? 'inset 0 0 0 1px rgba(99,102,241,0.12)' : 'none',
+          padding: '8px 8px 6px',
+          background: bg,
+          borderTop: isSelected
+            ? '2px solid rgba(245,158,11,0.85)'
+            : isToday
+            ? '2px solid rgba(99,179,237,0.7)'
+            : isHoliday
+            ? '2px solid rgba(248,113,113,0.35)'
+            : isSat
+            ? '2px solid rgba(125,211,252,0.25)'
+            : '2px solid transparent',
+          transition: 'background 0.15s',
         }}
       >
-        <div
-          style={{
-            color: isToday
-              ? '#a5b4fc'
-              : isCurrentMonth
-                ? 'var(--nowa-text)'
-                : 'rgba(255,255,255,0.2)',
-            fontSize: 13,
-            fontWeight: isCurrentMonth ? 800 : 500,
-            marginBottom: 8,
-          }}
-        >
-          {current.date()}
+        {/* 날짜 숫자 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 12,
+              fontWeight: 800,
+              color: isToday ? '#fff' : isSelected ? '#fbbf24' : dateNumColor,
+              background: isToday
+                ? 'linear-gradient(135deg,#3b82f6,#2563eb)'
+                : isSelected
+                ? 'rgba(245,158,11,0.15)'
+                : 'transparent',
+              boxShadow: isToday ? '0 2px 8px rgba(59,130,246,0.5)' : 'none',
+              flexShrink: 0,
+            }}
+          >
+            {current.date()}
+          </div>
+          {/* 공휴일 이름 */}
+          {holiday && (
+            <div style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: '#f87171',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
+              flex: 1,
+            }}>
+              {holiday}
+            </div>
+          )}
+          {/* 일정 건수 도트 */}
+          {items.length > 0 && (
+            <div style={{
+              marginLeft: 'auto',
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'rgba(148,163,184,0.6)',
+              flexShrink: 0,
+            }}>
+              {items.length}건
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {items.slice(0, 2).map((item) => {
+
+        {/* 일정 아이템 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {items.slice(0, 3).map((item) => {
             const meta = STATUS_META[item.status] ?? STATUS_META.normal
             return (
               <div
                 key={item.id}
                 style={{
-                  padding: '2px 8px',
-                  borderRadius: 10,
-                  background: meta.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '3px 7px 3px 5px',
+                  borderRadius: 6,
+                  background: `${meta.color}12`,
+                  borderLeft: `3px solid ${meta.color}`,
                   color: meta.color,
                   fontSize: 11,
                   fontWeight: 700,
@@ -416,9 +470,17 @@ function SourceStatusBoard() {
               </div>
             )
           })}
-          {items.length > 2 && (
-            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11 }}>
-              +{items.length - 2}건
+          {items.length > 3 && (
+            <div style={{
+              padding: '2px 7px',
+              fontSize: 10,
+              fontWeight: 600,
+              color: 'rgba(148,163,184,0.65)',
+              background: 'rgba(255,255,255,0.04)',
+              borderRadius: 6,
+              textAlign: 'center',
+            }}>
+              +{items.length - 3}건 더보기
             </div>
           )}
         </div>
@@ -451,7 +513,7 @@ function SourceStatusBoard() {
             <div style={{ color: 'var(--nowa-text-soft)', fontSize: 13 }}>{items.length}건 예정</div>
             {overdue > 0 && (
               <Tag style={{ margin: 0, width: 'fit-content', color: '#f87171', background: 'rgba(248,113,113,0.12)', borderColor: 'transparent' }}>
-                부족 {overdue}
+                긴급 {overdue}
               </Tag>
             )}
             {urgent > 0 && (
@@ -538,7 +600,7 @@ function SourceStatusBoard() {
         </Col>
         <Col xs={24} md={12} xl={6}>
           <SummaryCard
-            label="잔량 부족"
+            label="잔량 긴급"
             value={overdueCount}
             suffix="건"
             icon={<AlertOutlined />}
@@ -546,6 +608,47 @@ function SourceStatusBoard() {
             gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)"
             sub="소스 교체 초과"
           />
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24}>
+          <SectionCard title="소스별 요약">
+            {sourceSummary.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 소스 요약이 없습니다." style={{ padding: '36px 0 18px' }} />
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                {sourceSummary.slice(0, 8).map((item) => (
+                  <div
+                    key={item.source_label}
+                    style={{
+                      flex: '1 1 220px',
+                      padding: '14px 16px',
+                      borderRadius: 16,
+                      border: '1px solid var(--nowa-border)',
+                      background: 'rgba(255,255,255,0.02)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>{item.source_label}</div>
+                      <Tag color="blue">{item.count}건</Tag>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                      <span className="nowa-pill" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}>
+                        긴급 {item.overdue}
+                      </span>
+                      <span className="nowa-pill" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderColor: 'rgba(251,191,36,0.2)' }}>
+                        임박 {item.urgent}
+                      </span>
+                      <span className="nowa-pill" style={{ background: 'var(--nowa-button-bg)', color: 'var(--nowa-text-muted)' }}>
+                        최근 {formatDate(item.nearest)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
         </Col>
       </Row>
 
@@ -582,7 +685,7 @@ function SourceStatusBoard() {
                     yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
                     series: [
                       {
-                        name: '부족',
+                        name: '긴급',
                         type: 'bar',
                         stack: 'risk',
                         data: list.map(m => m.overdue),
@@ -650,98 +753,50 @@ function SourceStatusBoard() {
         </Col>
       </Row>
 
-      <Card className="nowa-card" styles={{ body: { padding: 22 } }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Typography.Text style={{ color: 'var(--nowa-text-soft)', fontSize: 16, fontWeight: 800 }}>
-            {selectedDate.format('YYYY-MM-DD')} 일정
-          </Typography.Text>
-          <Space wrap>
-            <Button className="nowa-btn" icon={<LeftOutlined />} onClick={() => setSelectedDate((prev) => prev.subtract(1, 'day'))}>
-              이전날
-            </Button>
-            <Button className="nowa-btn" disabled={isTodaySelected} onClick={() => setSelectedDate(dayjs())}>
-              오늘
-            </Button>
-            <Button className="nowa-btn" icon={<RightOutlined />} iconPosition="end" onClick={() => setSelectedDate((prev) => prev.add(1, 'day'))}>
-              다음날
-            </Button>
-          </Space>
-        </div>
-
-        {selectedDateEvents.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="선택한 날짜 일정이 없습니다." style={{ padding: '18px 0 4px' }} />
-        ) : (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-            {selectedDateEvents.map((item) => {
-              const meta = STATUS_META[item.status] ?? STATUS_META.normal
-              return (
-                <Tag
-                  key={item.id}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: 999,
-                    color: meta.color,
-                    background: meta.bg,
-                    borderColor: 'transparent',
-                    fontSize: 14,
-                  }}
-                >
-                  {formatMachineLabel(item.machine_no)} {item.source_label}
-                </Tag>
-              )
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={15}>
+      <style>{`
+        .day-card-abs.ant-card { display: flex !important; flex-direction: column !important; }
+        .day-card-abs > .ant-card-body { flex: 1 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; min-height: 0 !important; }
+      `}</style>
+      <div style={{ position: 'relative' }}>
+        {/* 왼쪽 캘린더가 부모 높이 결정 */}
+        <div style={{ marginRight: 'calc((100% - 16px) * 7 / 24 + 16px)' }}>
           <SectionCard
             title="월간 교체 일정"
-            extra={(
-              <Segmented
-                size="middle"
-                value={displayMode}
-                onChange={setDisplayMode}
-                options={[
-                  { label: '캘린더', value: 'calendar', icon: <CalendarOutlined /> },
-                  { label: '목록', value: 'list', icon: <UnorderedListOutlined /> },
-                ]}
-              />
-            )}
           >
-            {visibleListEvents.length === 0 ? (
-              <div style={{ padding: '18px 0 28px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-                  <Button
-                    className="nowa-btn"
-                    icon={<LeftOutlined />}
-                    onClick={() => setSelectedDate((prev) => prev.subtract(1, 'month'))}
-                  >
-                    이전달
-                  </Button>
-                  <span style={{ minWidth: 120, textAlign: 'center', fontSize: 16, fontWeight: 700, color: 'var(--nowa-text)' }}>
-                    {selectedDate.year()}년 {selectedDate.month() + 1}월
-                  </span>
-                  <Button
-                    className="nowa-btn"
-                    icon={<RightOutlined />}
-                    iconPosition="end"
-                    onClick={() => setSelectedDate((prev) => prev.add(1, 'month'))}
-                  >
-                    다음달
-                  </Button>
-                  <Button onClick={() => setSelectedDate(dayjs())} size="small">이번 달</Button>
-                </div>
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 일정 데이터가 없습니다." />
-              </div>
-            ) : displayMode === 'calendar' ? (
-              <Calendar
+            <>
+              <style>{`
+                .source-cal-wrap .ant-picker-cell:not(.ant-picker-cell-in-view) { pointer-events: none !important; }
+                .source-cal-wrap .ant-picker-cell-in-view:hover > div { background: rgba(245,158,11,0.06) !important; }
+                .source-cal-wrap .ant-picker-panel { background: transparent !important; }
+                .source-cal-wrap table { border-collapse: collapse !important; }
+                .source-cal-wrap thead th { padding: 6px 0 10px !important; font-size: 12px !important; font-weight: 700 !important; color: rgba(148,163,184,0.7) !important; letter-spacing: 0.5px !important; }
+                .source-cal-wrap td { padding: 0 !important; border: 1px solid rgba(255,255,255,0.04) !important; }
+              `}</style>
+              {(() => {
+                const offset = selectedDate.startOf('month').day()
+                const rowsNeeded = Math.ceil((offset + selectedDate.daysInMonth()) / 7)
+                if (rowsNeeded < 6) {
+                  return <style>{`.source-cal-wrap table tbody tr:last-child { display: none !important; }`}</style>
+                }
+                return null
+              })()}
+              <div className="source-cal-wrap"><Calendar
                 value={selectedDate}
                 mode={viewMode}
                 fullscreen={false}
-                onSelect={(value) => setSelectedDate(value)}
+                onSelect={(value) => {
+                  if (value.month() !== selectedDate.month()) {
+                    blockPanelChangeRef.current = true
+                    return
+                  }
+                  setSelectedDate(value)
+                }}
                 onPanelChange={(value, mode) => {
+                  if (blockPanelChangeRef.current) {
+                    blockPanelChangeRef.current = false
+                    setViewMode(mode)
+                    return
+                  }
                   setSelectedDate(value)
                   setViewMode(mode)
                 }}
@@ -787,7 +842,7 @@ function SourceStatusBoard() {
                           style={{ color: 'var(--nowa-text-muted)', border: '1px solid var(--nowa-border)' }}
                         />
                         <Button onClick={goToday} size="small" style={{ marginLeft: 4 }}>
-                          이번 달
+                          오늘
                         </Button>
                       </div>
 
@@ -823,105 +878,77 @@ function SourceStatusBoard() {
                   return info.originNode
                 }}
               />
+              </div>
+            </>
+          </SectionCard>
+
+        </div>
+
+        {/* 날짜별 일정 카드: 절대위치로 캘린더 카드와 동일 높이 */}
+        <div style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0,
+          width: 'calc((100% - 16px) * 7 / 24)',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <Card
+            className="nowa-card day-card-abs"
+            title={
+              <span style={{ fontSize: 15, fontWeight: 800 }}>
+                {selectedDate.format('YYYY-MM-DD')} 일정
+              </span>
+            }
+            styles={{ body: { padding: '14px 18px' } }}
+            style={{ height: '100%' }}
+          >
+            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: 6, marginBottom: 14 }}>
+              <Button size="small" className="nowa-btn" icon={<LeftOutlined />} onClick={() => setSelectedDate((prev) => prev.subtract(1, 'day'))}>이전날</Button>
+              <Button size="small" className="nowa-btn" disabled={isTodaySelected} onClick={() => setSelectedDate(dayjs())}>오늘</Button>
+              <Button size="small" className="nowa-btn" icon={<RightOutlined />} iconPosition="end" onClick={() => setSelectedDate((prev) => prev.add(1, 'day'))}>다음날</Button>
+            </div>
+
+            {selectedDateEvents.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="선택한 날짜 일정이 없습니다." style={{ padding: '24px 0 8px' }} />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {groupedVisibleListEvents.map(({ date, items }) => (
-                  <div
-                    key={date}
-                    style={{
-                      padding: '16px 18px',
-                      borderRadius: 18,
-                      border: '1px solid var(--nowa-border)',
-                      background: 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                      {formatDate(date)}
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 4 }}>
+                {selectedDateEvents.map((item) => {
+                  const meta = STATUS_META[item.status] ?? STATUS_META.normal
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        padding: '10px 14px',
+                        borderRadius: 12,
+                        background: meta.bg,
+                        border: `1px solid ${meta.color}30`,
+                        boxShadow: `inset 3px 0 0 ${meta.color}`,
+                      }}
+                    >
+                      <span style={{ color: meta.color, fontWeight: 700, fontSize: 13 }}>
+                        {formatMachineLabel(item.machine_no)} {item.source_label}
+                      </span>
+                      <span style={{
+                        flexShrink: 0,
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        color: meta.color,
+                        background: 'rgba(0,0,0,0.2)',
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}>
+                        {meta.label}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {items.map((item) => {
-                        const meta = STATUS_META[item.status] ?? STATUS_META.normal
-                        return (
-                          <div
-                            key={item.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 12,
-                              padding: '12px 14px',
-                              borderRadius: 14,
-                              background: 'rgba(11,18,36,0.42)',
-                              border: `1px solid ${meta.bg}`,
-                              boxShadow: `inset 3px 0 0 ${meta.color}`,
-                            }}
-                          >
-                            <div style={{ color: meta.color, fontWeight: 700 }}>
-                              {formatMachineLabel(item.machine_no)} / {item.source_label}
-                            </div>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                padding: '4px 10px',
-                                borderRadius: 999,
-                                color: meta.color,
-                                background: meta.bg,
-                                fontWeight: 700,
-                              }}
-                            >
-                              {meta.label}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
-          </SectionCard>
-        </Col>
-
-        <Col xs={24} xl={9}>
-          <SectionCard title="소스별 요약">
-            {sourceSummary.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 소스 요약이 없습니다." style={{ padding: '36px 0 18px' }} />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {sourceSummary.slice(0, 8).map((item) => (
-                  <div
-                    key={item.source_label}
-                    style={{
-                      padding: '14px 16px',
-                      borderRadius: 16,
-                      border: '1px solid var(--nowa-border)',
-                      background: 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>{item.source_label}</div>
-                      <Tag color="blue">{item.count}건</Tag>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                      <span className="nowa-pill" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}>
-                        부족 {item.overdue}
-                      </span>
-                      <span className="nowa-pill" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderColor: 'rgba(251,191,36,0.2)' }}>
-                        임박 {item.urgent}
-                      </span>
-                      <span className="nowa-pill" style={{ background: 'var(--nowa-button-bg)', color: 'var(--nowa-text-muted)' }}>
-                        최근 {formatDate(item.nearest)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-        </Col>
-      </Row>
-
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

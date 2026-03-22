@@ -631,7 +631,7 @@ function HolidayTab() {
       if (!map.has(y)) map.set(y, [])
       map.get(y).push(h)
     })
-    return [...map.entries()].sort((a, b) => b[0] - a[0])
+    return [...map.entries()].sort((a, b) => a[0] - b[0])
   }, [holidays])
 
   const columns = [

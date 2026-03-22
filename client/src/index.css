@@ -186,17 +186,9 @@ a { color: inherit; }
 
 @media (min-width: 1200px) {
   .page-scale-compact {
-    zoom: 0.92;
-  }
-}
-
-@supports not (zoom: 1) {
-  @media (min-width: 1200px) {
-    .page-scale-compact {
-      transform: scale(0.92);
-      transform-origin: top left;
-      width: 108.7%;
-    }
+    transform: scale(0.92);
+    transform-origin: top left;
+    width: 108.7%;
   }
 }
 

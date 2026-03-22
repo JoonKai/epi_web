@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, func
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, func
 from database import Base
 
 
@@ -127,7 +127,7 @@ class MocvdPmCounter(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     machine_no = Column(Integer, unique=True, nullable=False, index=True)
-    pm_count = Column(Float, default=0.0)
+    chamber_count = Column(Float, default=0.0)
     pm_base_count = Column(Float, default=0.0)
     filter_count = Column(Float, default=0.0)
     filter_base_count = Column(Float, default=0.0)
@@ -233,6 +233,14 @@ class ShiftType(Base):
     is_active = Column(Boolean, default=True)
 
 
+class PmPersonnelAssign(Base):
+    __tablename__ = "pm_personnel_assign"
+
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, nullable=False, unique=True, index=True)
+    role = Column(String(50), default="")
+
+
 class ShiftMember(Base):
     __tablename__ = "shift_member"
 
@@ -276,6 +284,17 @@ class KoreanHoliday(Base):
     date = Column(String(10), nullable=False, unique=True, index=True)   # YYYY-MM-DD
     name = Column(String(100), nullable=False)
     is_substitute = Column(Boolean, default=False)
+
+
+class PmSyncLog(Base):
+    __tablename__ = "pm_sync_log"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    synced_at     = Column(DateTime, default=func.now(), index=True)
+    triggered_by  = Column(String(10), default="auto")   # "auto" | "manual"
+    updated_count = Column(Integer, default=0)
+    error_count   = Column(Integer, default=0)
+    errors_json   = Column(Text, default="[]")
 
 
 class EquipmentHistory(Base):

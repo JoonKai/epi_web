@@ -13,6 +13,7 @@ from models import (
     MocvdMachine,
     PersonnelMember,
     PersonnelVendor,
+    PmPersonnelAssign,
     SourceType,
     SystemSetting,
     User,
@@ -420,6 +421,25 @@ def delete_personnel_member(member_id: int, db: Session = Depends(get_db), _=Dep
     return {"result": "ok"}
 
 
+@router.get("/personnel/pm-assign")
+def get_pm_assign(db: Session = Depends(get_db)):
+    rows = db.query(PmPersonnelAssign).all()
+    return [{"member_id": r.member_id, "role": r.role} for r in rows]
+
+
+class PmAssignItem(BaseModel):
+    member_id: int
+    role: str = ""
+
+@router.post("/personnel/pm-assign")
+def save_pm_assign(body: List[PmAssignItem], db: Session = Depends(get_db), _=Depends(require_admin)):
+    db.query(PmPersonnelAssign).delete()
+    for item in body:
+        db.add(PmPersonnelAssign(member_id=item.member_id, role=item.role))
+    db.commit()
+    return {"result": "ok", "count": len(body)}
+
+
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db), _=Depends(require_admin)):
     rows = db.query(SystemSetting).all()
@@ -525,3 +545,156 @@ def delete_holidays_by_year(year: int, db: Session = Depends(get_db), _=Depends(
     deleted = db.query(KoreanHoliday).filter(KoreanHoliday.date.like(f"{year}-%")).delete(synchronize_session=False)
     db.commit()
     return {"deleted": deleted}
+
+
+# ── PM 카운터 동기화 ────────────────────────────────────────────────────────────
+
+import threading
+
+_sync_state: dict = {"running": False, "result": None}
+
+
+SYNC_TIMEOUT = 180  # 최대 3분
+
+
+def _run_sync_thread():
+    from database import SessionLocal
+    from excel_sync import sync_pm_counter as do_sync, save_sync_log
+    db = SessionLocal()
+    try:
+        result = do_sync(db)
+        _sync_state["result"] = result
+        save_sync_log(db, result, triggered_by="manual")
+    except Exception as e:
+        print(f"[sync thread] 예외: {e}")
+        result = {
+            "synced_at": None,
+            "updated_count": 0,
+            "updated": [],
+            "error_count": 1,
+            "errors": [str(e)],
+        }
+        _sync_state["result"] = result
+        save_sync_log(db, result, triggered_by="manual")
+    finally:
+        _sync_state["running"] = False
+        db.close()
+
+
+def _watchdog_thread():
+    import time
+    time.sleep(SYNC_TIMEOUT)
+    if _sync_state["running"]:
+        print(f"[sync watchdog] {SYNC_TIMEOUT}초 초과 — 강제 종료")
+        _sync_state["running"] = False
+        _sync_state["result"] = {
+            "synced_at": None,
+            "updated_count": 0,
+            "updated": [],
+            "error_count": 1,
+            "errors": [f"타임아웃: {SYNC_TIMEOUT}초 내에 완료되지 않았습니다."],
+        }
+
+
+SYNC_PATH_KEYS = ["excel_sync_path_1", "excel_sync_path_2", "excel_sync_path_3"]
+
+
+@router.get("/sync-pm-counter/paths")
+def get_sync_paths(db: Session = Depends(get_db), _=Depends(require_admin)):
+    rows = {r.key: r.value for r in db.query(SystemSetting).filter(SystemSetting.key.in_(SYNC_PATH_KEYS)).all()}
+    return [rows.get(k, "") for k in SYNC_PATH_KEYS]
+
+
+def _clean_path(val: str) -> str:
+    import unicodedata
+    return "".join(c for c in val if not unicodedata.category(c).startswith("C")).strip()
+
+
+@router.put("/sync-pm-counter/paths")
+def save_sync_paths(paths: list[str], db: Session = Depends(get_db), _=Depends(require_admin)):
+    for key, val in zip(SYNC_PATH_KEYS, paths):
+        val = _clean_path(val)
+        row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+        if row:
+            row.value = val
+        else:
+            db.add(SystemSetting(key=key, value=val))
+    db.commit()
+    return {"ok": True}
+
+
+SYNC_SCHEDULE_KEY = "sync_schedule_times"
+DEFAULT_SCHEDULE   = ["07:00", "19:00"]
+
+
+@router.get("/sync-pm-counter/schedule")
+def get_sync_schedule(db: Session = Depends(get_db), _=Depends(require_admin)):
+    import json
+    row = db.query(SystemSetting).filter(SystemSetting.key == SYNC_SCHEDULE_KEY).first()
+    if row:
+        try:
+            return json.loads(row.value)
+        except Exception:
+            pass
+    return DEFAULT_SCHEDULE
+
+
+@router.put("/sync-pm-counter/schedule")
+def save_sync_schedule(times: list[str], db: Session = Depends(get_db), _=Depends(require_admin)):
+    import json, re
+    from scheduler import reschedule
+    # HH:MM 형식 검증
+    for t in times:
+        if not re.match(r"^\d{2}:\d{2}$", t):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"잘못된 시간 형식: {t}")
+    row = db.query(SystemSetting).filter(SystemSetting.key == SYNC_SCHEDULE_KEY).first()
+    if row:
+        row.value = json.dumps(times)
+    else:
+        db.add(SystemSetting(key=SYNC_SCHEDULE_KEY, value=json.dumps(times)))
+    db.commit()
+    reschedule(times)
+    return {"ok": True}
+
+
+@router.post("/sync-pm-counter")
+def start_sync(_=Depends(require_admin)):
+    if _sync_state["running"]:
+        return {"status": "running"}
+    _sync_state["running"] = True
+    _sync_state["result"] = None
+    threading.Thread(target=_run_sync_thread, daemon=True).start()
+    threading.Thread(target=_watchdog_thread, daemon=True).start()
+    return {"status": "started"}
+
+
+@router.get("/sync-pm-counter/status")
+def get_sync_status(_=Depends(require_admin)):
+    return {
+        "running": _sync_state["running"],
+        "result": _sync_state["result"],
+    }
+
+
+@router.get("/sync-pm-counter/logs")
+def get_sync_logs(limit: int = 30, db: Session = Depends(get_db), _=Depends(require_admin)):
+    import json
+    from models import PmSyncLog
+    rows = (
+        db.query(PmSyncLog)
+        .order_by(PmSyncLog.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "synced_at": r.synced_at.strftime("%Y-%m-%d %H:%M:%S") if r.synced_at else "",
+            "triggered_by": r.triggered_by,
+            "updated_count": r.updated_count,
+            "error_count": r.error_count,
+            "errors": json.loads(r.errors_json or "[]"),
+        }
+        for r in rows
+    ]

@@ -1,7 +1,10 @@
 import json
+from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -10,10 +13,21 @@ import models  # noqa: F401
 from models import SystemSetting
 from routers import admin, auth, cost, mocvd, shift
 from schema_sync import print_sync_summary, sync_schema
+from scheduler import start_scheduler, stop_scheduler
+
+DIST_DIR = Path(__file__).parent / "dist"
 
 print_sync_summary(sync_schema())
 
-app = FastAPI(title="Epi Web API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="Epi Web API", version="0.1.0", lifespan=lifespan)
 
 
 BYPASS_PATHS = {"/api/auth/login", "/api/auth/refresh", "/api/health", "/api/"}
@@ -48,8 +62,8 @@ async def ip_filter_middleware(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -91,3 +105,14 @@ def dashboard_stats(db: Session = Depends(get_db)):
         "source_types": db.query(SourceType).filter(SourceType.is_active == True).count(),
         "source_entries": db.query(MocvdSource).count(),
     }
+
+
+# SPA fallback: /api/* 이외의 모든 경로는 index.html 반환 (BrowserRouter 새로고침 지원)
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # dist 폴더 내 실제 파일이 있으면 해당 파일 반환 (JS, CSS, 이미지 등)
+    file_path = DIST_DIR / full_path
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(file_path)
+    # 없으면 index.html 반환 (React Router가 처리)
+    return FileResponse(DIST_DIR / "index.html")

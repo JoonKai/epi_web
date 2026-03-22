@@ -287,9 +287,12 @@ function NoticeBoard() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {isAdmin ? (
-            <Button type="primary" size="small" onClick={() => setShowForm((prev) => !prev)}>
-              {showForm ? '폼 닫기' : '공지 등록'}
-            </Button>
+            <button onClick={() => setShowForm((prev) => !prev)} style={{
+              appearance: 'none', WebkitAppearance: 'none',
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+              color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
+            }}>{showForm ? '닫기' : '공지 등록'}</button>
           ) : null}
           <Tag color="blue" style={{ marginInlineEnd: 0 }}>
             {notices.length}건
@@ -306,10 +309,20 @@ function NoticeBoard() {
                 title={<span style={{ fontWeight: 800 }}>{editingId ? '공지 수정' : '공지 작성'}</span>}
                 extra={
                   <Space>
-                    {editingId ? <Button onClick={resetForm}>취소</Button> : null}
-                    <Button type="primary" onClick={submitNotice} loading={saving}>
-                      {editingId ? '수정 저장' : '공지 등록'}
-                    </Button>
+                    {editingId ? (
+                      <button onClick={resetForm} style={{
+                        background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+                        color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                        cursor: 'pointer', lineHeight: '22px',
+                      }}>취소</button>
+                    ) : null}
+                    <button onClick={submitNotice} disabled={saving} style={{
+                      appearance: 'none', WebkitAppearance: 'none',
+                      background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+                      color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                      cursor: saving ? 'not-allowed' : 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
+                      opacity: saving ? 0.5 : 1,
+                    }}>{editingId ? '수정 저장' : '공지 등록'}</button>
                   </Space>
                 }
               >
@@ -422,14 +435,17 @@ function NoticeBoard() {
 }
 
 function AttendanceCard() {
-  const [items, setItems] = useState([])
-  const [allItems, setAllItems] = useState([]) // 해당월 전체 (휴가류 포함)
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]       = useState(true)
+  const [hasData, setHasData]       = useState(false)
   const [selectedDay, setSelectedDay] = useState(dayjs())
-  const [dayCounts, setDayCounts] = useState({})   // { dateStr: { typeName: count } }
-  const [typeMap, setTypeMap] = useState({})        // { typeName: { label, color } }
-  const [holidays, setHolidays] = useState({})      // { dateStr: holidayName }
+  const [typeMap, setTypeMap]       = useState({})
+  const [holidays, setHolidays]     = useState({})
+  const [searchName, setSearchName] = useState('')
+  // raw 데이터 저장
+  const [rawSched, setRawSched]     = useState([])   // 전체 스케줄
+  const [memberMap, setMemberMap]   = useState({})   // { id: name }
+  const [activeMemberIds, setActiveMemberIds] = useState(new Set())
+  const [typeJson, setTypeJson]     = useState([])
   const today = dayjs()
   const isToday = selectedDay.isSame(today, 'day')
 
@@ -449,59 +465,75 @@ function AttendanceCard() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true)
+      if (!hasData) setLoading(true)
       try {
         const [schedRes, typeRes, memberRes] = await Promise.all([
           authFetch(`/api/shift/schedules?year=${selectedDay.year()}&month=${selectedDay.month() + 1}`),
           authFetch('/api/shift/shift-types'),
           authFetch('/api/shift/members'),
         ])
-        const [schedJson, typeJson, memberJson] = await Promise.all([schedRes.json(), typeRes.json(), memberRes.json()])
+        const [schedJson, tj, memberJson] = await Promise.all([schedRes.json(), typeRes.json(), memberRes.json()])
         const members = Array.isArray(memberJson) ? memberJson : []
-        const activeMemberIds = new Set(members.map((m) => m.id))
-        const memberMap = Object.fromEntries(members.map((m) => [m.id, m.name]))
-        const tm = Object.fromEntries(typeJson.map((t) => [t.name, { label: t.label, color: t.color, order: t.order_idx }]))
+        const ids = new Set(members.map((m) => m.id))
+        const mmap = Object.fromEntries(members.map((m) => [m.id, m.name]))
+        const tm = Object.fromEntries(tj.map((t) => [t.name, { label: t.label, color: t.color, order: t.order_idx }]))
+        setRawSched(Array.isArray(schedJson) ? schedJson : [])
+        setMemberMap(mmap)
+        setActiveMemberIds(ids)
+        setTypeJson(tj)
         setTypeMap(tm)
-
-        // 캘린더용 일별 시프트타입별 카운트
-        const dc = {}
-        schedJson.filter((s) => activeMemberIds.has(s.member_id)).forEach((s) => {
-          if (!dc[s.work_date]) dc[s.work_date] = {}
-          dc[s.work_date][s.shift_type] = (dc[s.work_date][s.shift_type] || 0) + 1
-        })
-        setDayCounts(dc)
-
-        const dayStr = selectedDay.format('YYYY-MM-DD')
-        const counts = {}
-        const namesByType = {}
-        schedJson
-          .filter((s) => s.work_date === dayStr && activeMemberIds.has(s.member_id))
-          .forEach((s) => {
-            counts[s.shift_type] = (counts[s.shift_type] || 0) + 1
-            if (!namesByType[s.shift_type]) namesByType[s.shift_type] = []
-            namesByType[s.shift_type].push(memberMap[s.member_id] || '?')
-          })
-
-        // 출근 타입 vs 휴가 타입 분리 (근무 타입: 숫자 코드, 휴가류: 한글)
-        const WORK_CODES = typeJson.filter((t) => /^\d+$/.test(t.name)).map((t) => t.name)
-        const result = typeJson
-          .filter((t) => t.is_active && counts[t.name])
-          .map((t) => ({
-            name: t.label, code: t.name, value: counts[t.name],
-            color: t.color, bg: t.bg_color, names: namesByType[t.name] || [],
-            isWork: WORK_CODES.includes(t.name),
-          }))
-          .sort((a, b) => (b.isWork - a.isWork) || (b.value - a.value))
-
-        setItems(result)
-        setAllItems(result)
-        const workTotal = result.filter((r) => r.isWork).reduce((s, d) => s + d.value, 0)
-        setTotal(workTotal)
+        setHasData(true)
       } catch {}
       finally { setLoading(false) }
     }
     load()
-  }, [selectedDay])
+  }, [selectedDay.year(), selectedDay.month()])
+
+  // 검색 필터 적용된 멤버 ID 집합
+  const filteredMemberIds = useMemo(() => {
+    const q = searchName.trim()
+    if (!q) return activeMemberIds
+    return new Set(
+      Object.entries(memberMap)
+        .filter(([, name]) => name.includes(q))
+        .map(([id]) => Number(id))
+    )
+  }, [searchName, memberMap, activeMemberIds])
+
+  // 달력용 일별 카운트 (검색 반영)
+  const dayCounts = useMemo(() => {
+    const dc = {}
+    rawSched.filter((s) => filteredMemberIds.has(s.member_id)).forEach((s) => {
+      if (!dc[s.work_date]) dc[s.work_date] = {}
+      dc[s.work_date][s.shift_type] = (dc[s.work_date][s.shift_type] || 0) + 1
+    })
+    return dc
+  }, [rawSched, filteredMemberIds])
+
+  // 선택일 상세 (검색 반영)
+  const { items, total } = useMemo(() => {
+    const dayStr = selectedDay.format('YYYY-MM-DD')
+    const counts = {}
+    const namesByType = {}
+    rawSched
+      .filter((s) => s.work_date === dayStr && filteredMemberIds.has(s.member_id))
+      .forEach((s) => {
+        counts[s.shift_type] = (counts[s.shift_type] || 0) + 1
+        if (!namesByType[s.shift_type]) namesByType[s.shift_type] = []
+        namesByType[s.shift_type].push(memberMap[s.member_id] || '?')
+      })
+    const WORK_CODES = typeJson.filter((t) => /^\d+$/.test(t.name)).map((t) => t.name)
+    const result = typeJson
+      .filter((t) => t.is_active && counts[t.name])
+      .map((t) => ({
+        name: t.label, code: t.name, value: counts[t.name],
+        color: t.color, bg: t.bg_color, names: namesByType[t.name] || [],
+        isWork: WORK_CODES.includes(t.name),
+      }))
+      .sort((a, b) => (b.isWork - a.isWork) || (b.value - a.value))
+    const workTotal = result.filter((r) => r.isWork).reduce((s, d) => s + d.value, 0)
+    return { items: result, total: workTotal }
+  }, [rawSched, filteredMemberIds, selectedDay, memberMap, typeJson])
 
   // 미니 캘린더 계산
   const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
@@ -515,23 +547,25 @@ function AttendanceCard() {
 
   const navBtn = (label, onClick, active) => (
     <button onClick={onClick} style={{
+      appearance: 'none', WebkitAppearance: 'none',
       background: active ? '#f59e0b' : 'rgba(245,158,11,0.1)',
       border: `1px solid ${active ? '#f59e0b' : 'rgba(245,158,11,0.35)'}`,
       color: active ? '#000' : '#f0c060',
       borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: active ? 700 : 600,
-      cursor: 'pointer', lineHeight: '22px',
+      cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
     }}>{label}</button>
   )
 
   const miniCal = (
-    <div style={{ flex: 1, minWidth: 0 }}>
+    <div>
       {/* 월 네비게이션 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
         <button onClick={() => setSelectedDay((d) => d.subtract(1, 'month'))}
-          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '3px 10px', borderRadius: 6 }}>‹</button>
-        <span style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b', letterSpacing: 1 }}>{selectedDay.format('YYYY년 M월')}</span>
+          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '4px 12px', borderRadius: 6 }}>‹</button>
+        <span style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b', letterSpacing: 1, minWidth: 160, textAlign: 'center' }}>{selectedDay.format('YYYY년 M월')}</span>
         <button onClick={() => setSelectedDay((d) => d.add(1, 'month'))}
-          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '3px 10px', borderRadius: 6 }}>›</button>
+          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '4px 12px', borderRadius: 6 }}>›</button>
+        {navBtn('이번달', () => setSelectedDay(dayjs()), isToday)}
       </div>
       {/* 요일 헤더 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(245,158,11,0.08)', borderRadius: '8px 8px 0 0', border: '1px solid rgba(245,158,11,0.15)', borderBottom: 'none' }}>
@@ -543,42 +577,48 @@ function AttendanceCard() {
         ))}
       </div>
       {/* 날짜 셀 그리드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
         {cells.map((day, idx) => {
           if (!day) return (
-            <div key={`e${idx}`} style={{ borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', minHeight: 60, background: 'rgba(0,0,0,0.15)' }} />
+            <div key={`e${idx}`} style={{ borderRight: '1px solid rgba(255,255,255,0.12)', borderBottom: '1px solid rgba(255,255,255,0.12)', minHeight: 70, background: 'rgba(0,0,0,0.15)' }} />
           )
           const dow = (firstDow + day - 1) % 7
           const dateStr = calStart.date(day).format('YYYY-MM-DD')
           const isSel = selectedDay.date() === day
           const isT = today.format('YYYY-MM-DD') === dateStr
-          const dayData = dayCounts[dateStr] || {}
-          const totalCnt = Object.values(dayData).reduce((s, v) => s + v, 0)
           const isSat = dow === 6
           const isSun = dow === 0
           const holiday = holidays[dateStr]
+          const dayData = dayCounts[dateStr] || {}
+          const totalCnt = Object.values(dayData).reduce((s, v) => s + v, 0)
           const isHoliday = !!holiday || isSun
-          const dateColor = isSel ? '#1a1a00' : (isHoliday ? '#f87171' : isSat ? '#7dd3fc' : '#e2e8f0')
+          const dateColor = isHoliday ? '#f87171' : isSat ? '#7dd3fc' : isSel ? '#fbbf24' : '#e2e8f0'
           return (
             <div
               key={day}
               onClick={() => setSelectedDay(calStart.date(day))}
               style={{
-                padding: '5px 6px 4px',
+                padding: '4px 5px 3px',
                 cursor: 'pointer',
-                minHeight: 60,
+                minHeight: 70,
                 borderRight: '1px solid rgba(255,255,255,0.05)',
                 borderBottom: '1px solid rgba(255,255,255,0.05)',
                 background: isSel
-                  ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                  ? 'rgba(30,22,8,0.95)'
                   : isT
-                  ? 'rgba(245,158,11,0.15)'
+                  ? 'rgba(52,211,153,0.08)'
                   : isSat
                   ? 'rgba(125,211,252,0.07)'
                   : isHoliday
                   ? 'rgba(248,113,113,0.09)'
                   : 'rgba(255,255,255,0.02)',
-                boxShadow: isT && !isSel ? 'inset 0 0 0 1.5px rgba(245,158,11,0.55)' : 'none',
+                boxShadow: isSel
+                  ? 'inset 0 0 0 1.5px rgba(245,158,11,0.9), 0 0 16px rgba(245,158,11,0.25)'
+                  : isT
+                  ? 'inset 0 0 0 1.5px rgba(52,211,153,0.75)'
+                  : 'none',
+                zIndex: isSel ? 1 : 'auto',
+                position: 'relative',
                 transition: 'background 0.12s',
               }}
             >
@@ -587,30 +627,30 @@ function AttendanceCard() {
               {/* 공휴일 이름 */}
               {holiday && (
                 <div style={{
-                  fontSize: 9, fontWeight: 700, lineHeight: 1.1, marginTop: 1,
-                  color: isSel ? '#00000080' : '#f87171',
+                  fontSize: 11, fontWeight: 700, lineHeight: 1.2, marginTop: 2,
+                  color: '#f87171',
                   overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
                   maxWidth: '100%',
                 }}>{holiday}</div>
               )}
               {/* 시프트별 인원 */}
               {totalCnt > 0 && (
-                <div style={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {Object.entries(dayData)
                     .sort((a, b) => (typeMap[a[0]]?.order ?? 99) - (typeMap[b[0]]?.order ?? 99))
                     .map(([typeName, cnt]) => {
                       const ti = typeMap[typeName]
                       const label = ti?.label || typeName
-                      const color = isSel ? '#1a1a0099' : (ti?.color || '#f59e0b')
+                      const color = ti?.color || '#f59e0b'
                       return (
                         <div key={typeName} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 3,
-                          background: isSel ? 'rgba(0,0,0,0.12)' : `${ti?.color || '#f59e0b'}18`,
-                          border: `1px solid ${isSel ? 'rgba(0,0,0,0.15)' : `${ti?.color || '#f59e0b'}35`}`,
-                          borderRadius: 4, padding: '1px 4px',
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          background: `${color}18`,
+                          border: `1px solid ${color}35`,
+                          borderRadius: 5, padding: '2px 6px',
                         }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1.4 }}>{label}</span>
-                          <span style={{ fontSize: 9, fontWeight: 900, color, lineHeight: 1.4 }}>{cnt}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color, lineHeight: 1.4 }}>{label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 900, color, lineHeight: 1.4 }}>{cnt}</span>
                         </div>
                       )
                     })}
@@ -630,23 +670,7 @@ function AttendanceCard() {
 
   return (
     <SectionCard
-      title={
-        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          출근 인원
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,158,11,0.7)' }}>
-            {selectedDay.format('M월 D일 (ddd)')}
-            {selectedHoliday && <span style={{ marginLeft: 6, fontSize: 11, color: '#f87171', fontWeight: 700 }}>({selectedHoliday})</span>}
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>
-            출근 {total}<span style={{ fontSize: 12, color: 'rgba(245,158,11,0.6)', marginLeft: 2 }}>명</span>
-          </span>
-          {leaveItems.length > 0 && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(148,163,184,0.8)' }}>
-              · 부재 {leaveItems.reduce((s, d) => s + d.value, 0)}<span style={{ fontSize: 12, marginLeft: 2 }}>명</span>
-            </span>
-          )}
-        </span>
-      }
+      title="출근 인원"
       icon={<TeamOutlined />}
       extra={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -659,13 +683,34 @@ function AttendanceCard() {
       {loading ? (
         <Skeleton active paragraph={{ rows: 4 }} />
       ) : (
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', minHeight: 470 }}>
           {/* 좌측: 미니 캘린더 */}
-          {miniCal}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {miniCal}
+          </div>
           {/* 구분선 */}
           <div style={{ width: 1, background: 'rgba(245,158,11,0.12)', alignSelf: 'stretch', flexShrink: 0 }} />
           {/* 우측: 출근 상세 */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* 날짜 헤더 */}
+            {(() => {
+              const dow = selectedDay.day()
+              const dateColor = selectedHoliday || dow === 0 ? '#f87171' : dow === 6 ? '#7dd3fc' : '#e2e8f0'
+              return (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
+                  <span style={{ fontSize: 22, fontWeight: 900, color: dateColor, lineHeight: 1 }}>{selectedDay.format('M월 D일')}</span>
+                  <span style={{ fontSize: 22, fontWeight: 600, color: `${dateColor}99` }}>{selectedDay.format('(ddd)')}</span>
+                  {selectedHoliday && <span style={{ fontSize: 13, fontWeight: 700, color: '#f87171' }}>{selectedHoliday}</span>}
+                </div>
+              )
+            })()}
+            <Input
+              placeholder="이름 검색"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              allowClear
+              style={{ marginBottom: 4 }}
+            />
             {items.length === 0 ? (
               <Empty description="등록된 근무 데이터가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
@@ -703,28 +748,28 @@ function AttendanceCard() {
                 {leaveItems.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1 }}>부재 / 휴가</div>
-                    <div style={{
-                      borderRadius: 10, background: 'rgba(100,116,139,0.08)',
-                      border: '1px solid rgba(100,116,139,0.18)',
-                      padding: '8px 12px',
-                      display: 'flex', flexDirection: 'column', gap: 6,
-                    }}>
-                      {leaveItems.map((d) => (
-                        <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{
-                            fontSize: 11, fontWeight: 700, color: d.color,
-                            padding: '1px 7px', borderRadius: 20, background: `${d.color}18`,
-                            border: `1px solid ${d.color}30`, minWidth: 36, textAlign: 'center',
-                          }}>{d.name}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: d.color }}>{d.value}명</span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 6px' }}>
+                    {leaveItems.map((d) => (
+                      <div key={d.name} style={{
+                        borderRadius: 10, background: d.bg,
+                        border: `1px solid ${d.color}22`,
+                        borderLeft: `4px solid ${d.color}`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px' }}>
+                          <span style={{ fontSize: 22, fontWeight: 900, color: d.color, lineHeight: 1, minWidth: 28 }}>{d.value}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: d.color, opacity: 0.8, minWidth: 40 }}>{d.name}</span>
+                          <div style={{ width: 1, height: 18, background: `${d.color}30`, flexShrink: 0 }} />
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 8px' }}>
                             {d.names.map((n) => (
-                              <span key={n} style={{ fontSize: 12, color: 'rgba(148,163,184,0.85)', fontWeight: 500 }}>{n}</span>
+                              <span key={n} style={{
+                                fontSize: 13, fontWeight: 600, color: d.color,
+                                padding: '1px 9px', borderRadius: 20,
+                                background: `${d.color}15`, border: `1px solid ${d.color}28`,
+                              }}>{n}</span>
                             ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </>
@@ -852,17 +897,20 @@ function HandoverBoard() {
       title="인수인계일지"
       icon={<SwapOutlined />}
       extra={
-        <Button type="primary" size="small" onClick={() => setShowForm((prev) => !prev)}>
-          {showForm ? '폼 닫기' : '인수인계 등록'}
-        </Button>
+        <button onClick={() => setShowForm((prev) => !prev)} style={{
+          appearance: 'none', WebkitAppearance: 'none',
+          background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+          color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+          cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
+        }}>{showForm ? '닫기' : '인수인계 등록'}</button>
       }
     >
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: showForm
-            ? 'minmax(320px, 380px) minmax(0, 1.1fr) minmax(280px, 0.9fr)'
-            : 'minmax(0, 1.25fr) minmax(280px, 0.75fr)',
+            ? 'minmax(320px, 380px) 1fr 1fr'
+            : '1fr 1fr',
           gap: 12,
           alignItems: 'start',
         }}
@@ -890,10 +938,20 @@ function HandoverBoard() {
                 {editingId ? '인수인계 수정' : '인수인계 작성'}
               </span>
               <Space>
-                {editingId ? <Button onClick={resetForm}>취소</Button> : null}
-                <Button type="primary" onClick={submitNote} loading={saving}>
-                  {editingId ? '수정 저장' : '등록'}
-                </Button>
+                {editingId ? (
+                  <button onClick={resetForm} style={{
+                    background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+                    color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', lineHeight: '22px',
+                  }}>취소</button>
+                ) : null}
+                <button onClick={submitNote} disabled={saving} style={{
+                  appearance: 'none', WebkitAppearance: 'none',
+                  background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
+                  color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                  cursor: saving ? 'not-allowed' : 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
+                  opacity: saving ? 0.5 : 1,
+                }}>{editingId ? '수정 저장' : '등록'}</button>
               </Space>
             </div>
 
@@ -953,8 +1011,12 @@ function HandoverBoard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
                     <div>
                       <div style={{ color: 'var(--nowa-text)', fontWeight: 800, fontSize: 14 }}>{note.title || '인수인계'}</div>
-                      <div style={{ color: 'rgba(245,158,11,0.85)', fontSize: 11, marginTop: 3 }}>
-                        {note.author || '-'} / {note.handover_date}{note.updated_at || note.created_at ? ` ${dayjs(note.updated_at || note.created_at).format('HH:mm')}` : ''}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, marginTop: 3 }}>
+                        <span style={{ color: '#f59e0b', fontWeight: 700 }}>{note.author || '-'}</span>
+                        <span style={{ color: 'rgba(196,210,226,0.3)' }}>·</span>
+                        <span style={{ color: 'rgba(148,163,184,0.7)' }}>
+                          {note.handover_date}{note.updated_at || note.created_at ? ` ${dayjs(note.updated_at || note.created_at).format('HH:mm')}` : ''}
+                        </span>
                       </div>
                     </div>
                     {canManageNote(note) ? (
@@ -985,7 +1047,7 @@ function HandoverBoard() {
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      fontSize: 13,
+                      fontSize: 14,
                     }}
                   >
                     {note.content}
@@ -1034,7 +1096,7 @@ function HandoverBoard() {
                     <div key={`timeline:${note.id}`}>
                       {showDateSplit && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0 6px' }}>
-                          <span style={{ color: '#f59e0b', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{dateLabel}</span>
+                          <span style={{ color: '#f59e0b', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{dateLabel}</span>
                           <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.25)' }} />
                         </div>
                       )}
@@ -1057,8 +1119,8 @@ function HandoverBoard() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 1 }}>
                         <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700 }}>{timeLabel}</div>
                         {note.author && (
-                          <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <UserOutlined style={{ color: 'rgba(214,222,232,0.85)', fontSize: 11 }} />
+                          <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <UserOutlined style={{ color: 'rgba(214,222,232,0.85)', fontSize: 14 }} />
                             <span style={{ color: 'rgba(245,158,11,0.85)' }}>{note.author}</span>
                           </div>
                         )}
@@ -1094,7 +1156,7 @@ function HandoverBoard() {
                           style={{
                             color: 'var(--nowa-text)',
                             fontWeight: 800,
-                            fontSize: 13,
+                            fontSize: 14,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -1106,7 +1168,7 @@ function HandoverBoard() {
                           style={{
                             marginTop: 4,
                             color: 'var(--nowa-text-muted)',
-                            fontSize: 12,
+                            fontSize: 14,
                             lineHeight: 1.45,
                             display: '-webkit-box',
                             WebkitLineClamp: 2,

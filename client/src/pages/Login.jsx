@@ -25,7 +25,7 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at top left, rgba(245,158,11,0.12) 0%, transparent 28%), radial-gradient(circle at right center, rgba(249,115,22,0.10) 0%, transparent 24%), linear-gradient(135deg, #121520 0%, #171b26 45%, #151821 100%)',
+        background: 'radial-gradient(circle at top left, rgba(245,158,11,0.15) 0%, transparent 28%), radial-gradient(circle at right center, rgba(249,115,22,0.12) 0%, transparent 24%), linear-gradient(135deg, #1c2030 0%, #222840 45%, #1e2335 100%)',
         position: 'relative',
         overflow: 'hidden',
         padding: 24,
@@ -43,7 +43,7 @@ export default function Login() {
       <div
         style={{
           width: 440,
-          background: 'linear-gradient(180deg, rgba(22,25,33,0.96) 0%, rgba(15,17,23,0.98) 100%)',
+          background: 'linear-gradient(180deg, rgba(34,38,52,0.97) 0%, rgba(26,30,44,0.99) 100%)',
           backdropFilter: 'blur(18px)',
           borderRadius: 24,
           border: '1px solid rgba(245,158,11,0.14)',
@@ -108,7 +108,7 @@ export default function Login() {
               style={{
                 height: 48,
                 borderRadius: 12,
-                background: 'rgba(15,23,42,0.52)',
+                background: 'rgba(28,38,62,0.55)',
                 borderColor: 'rgba(245,158,11,0.16)',
                 color: '#e5e7eb',
                 boxShadow: 'none',
@@ -129,7 +129,7 @@ export default function Login() {
               style={{
                 height: 48,
                 borderRadius: 12,
-                background: 'rgba(15,23,42,0.52)',
+                background: 'rgba(28,38,62,0.55)',
                 borderColor: 'rgba(245,158,11,0.16)',
                 color: '#e5e7eb',
                 boxShadow: 'none',
@@ -177,7 +177,7 @@ export default function Login() {
         .epi-login-input.ant-input-affix-wrapper:focus-within,
         .epi-login-input.ant-input:focus,
         .epi-login-input.ant-input:hover {
-          background: rgba(15,23,42,0.52) !important;
+          background: rgba(28,38,62,0.55) !important;
           box-shadow: none !important;
         }
         .epi-login-input input {
@@ -189,8 +189,8 @@ export default function Login() {
         .epi-login-input input:-webkit-autofill:focus,
         .epi-login-input input:-webkit-autofill:active {
           -webkit-text-fill-color: #e5e7eb !important;
-          -webkit-box-shadow: 0 0 0 1000px rgba(15,23,42,0.52) inset !important;
-          box-shadow: 0 0 0 1000px rgba(15,23,42,0.52) inset !important;
+          -webkit-box-shadow: 0 0 0 1000px rgba(28,38,62,0.55) inset !important;
+          box-shadow: 0 0 0 1000px rgba(28,38,62,0.55) inset !important;
           transition: background-color 9999s ease-out 0s !important;
           caret-color: #e5e7eb !important;
         }

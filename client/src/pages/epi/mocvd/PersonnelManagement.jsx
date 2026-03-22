@@ -7,10 +7,7 @@ import {
   Modal,
   Popconfirm,
   Select,
-  Space,
-  Statistic,
   Switch,
-  Table,
   Tabs,
   Tag,
   message,
@@ -43,7 +40,16 @@ function VendorTab({ vendors, members, refreshAll }) {
   const [open, setOpen] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
   const [form] = Form.useForm()
+
+  const filtered = useMemo(() => {
+    const kw = search.trim().toLowerCase()
+    if (!kw) return vendors
+    return vendors.filter(v =>
+      [v.name, v.contact_name, v.contact_phone, v.note].filter(Boolean).some(s => s.toLowerCase().includes(kw))
+    )
+  }, [vendors, search])
 
   const openCreate = () => {
     setEditingRow(null)
@@ -94,13 +100,7 @@ function VendorTab({ vendors, members, refreshAll }) {
       await readJson(await authFetch(`/api/admin/personnel/vendors/${row.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: row.name,
-          contact_name: row.contact_name,
-          contact_phone: row.contact_phone,
-          note: row.note,
-          is_active: checked,
-        }),
+        body: JSON.stringify({ name: row.name, contact_name: row.contact_name, contact_phone: row.contact_phone, note: row.note, is_active: checked }),
       }))
       message.success('업체 사용 여부를 반영했습니다.')
       refreshAll()
@@ -109,57 +109,87 @@ function VendorTab({ vendors, members, refreshAll }) {
     }
   }
 
-  const columns = [
-    { title: '업체명', dataIndex: 'name', width: 220 },
-    { title: '담당자', dataIndex: 'contact_name', width: 120, render: (value) => value || '-' },
-    { title: '연락처', dataIndex: 'contact_phone', width: 150, render: (value) => value || '-' },
-    {
-      title: '인원',
-      width: 120,
-      render: (_, row) => `${row.active_member_count}/${row.member_count}명`,
-    },
-    { title: '비고', dataIndex: 'note', render: (value) => value || '-' },
-    {
-      title: '사용',
-      width: 90,
-      render: (_, row) => <Switch size="small" checked={row.is_active} onChange={(checked) => handleToggle(row, checked)} />,
-    },
-    {
-      title: '관리',
-      width: 140,
-      render: (_, row) => (
-        <Space size={6}>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>수정</Button>
-          <Popconfirm title="업체와 소속 인원을 삭제합니다." onConfirm={() => handleDelete(row)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
-
-  const vendorlessCount = members.filter((member) => !vendors.some((vendor) => vendor.id === member.vendor_id)).length
-
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Space wrap>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>업체 추가</Button>
-        </Space>
-        <Space wrap>
-          {vendorlessCount > 0 ? <Tag color="red">미매핑 인원 {vendorlessCount}명</Tag> : null}
-          <Tag color="blue">총 {vendors.length}개 업체</Tag>
-        </Space>
+      {/* 툴바 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Input allowClear value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="업체명/담당자 검색" style={{ width: 220 }} />
+          <span style={{ fontSize: 13, color: 'var(--nowa-text-muted)' }}>{filtered.length}개 업체</span>
+        </div>
+        <button
+          onClick={openCreate}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
+            borderRadius: 8, padding: '5px 14px', cursor: 'pointer',
+            color: 'rgba(245,158,11,0.85)', fontSize: 13, fontWeight: 700,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.85)' }}
+        >
+          <PlusOutlined /> 업체 추가
+        </button>
       </div>
 
-      <Table
-        rowKey="id"
-        bordered
-        size="middle"
-        pagination={{ pageSize: 10 }}
-        columns={columns}
-        dataSource={vendors}
-      />
+      {/* 업체 카드 그리드 */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {filtered.length === 0 && (
+          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '8px 4px' }}>등록된 업체가 없습니다.</span>
+        )}
+        {filtered.map(v => {
+          const memberCount = members.filter(m => m.vendor_id === v.id).length
+          const activeMemberCount = members.filter(m => m.vendor_id === v.id && m.is_active).length
+          return (
+            <div key={v.id} style={{
+              display: 'flex', alignItems: 'center',
+              background: '#212535', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16, minWidth: 240, overflow: 'hidden',
+              borderLeft: `3px solid ${v.is_active ? '#f59e0b' : '#475569'}`,
+              opacity: v.is_active ? 1 : 0.55,
+            }}>
+              {/* 아바타 */}
+              <div style={{
+                width: 44, height: 44, borderRadius: '50%', background: '#343850',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, margin: '12px 12px 12px 10px',
+                border: '1.5px solid rgba(255,255,255,0.1)',
+              }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>{v.name?.[0] || '?'}</span>
+              </div>
+
+              {/* 정보 */}
+              <div style={{ flex: 1, minWidth: 0, paddingRight: 8, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{v.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {v.contact_name && (
+                    <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.6)' }}>{v.contact_name}</span>
+                  )}
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 999,
+                    background: 'rgba(125,211,252,0.12)', color: '#7dd3fc',
+                    border: '1px solid rgba(125,211,252,0.2)',
+                  }}>
+                    {activeMemberCount}/{memberCount}명
+                  </span>
+                </div>
+              </div>
+
+              {/* 액션 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, paddingRight: 12, alignItems: 'center' }}>
+                <Switch size="small" checked={v.is_active} onChange={checked => handleToggle(v, checked)} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <EditOutlined onClick={() => openEdit(v)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                  <Popconfirm title="업체와 소속 인원을 삭제합니다." onConfirm={() => handleDelete(v)}>
+                    <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                  </Popconfirm>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
       <Modal
         title={editingRow ? '업체 수정' : '업체 추가'}
