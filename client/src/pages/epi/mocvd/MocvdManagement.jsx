@@ -111,7 +111,7 @@ function RiskBar({ name, remaining, daily_usage }) {
             display: 'flex',
             justifyContent: 'space-between',
             gap: 8,
-            fontSize: 11,
+            fontSize: 14,
             color: 'var(--nowa-text-muted)',
             marginBottom: 4,
           }}
@@ -150,7 +150,7 @@ function MachineCard({ machine_no, description, is_active, forcedDown, sources }
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 16, color: meta.color }}>{formatMachineLabel(machine_no)}</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, marginTop: 2 }}>{description || '설비 설명 없음'}</div>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 2 }}>{description || '설비 설명 없음'}</div>
         </div>
         <Tag style={{ margin: 0, color: meta.color, background: meta.bg, border: `1px solid ${meta.border}`, borderRadius: 999, fontWeight: 700 }}>
           {meta.icon} {meta.label}
@@ -158,17 +158,17 @@ function MachineCard({ machine_no, description, is_active, forcedDown, sources }
       </div>
 
       <div>
-        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, marginBottom: 8 }}>다운 리스크 요인</div>
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, marginBottom: 8 }}>다운 리스크 요인</div>
         {forcedDown ? (
-          <div style={{ color: meta.color, fontSize: 12, fontWeight: 700 }}>강제 다운으로 지정된 설비입니다.</div>
+          <div style={{ color: meta.color, fontSize: 14, fontWeight: 700 }}>강제 다운으로 지정된 설비입니다.</div>
         ) : aggregateSource == null ? (
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12 }}>등록된 리스크 데이터가 없습니다.</div>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>등록된 리스크 데이터가 없습니다.</div>
         ) : (
           <RiskBar key={`${machine_no}:aggregate-source`} name="소스" remaining={aggregateSource.daysLeft} daily_usage={1} />
         )}
       </div>
 
-      <div style={{ marginTop: 'auto', color: 'var(--nowa-text-muted)', fontSize: 12 }}>
+      <div style={{ marginTop: 'auto', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
         {forcedDown ? '현황판에서 강제 다운 상태로 표시됩니다.' : '현재 소스 상태를 기준으로 리스크를 표시합니다.'}
       </div>
     </div>
@@ -185,7 +185,7 @@ function SummaryCard({ label, value, suffix, gradient, accent, icon, sub }) {
         padding: '16px 18px',
         borderRadius: 18,
         background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-        border: '1px solid rgba(196,210,226,0.16)',
+        border: '1px solid var(--nowa-border)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
         position: 'relative',
         overflow: 'hidden',
@@ -194,7 +194,7 @@ function SummaryCard({ label, value, suffix, gradient, accent, icon, sub }) {
       <div style={{ position: 'absolute', inset: 0, background: gradient, opacity: 0.14, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: gradient, opacity: 0.95 }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
-        <div style={{ color: resolvedAccent, fontSize: 12, fontWeight: 700, paddingTop: 2 }}>{label}</div>
+        <div style={{ color: resolvedAccent, fontSize: 14, fontWeight: 700, paddingTop: 2 }}>{label}</div>
         <div
           style={{
             width: 30,
@@ -217,7 +217,7 @@ function SummaryCard({ label, value, suffix, gradient, accent, icon, sub }) {
         {value}
         {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${resolvedAccent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
       </div>
-      {sub ? <div style={{ color: `${resolvedAccent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
+      {sub ? <div style={{ color: `${resolvedAccent}cc`, fontSize: 14, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
     </div>
   )
 }
@@ -359,7 +359,7 @@ function EquipmentHistoryTab({ machineList }) {
       {/* 좌측 설비 선택 패널 */}
       <div style={{ width: 200, flexShrink: 0 }}>
         <Card className="nowa-card" styles={{ body: { padding: 0 } }}>
-          <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(245,158,11,0.14)', fontSize: 12, fontWeight: 700, color: 'rgba(245,158,11,0.8)', letterSpacing: 1 }}>
+          <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(245,158,11,0.14)', fontSize: 14, fontWeight: 700, color: 'rgba(245,158,11,0.8)', letterSpacing: 1 }}>
             설비 선택
           </div>
           <div style={{ maxHeight: 600, overflowY: 'auto' }}>
@@ -383,7 +383,7 @@ function EquipmentHistoryTab({ machineList }) {
                     {formatMachineLabel(m.machine_no)}
                   </span>
                   {m.description && (
-                    <span style={{ fontSize: 11, color: 'var(--nowa-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 14, color: 'var(--nowa-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {m.description}
                     </span>
                   )}
@@ -435,9 +435,9 @@ function EquipmentHistoryTab({ machineList }) {
                   {/* 월 구분선 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 16px' }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(245,158,11,0.5)', flexShrink: 0, marginLeft: 3 }} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: 'rgba(245,158,11,0.8)' }}>{month}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: 'rgba(245,158,11,0.8)' }}>{month}</span>
                     <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.15)' }} />
-                    <span style={{ fontSize: 11, color: 'var(--nowa-text-muted)' }}>{items.length}건</span>
+                    <span style={{ fontSize: 14, color: 'var(--nowa-text-muted)' }}>{items.length}건</span>
                   </div>
 
                   {/* 타임라인 아이템들 */}
@@ -454,7 +454,7 @@ function EquipmentHistoryTab({ machineList }) {
                               width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                               background: meta.bg, border: `2px solid ${meta.border}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 13, zIndex: 1,
+                              fontSize: 14, zIndex: 1,
                             }}>
                               {meta.icon}
                             </div>
@@ -472,21 +472,21 @@ function EquipmentHistoryTab({ machineList }) {
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-                                  <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11, fontWeight: 700, color: meta.color, background: 'transparent', border: `1px solid ${meta.border}`, padding: '0 8px' }}>
+                                  <Tag style={{ margin: 0, borderRadius: 99, fontSize: 14, fontWeight: 700, color: meta.color, background: 'transparent', border: `1px solid ${meta.border}`, padding: '0 8px' }}>
                                     {meta.label}
                                   </Tag>
-                                  <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11, fontWeight: 700, color: sev.color, background: 'transparent', border: `1px solid ${sev.color}55`, padding: '0 8px' }}>
+                                  <Tag style={{ margin: 0, borderRadius: 99, fontSize: 14, fontWeight: 700, color: sev.color, background: 'transparent', border: `1px solid ${sev.color}55`, padding: '0 8px' }}>
                                     {sev.label}
                                   </Tag>
                                   {item.resolved_at && (
-                                    <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', padding: '0 8px' }}>
+                                    <Tag style={{ margin: 0, borderRadius: 99, fontSize: 14, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', padding: '0 8px' }}>
                                       해결됨
                                     </Tag>
                                   )}
                                 </div>
                                 <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--nowa-text)', marginBottom: 4 }}>{item.title}</div>
                                 {item.detail && (
-                                  <div style={{ fontSize: 13, color: 'var(--nowa-text-muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.detail}</div>
+                                  <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.detail}</div>
                                 )}
                               </div>
                               <div style={{ display: 'flex', gap: 4 }}>
@@ -496,7 +496,7 @@ function EquipmentHistoryTab({ machineList }) {
                                 </Popconfirm>
                               </div>
                             </div>
-                            <div style={{ marginTop: 8, display: 'flex', gap: 16, fontSize: 11, color: 'var(--nowa-text-muted)', flexWrap: 'wrap' }}>
+                            <div style={{ marginTop: 8, display: 'flex', gap: 16, fontSize: 14, color: 'var(--nowa-text-muted)', flexWrap: 'wrap' }}>
                               <span>📅 발생: <b style={{ color: meta.color }}>{dayjs(item.occurred_at).format('YYYY-MM-DD')}</b></span>
                               {item.resolved_at && <span>✅ 해결: <b style={{ color: '#34d399' }}>{dayjs(item.resolved_at).format('YYYY-MM-DD')}</b></span>}
                               {item.actor && <span>👤 {item.actor}</span>}
@@ -595,13 +595,13 @@ function ForceDownTab({ machineList, pendingForcedDownMap, onToggle, onResetAll,
                     <div style={{ color: forced ? '#ef4444' : 'var(--nowa-text)', fontWeight: 800, fontSize: 16 }}>
                       {formatMachineLabel(machine.machine_no)}
                     </div>
-                    <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
                       {machine.description || '설비 설명 없음'}
                     </div>
                   </div>
                   <Switch checked={forced} onChange={(checked) => onToggle(machine.machine_no, checked)} />
                 </div>
-                <div style={{ marginTop: 14, color: forced ? '#ef4444' : 'var(--nowa-text-muted)', fontSize: 12, fontWeight: forced ? 700 : 500 }}>
+                <div style={{ marginTop: 14, color: forced ? '#ef4444' : 'var(--nowa-text-muted)', fontSize: 14, fontWeight: forced ? 700 : 500 }}>
                   {forced ? '현황판에서 강제 다운으로 표시됩니다.' : '현재는 강제 다운 미적용 상태입니다.'}
                 </div>
               </Card>
@@ -715,17 +715,17 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
                   backgroundColor: 'transparent',
                   grid: { top: 16, bottom: 44, left: 36, right: 16 },
                   tooltip: { trigger: 'axis' },
-                  legend: { bottom: 4, textStyle: { color: '#b0c0d0', fontSize: 11 } },
+                  legend: { bottom: 4, textStyle: { color: '#b0c0d0', fontSize: 14 } },
                   xAxis: {
                     type: 'category',
                     data: riskChartRows.map((row) => `${row.machine_no}`),
-                    axisLabel: { color: '#64748b', fontSize: 10, rotate: 30 },
+                    axisLabel: { color: '#64748b', fontSize: 14, rotate: 30 },
                     axisLine: { lineStyle: { color: '#1e2a3c' } },
                   },
                   yAxis: {
                     type: 'value',
                     minInterval: 1,
-                    axisLabel: { color: '#64748b', fontSize: 11 },
+                    axisLabel: { color: '#64748b', fontSize: 14 },
                     splitLine: { lineStyle: { color: '#1e2a3c' } },
                   },
                   series: [
@@ -751,13 +751,13 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
                 xAxis: {
                   type: 'category',
                   data: distributionBuckets.map((bucket) => bucket.label),
-                  axisLabel: { color: '#64748b', fontSize: 11, rotate: 20 },
+                  axisLabel: { color: '#64748b', fontSize: 14, rotate: 20 },
                   axisLine: { lineStyle: { color: '#1e2a3c' } },
                 },
                 yAxis: {
                   type: 'value',
                   minInterval: 1,
-                  axisLabel: { color: '#64748b', fontSize: 11 },
+                  axisLabel: { color: '#64748b', fontSize: 14 },
                   splitLine: { lineStyle: { color: '#1e2a3c' } },
                 },
                 series: [
@@ -765,7 +765,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
                     type: 'bar',
                     data: distributionCounts.map((value, index) => ({ value, itemStyle: { color: distributionBuckets[index].color, borderRadius: [4, 4, 0, 0] } })),
                     barMaxWidth: 48,
-                    label: { show: true, position: 'top', color: '#b0c0d0', fontSize: 11 },
+                    label: { show: true, position: 'top', color: '#b0c0d0', fontSize: 14 },
                   },
                 ],
               }}
@@ -792,7 +792,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
               style={{
                 padding: '4px 14px',
                 borderRadius: 20,
-                fontSize: 13,
+                fontSize: 14,
                 cursor: 'pointer',
                 fontWeight: 600,
                 border: filter === button.key ? `1.5px solid ${button.color ?? '#6366f1'}` : '1.5px solid rgba(100,116,139,0.25)',
@@ -805,7 +805,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
             </button>
           ))}
         </div>
-        <span style={{ marginLeft: 'auto', color: '#64748b', fontSize: 13 }}>{filtered.length}대 표시</span>
+        <span style={{ marginLeft: 'auto', color: '#64748b', fontSize: 14 }}>{filtered.length}대 표시</span>
       </Card>
 
       <Row gutter={[12, 12]}>

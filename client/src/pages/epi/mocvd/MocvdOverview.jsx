@@ -85,7 +85,7 @@ function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) 
           }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
-          <div style={{ color: '#aeb8c9', fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em', paddingTop: 2 }}>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em', paddingTop: 2 }}>
             {title}
           </div>
           <div
@@ -110,7 +110,7 @@ function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) 
           {value}
           {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: '#d6dcea', fontWeight: 700 }}>{suffix}</span> : null}
         </div>
-        <div style={{ marginTop: 10, color: accent, fontSize: 12, fontWeight: 700, position: 'relative', zIndex: 1 }}>관련 화면으로 이동</div>
+        <div style={{ marginTop: 10, color: accent, fontSize: 14, fontWeight: 700, position: 'relative', zIndex: 1 }}>관련 화면으로 이동</div>
       </div>
     </button>
   )
@@ -137,7 +137,7 @@ function SectionCard({ title, icon, extra, children }) {
 const cardBtnStyle = {
   appearance: 'none', WebkitAppearance: 'none',
   background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-  color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+  color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
   cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
 }
 
@@ -301,7 +301,7 @@ function NoticeBoard() {
             <button onClick={() => setShowForm((prev) => !prev)} style={{
               appearance: 'none', WebkitAppearance: 'none',
               background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-              color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+              color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
               cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
             }}>{showForm ? '닫기' : '공지 등록'}</button>
           ) : null}
@@ -323,14 +323,14 @@ function NoticeBoard() {
                     {editingId ? (
                       <button onClick={resetForm} style={{
                         background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-                        color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                        color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
                         cursor: 'pointer', lineHeight: '22px',
                       }}>취소</button>
                     ) : null}
                     <button onClick={submitNotice} disabled={saving} style={{
                       appearance: 'none', WebkitAppearance: 'none',
                       background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-                      color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                      color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
                       cursor: saving ? 'not-allowed' : 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
                       opacity: saving ? 0.5 : 1,
                     }}>{editingId ? '수정 저장' : '공지 등록'}</button>
@@ -417,7 +417,7 @@ function NoticeBoard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
                           <div>
                             <div style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>{notice.title || '공지사항'}</div>
-                            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>
+                            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
                               {notice.author || '-'} / {notice.updated_at || notice.created_at || '-'}
                             </div>
                           </div>
@@ -562,7 +562,7 @@ function AttendanceCard() {
       background: active ? '#f59e0b' : 'rgba(245,158,11,0.1)',
       border: `1px solid ${active ? '#f59e0b' : 'rgba(245,158,11,0.35)'}`,
       color: active ? '#000' : '#f0c060',
-      borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: active ? 700 : 600,
+      borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: active ? 700 : 600,
       cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
     }}>{label}</button>
   )
@@ -570,103 +570,70 @@ function AttendanceCard() {
   const miniCal = (
     <div>
       {/* 월 네비게이션 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
         <button onClick={() => setSelectedDay((d) => d.subtract(1, 'month'))}
-          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '4px 12px', borderRadius: 6 }}>‹</button>
-        <span style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b', letterSpacing: 1, minWidth: 160, textAlign: 'center' }}>{selectedDay.format('YYYY년 M월')}</span>
+          style={{ background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+        <span style={{ fontWeight: 800, fontSize: 18, color: '#f59e0b' }}>{selectedDay.format('YYYY년 M월')}</span>
         <button onClick={() => setSelectedDay((d) => d.add(1, 'month'))}
-          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '4px 12px', borderRadius: 6 }}>›</button>
+          style={{ background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
         {navBtn('이번달', () => setSelectedDay(dayjs()), isToday)}
       </div>
       {/* 요일 헤더 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(245,158,11,0.08)', borderRadius: '8px 8px 0 0', border: '1px solid rgba(245,158,11,0.15)', borderBottom: 'none' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
         {DOW_LABELS.map((lbl, i) => (
-          <div key={lbl} style={{
-            textAlign: 'center', fontSize: 12, fontWeight: 800, padding: '6px 0',
-            color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(214,222,232,0.7)',
-          }}>{lbl}</div>
+          <div key={lbl} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, paddingBottom: 6, color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.72)' }}>{lbl}</div>
         ))}
       </div>
       {/* 날짜 셀 그리드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {cells.map((day, idx) => {
+          const dow = idx % 7
           if (!day) return (
-            <div key={`e${idx}`} style={{ borderRight: '1px solid rgba(255,255,255,0.12)', borderBottom: '1px solid rgba(255,255,255,0.12)', minHeight: 70, background: 'rgba(0,0,0,0.15)' }} />
+            <div key={`e${idx}`} style={{ borderRadius: 8, minHeight: 72, background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', opacity: 0.25 }} />
           )
-          const dow = (firstDow + day - 1) % 7
           const dateStr = calStart.date(day).format('YYYY-MM-DD')
-          const isSel = selectedDay.date() === day
+          const isSel = selectedDay.date() === day && selectedDay.format('YYYY-MM') === calStart.format('YYYY-MM')
           const isT = today.format('YYYY-MM-DD') === dateStr
           const isSat = dow === 6
           const isSun = dow === 0
           const holiday = holidays[dateStr]
           const dayData = dayCounts[dateStr] || {}
-          const totalCnt = Object.values(dayData).reduce((s, v) => s + v, 0)
           const isHoliday = !!holiday || isSun
-          const dateColor = isHoliday ? '#f87171' : isSat ? '#7dd3fc' : isSel ? '#fbbf24' : '#e2e8f0'
+          const dateColor = isT ? '#f59e0b' : isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,226,0.75)'
           return (
             <div
               key={day}
               onClick={() => setSelectedDay(calStart.date(day))}
               style={{
-                padding: '4px 5px 3px',
-                cursor: 'pointer',
-                minHeight: 70,
-                borderRight: '1px solid rgba(255,255,255,0.05)',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
-                background: isSel
-                  ? 'rgba(30,22,8,0.95)'
-                  : isT
-                  ? 'rgba(52,211,153,0.08)'
-                  : isSat
-                  ? 'rgba(125,211,252,0.07)'
-                  : isHoliday
-                  ? 'rgba(248,113,113,0.09)'
-                  : 'rgba(255,255,255,0.02)',
-                boxShadow: isSel
-                  ? 'inset 0 0 0 1.5px rgba(245,158,11,0.9), 0 0 16px rgba(245,158,11,0.25)'
-                  : isT
-                  ? 'inset 0 0 0 1.5px rgba(52,211,153,0.75)'
-                  : 'none',
-                zIndex: isSel ? 1 : 'auto',
-                position: 'relative',
-                transition: 'background 0.12s',
+                borderRadius: 8, padding: '6px 6px 5px', cursor: 'pointer', minHeight: 72,
+                background: isSel ? 'rgba(125,211,252,0.08)' : isHoliday ? 'rgba(248,113,113,0.04)' : 'var(--nowa-panel)',
+                border: `1px solid ${isSel ? 'rgba(125,211,252,0.5)' : isT ? 'rgba(245,158,11,0.45)' : isHoliday ? 'rgba(248,113,113,0.2)' : 'var(--nowa-border)'}`,
+                transition: 'border-color 0.1s',
               }}
             >
-              {/* 날짜 숫자 */}
-              <div style={{ fontSize: 13, fontWeight: isSel ? 900 : 700, color: dateColor, lineHeight: 1.2 }}>{day}</div>
-              {/* 공휴일 이름 */}
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2, color: dateColor }}>{day}</div>
               {holiday && (
-                <div style={{
-                  fontSize: 11, fontWeight: 700, lineHeight: 1.2, marginTop: 2,
-                  color: '#f87171',
-                  overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                  maxWidth: '100%',
-                }}>{holiday}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#f87171', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{holiday}</div>
               )}
-              {/* 시프트별 인원 */}
-              {totalCnt > 0 && (
-                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {Object.entries(dayData)
-                    .sort((a, b) => (typeMap[a[0]]?.order ?? 99) - (typeMap[b[0]]?.order ?? 99))
-                    .map(([typeName, cnt]) => {
-                      const ti = typeMap[typeName]
-                      const label = ti?.label || typeName
-                      const color = ti?.color || '#f59e0b'
-                      return (
-                        <div key={typeName} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          background: `${color}18`,
-                          border: `1px solid ${color}35`,
-                          borderRadius: 5, padding: '2px 6px',
-                        }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color, lineHeight: 1.4 }}>{label}</span>
-                          <span style={{ fontSize: 12, fontWeight: 900, color, lineHeight: 1.4 }}>{cnt}</span>
-                        </div>
-                      )
-                    })}
-                </div>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {Object.entries(dayData)
+                  .sort((a, b) => (typeMap[a[0]]?.order ?? 99) - (typeMap[b[0]]?.order ?? 99))
+                  .map(([typeName, cnt]) => {
+                    const ti = typeMap[typeName]
+                    const label = ti?.label || typeName
+                    const color = ti?.color || '#f59e0b'
+                    return (
+                      <div key={typeName} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        background: `${color}18`, border: `1px solid ${color}35`,
+                        borderRadius: 4, padding: '1px 5px',
+                      }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color, lineHeight: 1.4 }}>{label}</span>
+                        <span style={{ fontSize: 14, fontWeight: 900, color, lineHeight: 1.4 }}>{cnt}</span>
+                      </div>
+                    )
+                  })}
+              </div>
             </div>
           )
         })}
@@ -694,15 +661,15 @@ function AttendanceCard() {
       {loading ? (
         <Skeleton active paragraph={{ rows: 4 }} />
       ) : (
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', minHeight: 470 }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', minHeight: 560 }}>
           {/* 좌측: 미니 캘린더 */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 7, minWidth: 0 }}>
             {miniCal}
           </div>
           {/* 구분선 */}
           <div style={{ width: 1, background: 'rgba(245,158,11,0.12)', alignSelf: 'stretch', flexShrink: 0 }} />
           {/* 우측: 출근 상세 */}
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ flex: 3, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* 날짜 헤더 */}
             {(() => {
               const dow = selectedDay.day()
@@ -711,7 +678,7 @@ function AttendanceCard() {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
                   <span style={{ fontSize: 22, fontWeight: 900, color: dateColor, lineHeight: 1 }}>{selectedDay.format('M월 D일')}</span>
                   <span style={{ fontSize: 22, fontWeight: 600, color: `${dateColor}99` }}>{selectedDay.format('(ddd)')}</span>
-                  {selectedHoliday && <span style={{ fontSize: 13, fontWeight: 700, color: '#f87171' }}>{selectedHoliday}</span>}
+                  {selectedHoliday && <span style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>{selectedHoliday}</span>}
                 </div>
               )
             })()}
@@ -729,7 +696,7 @@ function AttendanceCard() {
                 {/* 근무 그룹 */}
                 {workItems.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1, textTransform: 'uppercase' }}>근무</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1, textTransform: 'uppercase' }}>근무</div>
                     {workItems.map((d) => (
                       <div key={d.name} style={{
                         borderRadius: 10, background: d.bg,
@@ -739,12 +706,12 @@ function AttendanceCard() {
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px' }}>
                           <span style={{ fontSize: 22, fontWeight: 900, color: d.color, lineHeight: 1, minWidth: 28 }}>{d.value}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: d.color, opacity: 0.8, minWidth: 40 }}>{d.name}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: d.color, opacity: 0.8, minWidth: 40 }}>{d.name}</span>
                           <div style={{ width: 1, height: 18, background: `${d.color}30`, flexShrink: 0 }} />
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 8px' }}>
                             {d.names.map((n) => (
                               <span key={n} style={{
-                                fontSize: 13, fontWeight: 600, color: d.color,
+                                fontSize: 14, fontWeight: 600, color: d.color,
                                 padding: '1px 9px', borderRadius: 20,
                                 background: `${d.color}15`, border: `1px solid ${d.color}28`,
                               }}>{n}</span>
@@ -758,7 +725,7 @@ function AttendanceCard() {
                 {/* 부재/휴가 그룹 */}
                 {leaveItems.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1 }}>부재 / 휴가</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(214,222,232,0.4)', letterSpacing: 1 }}>부재 / 휴가</div>
                     {leaveItems.map((d) => (
                       <div key={d.name} style={{
                         borderRadius: 10, background: d.bg,
@@ -767,12 +734,12 @@ function AttendanceCard() {
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px' }}>
                           <span style={{ fontSize: 22, fontWeight: 900, color: d.color, lineHeight: 1, minWidth: 28 }}>{d.value}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: d.color, opacity: 0.8, minWidth: 40 }}>{d.name}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: d.color, opacity: 0.8, minWidth: 40 }}>{d.name}</span>
                           <div style={{ width: 1, height: 18, background: `${d.color}30`, flexShrink: 0 }} />
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 8px' }}>
                             {d.names.map((n) => (
                               <span key={n} style={{
-                                fontSize: 13, fontWeight: 600, color: d.color,
+                                fontSize: 14, fontWeight: 600, color: d.color,
                                 padding: '1px 9px', borderRadius: 20,
                                 background: `${d.color}15`, border: `1px solid ${d.color}28`,
                               }}>{n}</span>
@@ -863,9 +830,9 @@ function SchedulerMiniCalCard() {
         <CardBtn onClick={() => navigate('/epi/mocvd/scheduler')}>스케줄러 열기</CardBtn>
       }
     >
-      <div style={{ display: 'flex', gap: 20 }}>
+      <div style={{ display: 'flex', gap: 20, minHeight: 560 }}>
         {/* 캘린더 */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 7, minWidth: 0 }}>
           {/* 월 네비 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
             <button onClick={() => navMonth(-1)} style={{ background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
@@ -875,7 +842,7 @@ function SchedulerMiniCalCard() {
           {/* 요일 헤더 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
             {WEEK_DAYS_KO.map((d, i) => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.45)', paddingBottom: 6 }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.72)', paddingBottom: 6 }}>{d}</div>
             ))}
           </div>
           {/* 날짜 그리드 */}
@@ -902,22 +869,22 @@ function SchedulerMiniCalCard() {
                   }}
                 >
                   <div style={{
-                    fontSize: 13, fontWeight: 700, marginBottom: 2,
+                    fontSize: 14, fontWeight: 700, marginBottom: 2,
                     color: isToday ? '#f59e0b' : isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.75)',
                   }}>{date.date()}</div>
                   {holidayName && cur && (
-                    <div style={{ fontSize: 9, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{holidayName}</div>
+                    <div style={{ fontSize: 14, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{holidayName}</div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {dayEvts.slice(0, 3).map(ev => {
                       const cfg = SCHED_EVENT_CONFIG[ev.event_type] || SCHED_EVENT_CONFIG.other
                       return (
-                        <div key={ev.id} style={{ fontSize: 10, borderRadius: 3, padding: '1px 4px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '14px' }}>
+                        <div key={ev.id} style={{ fontSize: 14, borderRadius: 3, padding: '1px 4px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '14px' }}>
                           <span style={{ fontWeight: 700 }}>{cfg.label}</span>{ev.machine_no ? ` ${formatMachineLabel(ev.machine_no)}` : ''}
                         </div>
                       )
                     })}
-                    {dayEvts.length > 3 && <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.35)', paddingLeft: 2 }}>+{dayEvts.length - 3}건</div>}
+                    {dayEvts.length > 3 && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', paddingLeft: 2 }}>+{dayEvts.length - 3}건</div>}
                   </div>
                 </div>
               )
@@ -926,25 +893,25 @@ function SchedulerMiniCalCard() {
         </div>
 
         {/* 선택일 일정 목록 */}
-        <div style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ flex: 3, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--nowa-text)' }}>
             {dayjs(selectedDate).format('M월 D일 (ddd)')}
-            <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(196,210,226,0.45)', marginLeft: 8 }}>{selectedEvents.length}건</span>
+            <span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(196,210,226,0.72)', marginLeft: 8 }}>{selectedEvents.length}건</span>
           </div>
           {selectedEvents.length === 0 ? (
             <Empty description="일정이 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', maxHeight: 420 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {selectedEvents.map(ev => {
                 const cfg = SCHED_EVENT_CONFIG[ev.event_type] || SCHED_EVENT_CONFIG.other
                 return (
                   <div key={ev.id} style={{ padding: '10px 12px', borderRadius: 10, background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `3px solid ${cfg.color}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 3, padding: '1px 6px', color: cfg.color, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-                      {ev.machine_no && <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.6)', fontWeight: 600 }}>{formatMachineLabel(ev.machine_no)}</span>}
+                      <span style={{ fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 6px', color: cfg.color, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+                      {ev.machine_no && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)', fontWeight: 600 }}>{formatMachineLabel(ev.machine_no)}</span>}
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--nowa-text)' }}>{ev.title || '-'}</div>
-                    {ev.actor && <div style={{ fontSize: 12, color: 'rgba(196,210,226,0.5)', marginTop: 4 }}>담당: {ev.actor}</div>}
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--nowa-text)' }}>{ev.title || '-'}</div>
+                    {ev.actor && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', marginTop: 4 }}>담당: {ev.actor}</div>}
                   </div>
                 )
               })}
@@ -1075,7 +1042,7 @@ function HandoverBoard() {
         <button onClick={() => setShowForm((prev) => !prev)} style={{
           appearance: 'none', WebkitAppearance: 'none',
           background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-          color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+          color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
           cursor: 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
         }}>{showForm ? '닫기' : '인수인계 등록'}</button>
       }
@@ -1116,14 +1083,14 @@ function HandoverBoard() {
                 {editingId ? (
                   <button onClick={resetForm} style={{
                     background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-                    color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                    color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
                     cursor: 'pointer', lineHeight: '22px',
                   }}>취소</button>
                 ) : null}
                 <button onClick={submitNote} disabled={saving} style={{
                   appearance: 'none', WebkitAppearance: 'none',
                   background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)',
-                  color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 13, fontWeight: 600,
+                  color: '#f0c060', borderRadius: 8, padding: '4px 14px', fontSize: 14, fontWeight: 600,
                   cursor: saving ? 'not-allowed' : 'pointer', lineHeight: '22px', fontFamily: 'inherit', outline: 'none',
                   opacity: saving ? 0.5 : 1,
                 }}>{editingId ? '수정 저장' : '등록'}</button>
@@ -1188,7 +1155,7 @@ function HandoverBoard() {
                       <div style={{ color: 'var(--nowa-text)', fontWeight: 800, fontSize: 14 }}>{note.title || '인수인계'}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, marginTop: 3 }}>
                         <span style={{ color: '#f59e0b', fontWeight: 700 }}>{note.author || '-'}</span>
-                        <span style={{ color: 'rgba(196,210,226,0.3)' }}>·</span>
+                        <span style={{ color: 'rgba(196,210,226,0.62)' }}>·</span>
                         <span style={{ color: 'rgba(148,163,184,0.7)' }}>
                           {note.handover_date}{note.updated_at || note.created_at ? ` ${dayjs(note.updated_at || note.created_at).format('HH:mm')}` : ''}
                         </span>
@@ -1372,7 +1339,7 @@ function HandoverBoard() {
       >
         {previewNote ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12 }}>
+            <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
               {previewNote.handover_date} / {previewNote.author || '-'} / {previewNote.updated_at || previewNote.created_at || '-'}
             </div>
             <div style={{ color: 'var(--nowa-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
@@ -1480,7 +1447,7 @@ export default function MocvdOverview() {
                     }}
                   >
                     <div style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>{formatMachineLabel(item.machine_no)}</div>
-                    <div style={{ marginTop: 6, color: 'var(--nowa-text-muted)', fontSize: 13 }}>{item.source_name}</div>
+                    <div style={{ marginTop: 6, color: 'var(--nowa-text-muted)', fontSize: 14 }}>{item.source_name}</div>
                     <div style={{ marginTop: 10 }}>
                       <Tag color={item.status === 'overdue' ? 'red' : item.status === 'urgent' ? 'gold' : 'green'}>
                         {item.status === 'overdue' ? '부족' : item.status === 'urgent' ? '임박' : '정상'}
@@ -1519,7 +1486,7 @@ export default function MocvdOverview() {
                   >
                     <div>
                       <div style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>{formatMachineLabel(row.machine_no)}</div>
-                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>
+                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
                         다음 교체 {row.nextReplacementDate || '-'}
                       </div>
                     </div>

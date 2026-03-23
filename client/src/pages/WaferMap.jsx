@@ -361,8 +361,8 @@ export default function WaferMapPage() {
               ['균일도 (σ/μ)', `${stats.uniformity.toFixed(3)} %`],
             ].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>{label}</Text>
-                <Text strong style={{ fontSize: 12 }}>{value}{pInfo.unit ? ` ${pInfo.unit}` : ''}</Text>
+                <Text type="secondary" style={{ fontSize: 14 }}>{label}</Text>
+                <Text strong style={{ fontSize: 14 }}>{value}{pInfo.unit ? ` ${pInfo.unit}` : ''}</Text>
               </div>
             ))}
           </Card>
@@ -383,13 +383,13 @@ export default function WaferMapPage() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                    <Text strong style={{ fontSize: 12, color: active ? token.colorPrimary : token.colorText }}>
+                    <Text strong style={{ fontSize: 14, color: active ? token.colorPrimary : token.colorText }}>
                       {p.label}
-                      <Text type="secondary" style={{ fontWeight: 400, fontSize: 11, marginLeft: 4 }}>{p.fullLabel}</Text>
+                      <Text type="secondary" style={{ fontWeight: 400, fontSize: 14, marginLeft: 4 }}>{p.fullLabel}</Text>
                     </Text>
-                    {p.unit && <Tag color={active ? 'blue' : 'default'} style={{ fontSize: 10, margin: 0 }}>{p.unit}</Tag>}
+                    {p.unit && <Tag color={active ? 'blue' : 'default'} style={{ fontSize: 14, margin: 0 }}>{p.unit}</Tag>}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
+                  <Text type="secondary" style={{ fontSize: 14 }}>
                     μ={s.avg.toFixed(2)}  σ={s.std.toFixed(2)}  U={s.uniformity.toFixed(2)}%
                   </Text>
                 </div>
@@ -406,12 +406,12 @@ export default function WaferMapPage() {
               ['범위 모드', useAutoRange ? '자동' : '수동'],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>{k}</Text>
-                <Text strong style={{ fontSize: 12 }}>{v}</Text>
+                <Text type="secondary" style={{ fontSize: 14 }}>{k}</Text>
+                <Text strong style={{ fontSize: 14 }}>{v}</Text>
               </div>
             ))}
             <Divider style={{ margin: '8px 0' }} />
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text type="secondary" style={{ fontSize: 14 }}>
               컬러바 우클릭 → 범위/컬러맵 설정<br />
               스크롤: 줌  |  드래그: 패닝<br />
               더블클릭: 범위 직접 입력
@@ -434,7 +434,7 @@ export default function WaferMapPage() {
         overflow: 'hidden',
       }}>
         {hovered ? (
-          <span style={{ fontFamily: 'Consolas, monospace', fontSize: 13, color: token.colorText, whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: 'Consolas, monospace', fontSize: 14, color: token.colorText, whiteSpace: 'nowrap' }}>
             <span style={{ color: token.colorTextSecondary }}>Row: </span>
             <strong>{String(-hovered.y).padStart(3)}</strong>
             {'  '}
@@ -452,7 +452,7 @@ export default function WaferMapPage() {
             ))}
           </span>
         ) : (
-          <Text type="secondary" style={{ fontSize: 13, fontFamily: 'monospace' }}>
+          <Text type="secondary" style={{ fontSize: 14, fontFamily: 'monospace' }}>
             셀 위로 마우스를 올리면 측정값이 표시됩니다.
           </Text>
         )}

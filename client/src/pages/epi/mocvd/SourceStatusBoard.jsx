@@ -63,7 +63,7 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
         padding: '16px 18px',
         borderRadius: 18,
         background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-        border: '1px solid rgba(196,210,226,0.16)',
+        border: '1px solid var(--nowa-border)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
         position: 'relative',
         overflow: 'hidden',
@@ -90,7 +90,7 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
         }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
-        <div style={{ color: resolvedAccent, fontSize: 12, fontWeight: 700, paddingTop: 2 }}>{label}</div>
+        <div style={{ color: resolvedAccent, fontSize: 14, fontWeight: 700, paddingTop: 2 }}>{label}</div>
         <div
           style={{
             width: 30,
@@ -113,7 +113,7 @@ function SummaryCard({ label, value, suffix, icon, accent, gradient = 'linear-gr
         {value}
         {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${resolvedAccent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
       </div>
-      {sub ? <div style={{ color: `${resolvedAccent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
+      {sub ? <div style={{ color: `${resolvedAccent}cc`, fontSize: 14, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div> : null}
     </div>
   )
 }
@@ -401,7 +401,7 @@ function SourceStatusBoard() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 800,
               color: isToday ? '#fff' : isSelected ? '#fbbf24' : dateNumColor,
               background: isToday
@@ -418,7 +418,7 @@ function SourceStatusBoard() {
           {/* 공휴일 이름 */}
           {holiday && (
             <div style={{
-              fontSize: 10,
+              fontSize: 14,
               fontWeight: 700,
               color: '#f87171',
               overflow: 'hidden',
@@ -433,7 +433,7 @@ function SourceStatusBoard() {
           {items.length > 0 && (
             <div style={{
               marginLeft: 'auto',
-              fontSize: 10,
+              fontSize: 14,
               fontWeight: 700,
               color: 'rgba(148,163,184,0.6)',
               flexShrink: 0,
@@ -459,7 +459,7 @@ function SourceStatusBoard() {
                   background: `${meta.color}12`,
                   borderLeft: `3px solid ${meta.color}`,
                   color: meta.color,
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: 700,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -473,7 +473,7 @@ function SourceStatusBoard() {
           {items.length > 3 && (
             <div style={{
               padding: '2px 7px',
-              fontSize: 10,
+              fontSize: 14,
               fontWeight: 600,
               color: 'rgba(148,163,184,0.65)',
               background: 'rgba(255,255,255,0.04)',
@@ -507,10 +507,10 @@ function SourceStatusBoard() {
           {current.format('M월')}
         </div>
         {items.length === 0 ? (
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12 }}>일정 없음</div>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>일정 없음</div>
         ) : (
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
-            <div style={{ color: 'var(--nowa-text-soft)', fontSize: 13 }}>{items.length}건 예정</div>
+            <div style={{ color: 'var(--nowa-text-soft)', fontSize: 14 }}>{items.length}건 예정</div>
             {overdue > 0 && (
               <Tag style={{ margin: 0, width: 'fit-content', color: '#f87171', background: 'rgba(248,113,113,0.12)', borderColor: 'transparent' }}>
                 긴급 {overdue}
@@ -675,14 +675,14 @@ function SourceStatusBoard() {
                     backgroundColor: 'transparent',
                     grid: { top: 16, bottom: 44, left: 36, right: 16 },
                     tooltip: { trigger: 'axis' },
-                    legend: { bottom: 4, textStyle: { color: '#b0c0d0', fontSize: 11 } },
+                    legend: { bottom: 4, textStyle: { color: '#b0c0d0', fontSize: 14 } },
                     xAxis: {
                       type: 'category',
                       data: list.map(m => `${m.machine_no}`),
-                      axisLabel: { color: '#64748b', fontSize: 10, rotate: 30 },
+                      axisLabel: { color: '#64748b', fontSize: 14, rotate: 30 },
                       axisLine: { lineStyle: { color: '#1e2a3c' } },
                     },
-                    yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
+                    yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#64748b', fontSize: 14 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
                     series: [
                       {
                         name: '긴급',
@@ -736,15 +736,15 @@ function SourceStatusBoard() {
                   xAxis: {
                     type: 'category',
                     data: buckets.map(b => b.label),
-                    axisLabel: { color: '#64748b', fontSize: 11, rotate: 20 },
+                    axisLabel: { color: '#64748b', fontSize: 14, rotate: 20 },
                     axisLine: { lineStyle: { color: '#1e2a3c' } },
                   },
-                  yAxis: { type: 'value', axisLabel: { color: '#64748b', fontSize: 11 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
+                  yAxis: { type: 'value', axisLabel: { color: '#64748b', fontSize: 14 }, splitLine: { lineStyle: { color: '#1e2a3c' } } },
                   series: [{
                     type: 'bar',
                     data: counts.map((v, i) => ({ value: v, itemStyle: { color: buckets[i].color, borderRadius: [4, 4, 0, 0] } })),
                     barMaxWidth: 48,
-                    label: { show: true, position: 'top', color: '#b0c0d0', fontSize: 11 },
+                    label: { show: true, position: 'top', color: '#b0c0d0', fontSize: 14 },
                   }],
                 }
               })()}
@@ -927,7 +927,7 @@ function SourceStatusBoard() {
                         boxShadow: `inset 3px 0 0 ${meta.color}`,
                       }}
                     >
-                      <span style={{ color: meta.color, fontWeight: 700, fontSize: 13 }}>
+                      <span style={{ color: meta.color, fontWeight: 700, fontSize: 14 }}>
                         {formatMachineLabel(item.machine_no)} {item.source_label}
                       </span>
                       <span style={{
@@ -936,7 +936,7 @@ function SourceStatusBoard() {
                         borderRadius: 999,
                         color: meta.color,
                         background: 'rgba(0,0,0,0.2)',
-                        fontSize: 11,
+                        fontSize: 14,
                         fontWeight: 700,
                       }}>
                         {meta.label}

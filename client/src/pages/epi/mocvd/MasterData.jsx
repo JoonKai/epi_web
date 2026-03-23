@@ -153,9 +153,9 @@ function MachineTab() {
       {/* 툴바 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.5)' }}>전체 {rows.length}대</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>전체 {rows.length}대</span>
           {hasPendingChanges && (
-            <span style={{ fontSize: 12, color: '#fbbf24' }}>변경사항 있음</span>
+            <span style={{ fontSize: 14, color: '#fbbf24' }}>변경사항 있음</span>
           )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -167,7 +167,7 @@ function MachineTab() {
             style={{
               background: hasPendingChanges ? 'rgba(125,211,252,0.12)' : 'rgba(255,255,255,0.04)',
               border: `1px solid ${hasPendingChanges ? 'rgba(125,211,252,0.4)' : 'rgba(255,255,255,0.1)'}`,
-              color: hasPendingChanges ? '#7dd3fc' : 'rgba(196,210,226,0.35)',
+              color: hasPendingChanges ? '#7dd3fc' : 'rgba(196,210,226,0.65)',
             }}
           >저장</Button>
           <button
@@ -176,7 +176,7 @@ function MachineTab() {
               display: 'flex', alignItems: 'center', gap: 4,
               background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
               borderRadius: 8, padding: '4px 14px', cursor: 'pointer',
-              color: 'rgba(245,158,11,0.8)', fontSize: 13, fontWeight: 700,
+              color: 'rgba(245,158,11,0.8)', fontSize: 14, fontWeight: 700,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
@@ -187,7 +187,7 @@ function MachineTab() {
       {/* 카드 그리드 */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {rows.length === 0 && !loading && (
-          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '24px 4px' }}>등록된 호기가 없습니다.</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '24px 4px' }}>등록된 호기가 없습니다.</span>
         )}
         {rows.map((row) => {
           const isActive = pendingActiveMap[row.id] ?? row.is_active
@@ -198,7 +198,7 @@ function MachineTab() {
               style={{
                 display: 'flex', alignItems: 'center',
                 background: '#212535',
-                border: `1px solid ${changed ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                border: `1px solid ${changed ? 'rgba(251,191,36,0.3)' : 'var(--nowa-border)'}`,
                 borderRadius: 16, minWidth: 200, overflow: 'hidden',
                 borderLeft: `3px solid ${isActive ? '#f59e0b' : '#475569'}`,
                 opacity: isActive ? 1 : 0.55,
@@ -222,7 +222,7 @@ function MachineTab() {
                   {formatMachineLabel(row.machine_no)}
                 </span>
                 {row.description && (
-                  <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.5)', marginTop: 2, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', marginTop: 2, whiteSpace: 'nowrap' }}>
                     {row.description}
                   </span>
                 )}
@@ -238,10 +238,10 @@ function MachineTab() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <EditOutlined
                     onClick={() => openEdit(row)}
-                    style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }}
+                    style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }}
                   />
                   <Popconfirm title="이 호기를 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
-                    <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                    <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
                   </Popconfirm>
                 </div>
               </div>
@@ -411,8 +411,8 @@ function SourceTab() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.5)' }}>전체 {rows.length}종</span>
-          {hasPendingChanges && <span style={{ fontSize: 12, color: '#fbbf24' }}>변경사항 있음</span>}
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>전체 {rows.length}종</span>
+          {hasPendingChanges && <span style={{ fontSize: 14, color: '#fbbf24' }}>변경사항 있음</span>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button
@@ -423,7 +423,7 @@ function SourceTab() {
             style={{
               background: hasPendingChanges ? 'rgba(125,211,252,0.12)' : 'rgba(255,255,255,0.04)',
               border: `1px solid ${hasPendingChanges ? 'rgba(125,211,252,0.4)' : 'rgba(255,255,255,0.1)'}`,
-              color: hasPendingChanges ? '#7dd3fc' : 'rgba(196,210,226,0.35)',
+              color: hasPendingChanges ? '#7dd3fc' : 'rgba(196,210,226,0.65)',
             }}
           >저장</Button>
           <button
@@ -432,7 +432,7 @@ function SourceTab() {
               display: 'flex', alignItems: 'center', gap: 4,
               background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
               borderRadius: 8, padding: '4px 14px', cursor: 'pointer',
-              color: 'rgba(245,158,11,0.8)', fontSize: 13, fontWeight: 700,
+              color: 'rgba(245,158,11,0.8)', fontSize: 14, fontWeight: 700,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
@@ -442,7 +442,7 @@ function SourceTab() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {rows.length === 0 && !loading && (
-          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '24px 4px' }}>등록된 소스가 없습니다.</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '24px 4px' }}>등록된 소스가 없습니다.</span>
         )}
         {rows.map((row) => {
           const isActive = pendingActiveMap[row.id] ?? row.is_active
@@ -451,7 +451,7 @@ function SourceTab() {
             <div key={row.id} style={{
               display: 'flex', alignItems: 'center',
               background: '#212535',
-              border: `1px solid ${changed ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.08)'}`,
+              border: `1px solid ${changed ? 'rgba(251,191,36,0.3)' : 'var(--nowa-border)'}`,
               borderRadius: 16, minWidth: 180, overflow: 'hidden',
               borderLeft: `3px solid ${isActive ? '#f59e0b' : '#475569'}`,
               opacity: isActive ? 1 : 0.55,
@@ -471,7 +471,7 @@ function SourceTab() {
               {/* 정보 */}
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 4 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{row.name}</span>
-                <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.45)', marginTop: 2 }}>순서 {row.order_idx}</span>
+                <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginTop: 2 }}>순서 {row.order_idx}</span>
               </div>
 
               {/* 액션 */}
@@ -482,9 +482,9 @@ function SourceTab() {
                   onChange={(checked) => setPendingActiveMap((prev) => ({ ...prev, [row.id]: checked }))}
                 />
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <EditOutlined onClick={() => openEdit(row)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                  <EditOutlined onClick={() => openEdit(row)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }} />
                   <Popconfirm title="이 소스를 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
-                    <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                    <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
                   </Popconfirm>
                 </div>
               </div>
@@ -538,7 +538,7 @@ function ColorPickerField({ value, onChange, rgba = false }) {
         onClick={() => setOpen((p) => !p)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+          border: '1px solid var(--nowa-border)', borderRadius: 6,
           padding: '4px 10px', cursor: 'pointer',
           background: 'rgba(255,255,255,0.04)',
         }}
@@ -549,7 +549,7 @@ function ColorPickerField({ value, onChange, rgba = false }) {
           border: '1px solid rgba(255,255,255,0.2)',
           flexShrink: 0,
         }} />
-        <span style={{ fontSize: 12, color: 'var(--nowa-text)', flex: 1 }}>{value || '선택 안됨'}</span>
+        <span style={{ fontSize: 14, color: 'var(--nowa-text)', flex: 1 }}>{value || '선택 안됨'}</span>
       </div>
 
       {open && (
@@ -570,8 +570,8 @@ function ColorPickerField({ value, onChange, rgba = false }) {
             onClick={(e) => e.stopPropagation()}
             style={{
               marginTop: 8, width: '100%', background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
-              padding: '4px 8px', color: '#e2e8f0', fontSize: 12,
+              border: '1px solid var(--nowa-border)', borderRadius: 6,
+              padding: '4px 8px', color: '#e2e8f0', fontSize: 14,
             }}
           />
         </div>
@@ -686,14 +686,14 @@ function ShiftTypeTab() {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-        <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.5)' }}>전체 {rows.length}종</span>
+        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>전체 {rows.length}종</span>
         <button
           onClick={() => setCreateOpen(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 4,
             background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
             borderRadius: 8, padding: '4px 14px', cursor: 'pointer',
-            color: 'rgba(245,158,11,0.8)', fontSize: 13, fontWeight: 700,
+            color: 'rgba(245,158,11,0.8)', fontSize: 14, fontWeight: 700,
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
@@ -702,13 +702,13 @@ function ShiftTypeTab() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {rows.length === 0 && !loading && (
-          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '24px 4px' }}>등록된 근무 유형이 없습니다.</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '24px 4px' }}>등록된 근무 유형이 없습니다.</span>
         )}
         {rows.map((row) => (
           <div key={row.id} style={{
             display: 'flex', alignItems: 'center',
             background: '#212535',
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: '1px solid var(--nowa-border)',
             borderRadius: 16, minWidth: 200, overflow: 'hidden',
             borderLeft: `3px solid ${row.is_active ? (row.color || '#f59e0b') : '#475569'}`,
             opacity: row.is_active ? 1 : 0.55,
@@ -729,9 +729,9 @@ function ShiftTypeTab() {
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 4 }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{row.label}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: row.color, border: '1px solid rgba(255,255,255,0.15)', display: 'inline-block' }} />
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: row.bg_color, border: '1px solid rgba(255,255,255,0.15)', display: 'inline-block' }} />
-                <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.4)' }}>순서 {row.order_idx}</span>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: row.color, border: '1px solid var(--nowa-border)', display: 'inline-block' }} />
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: row.bg_color, border: '1px solid var(--nowa-border)', display: 'inline-block' }} />
+                <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>순서 {row.order_idx}</span>
               </div>
             </div>
 
@@ -739,9 +739,9 @@ function ShiftTypeTab() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, paddingRight: 12, alignItems: 'center' }}>
               <Switch size="small" checked={row.is_active} onChange={(checked) => handleToggleActive(row, checked)} />
               <div style={{ display: 'flex', gap: 8 }}>
-                <EditOutlined onClick={() => openEdit(row)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                <EditOutlined onClick={() => openEdit(row)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }} />
                 <Popconfirm title="이 근무 유형을 삭제하시겠습니까?" onConfirm={() => handleDelete(row.id)}>
-                  <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                  <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
                 </Popconfirm>
               </div>
             </div>

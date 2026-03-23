@@ -56,7 +56,7 @@ function getStatusColor(value) {
 function RepairSheet({ rows }) {
   return (
     <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 370px)', position: 'relative' }}>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', minWidth: '100%', fontSize: 12 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', minWidth: '100%', fontSize: 14 }}>
         <colgroup>
           {columns.map((column) => (
             <col key={column.key} style={{ width: column.width, minWidth: column.width }} />
@@ -244,7 +244,7 @@ export default function RepairStatus() {
         }
         styles={{ body: { padding: 0 } }}
       >
-        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 12 }}>
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
           좌우 스크롤로 전체 컬럼을 확인할 수 있고, 첫 번째 `입고구분` 열은 고정되어 현재 행 상태를 놓치지 않게 했습니다.
         </div>
         {loading ? (

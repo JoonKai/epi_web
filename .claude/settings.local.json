@@ -24,7 +24,10 @@
       "Bash(npx vite:*)",
       "Bash(del \"c:\\\\epi_web\\\\client\\\\src\\\\pages\\\\epi\\\\mocvd\\\\MocvdScheduler.jsx\")",
       "Bash(.venvScriptspython.exe -c \"from database import engine; from models import Base; Base.metadata.create_all\\(bind=engine\\); print\\(''OK''\\)\")",
-      "Bash(.venv/Scripts/python.exe -c \"from database import engine; from models import Base; Base.metadata.create_all\\(bind=engine\\); print\\(''OK''\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"from database import engine; from models import Base; Base.metadata.create_all\\(bind=engine\\); print\\(''OK''\\)\")",
+      "Bash(grep -rn \"fontSize: [0-9]\\\\{1,2\\\\}[^0-9]\" c:/epi_web/client/src --include=\"*.jsx\")",
+      "Bash(grep -rn \"font-size: [0-9]\\\\{1,2\\\\}px\" c:/epi_web/client/src/index.css)",
+      "Bash(grep -n \"font-size: [0-9]\\\\{1,2\\\\}px\" c:/epi_web/client/src/index.css)"
     ]
   }
 }

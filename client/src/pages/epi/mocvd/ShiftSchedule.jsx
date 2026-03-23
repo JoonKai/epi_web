@@ -484,7 +484,7 @@ function ScheduleTab() {
               </span>
             )
           })}
-          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.4)', marginLeft: 4 }}>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', marginLeft: 4 }}>
             ※ 셀 클릭으로 근무 유형 변경
           </span>
         </div>
@@ -525,7 +525,7 @@ function ScheduleTab() {
                         title={holidays[dk] || undefined}
                         style={{ color, background: bg, fontSize: 14, ...(isMon && { borderLeft: '2.5px solid #000' }) }}>
                         {d.format('M/D')}
-                        {isHoliday && <div style={{ fontSize: 9, color: '#f87171', lineHeight: 1.1, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holidays[dk]}</div>}
+                        {isHoliday && <div style={{ fontSize: 14, color: '#f87171', lineHeight: 1.1, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holidays[dk]}</div>}
                       </TH>
                     )
                   })}
@@ -706,7 +706,7 @@ function ScheduleTab() {
                             textAlign: 'center',
                             fontSize: 14, fontWeight: val > 0 ? 700 : 400,
                             background: val > 0 ? rowBg : 'transparent',
-                            color: val > 0 ? color : 'rgba(196,210,224,0.45)',
+                            color: val > 0 ? color : 'rgba(196,210,224,0.72)',
                             height: 46,
                           }}>
                             {val}
@@ -747,7 +747,7 @@ function ScheduleTab() {
         okText={`추가 (${selectedPids.length}명)`}
         width={520}
       >
-        <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.55)', marginBottom: 14 }}>
+        <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.78)', marginBottom: 14 }}>
           인원관리에 등록된 직원을 선택하면 근무표에 추가됩니다.
         </div>
         {personnelGroups.vendors.map((vendor) => {
@@ -782,7 +782,7 @@ function ScheduleTab() {
           )
         })}
         {personnelGroups.members.every((m) => m.already_added) && (
-          <div style={{ textAlign: 'center', color: 'rgba(196,210,226,0.45)', padding: '20px 0' }}>
+          <div style={{ textAlign: 'center', color: 'rgba(196,210,226,0.72)', padding: '20px 0' }}>
             추가 가능한 인원이 없습니다.
           </div>
         )}
@@ -890,7 +890,7 @@ function PmPersonnelTab({ vendors, members }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <UserOutlined style={{ color: '#94a3b8' }} />
               <span style={{ fontWeight: 700, fontSize: 14 }}>인원 풀</span>
-              <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.45)', marginLeft: 2 }}>{poolList.length}명</span>
+              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginLeft: 2 }}>{poolList.length}명</span>
             </div>
           }
         >
@@ -903,16 +903,16 @@ function PmPersonnelTab({ vendors, members }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
             {poolGroups.length === 0 && (
-              <div style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', textAlign: 'center', padding: '20px 0' }}>
                 추가할 인원이 없습니다.
               </div>
             )}
             {poolGroups.map(({ vendor, members: gm }) => (
               <div key={vendor.id}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
                   {vendor.name}
-                  <span style={{ color: 'rgba(196,210,226,0.4)', fontWeight: 400 }}>{gm.length}명</span>
+                  <span style={{ color: 'rgba(196,210,226,0.68)', fontWeight: 400 }}>{gm.length}명</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {gm.map(m => (
@@ -920,20 +920,20 @@ function PmPersonnelTab({ vendors, members }) {
                       display: 'flex', alignItems: 'center', gap: 10,
                       background: '#1e2235', borderRadius: 10,
                       padding: '8px 10px',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      border: '1px solid var(--nowa-border)',
                       cursor: 'pointer',
                       transition: 'border-color 0.15s',
                     }}
                       onClick={() => addMember(m.id)}
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(125,211,252,0.4)'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--nowa-border)'}
                     >
-                      <div style={avatarStyle('rgba(196,210,226,0.5)', '#2a2f45')}>
+                      <div style={avatarStyle('rgba(196,210,226,0.75)', '#2a2f45')}>
                         {m.name?.[0] || '?'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.45)', marginTop: 1 }}>
+                        <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginTop: 1 }}>
                           {[m.position, m.shift && `${m.shift}조`].filter(Boolean).join(' · ')}
                         </div>
                       </div>
@@ -941,7 +941,7 @@ function PmPersonnelTab({ vendors, members }) {
                         width: 22, height: 22, borderRadius: '50%',
                         background: 'rgba(125,211,252,0.1)', border: '1px solid rgba(125,211,252,0.3)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0, color: '#7dd3fc', fontSize: 13, fontWeight: 700,
+                        flexShrink: 0, color: '#7dd3fc', fontSize: 14, fontWeight: 700,
                       }}>+</div>
                     </div>
                   ))}
@@ -960,16 +960,16 @@ function PmPersonnelTab({ vendors, members }) {
               <ToolOutlined style={{ color: '#7dd3fc' }} />
               <span style={{ fontWeight: 700, fontSize: 14 }}>PM 투입 인원</span>
               <span style={{
-                fontSize: 12, fontWeight: 700,
+                fontSize: 14, fontWeight: 700,
                 background: pmList.length > 0 ? 'rgba(125,211,252,0.15)' : 'rgba(255,255,255,0.06)',
-                color: pmList.length > 0 ? '#7dd3fc' : 'rgba(196,210,226,0.4)',
+                color: pmList.length > 0 ? '#7dd3fc' : 'rgba(196,210,226,0.68)',
                 padding: '1px 8px', borderRadius: 10, marginLeft: 4,
               }}>{pmList.length}명</span>
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                {saveOk && <span style={{ fontSize: 12, color: '#4ade80' }}>저장 완료</span>}
+                {saveOk && <span style={{ fontSize: 14, color: '#4ade80' }}>저장 완료</span>}
                 {pmList.length > 0 && (
                   <div onClick={resetAll} style={{
-                    fontSize: 12, color: '#f87171', cursor: 'pointer',
+                    fontSize: 14, color: '#f87171', cursor: 'pointer',
                     padding: '3px 12px', borderRadius: 6,
                     border: '1px solid rgba(248,113,113,0.3)',
                     background: 'rgba(248,113,113,0.08)',
@@ -979,8 +979,8 @@ function PmPersonnelTab({ vendors, members }) {
                   >초기화</div>
                 )}
                 <div onClick={!saving && isDirty ? saveToServer : undefined} style={{
-                  fontSize: 12, fontWeight: 700,
-                  color: isDirty ? '#fff' : 'rgba(196,210,226,0.35)',
+                  fontSize: 14, fontWeight: 700,
+                  color: isDirty ? '#fff' : 'rgba(196,210,226,0.65)',
                   cursor: isDirty && !saving ? 'pointer' : 'default',
                   padding: '3px 14px', borderRadius: 6,
                   border: `1px solid ${isDirty ? 'rgba(125,211,252,0.5)' : 'rgba(255,255,255,0.1)'}`,
@@ -998,7 +998,7 @@ function PmPersonnelTab({ vendors, members }) {
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '48px 0', gap: 10,
-              color: 'rgba(196,210,226,0.3)', fontSize: 14,
+              color: 'rgba(196,210,226,0.62)', fontSize: 14,
               border: '2px dashed rgba(125,211,252,0.12)', borderRadius: 12,
             }}>
               <UserOutlined style={{ fontSize: 32, opacity: 0.4 }} />
@@ -1022,7 +1022,7 @@ function PmPersonnelTab({ vendors, members }) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--nowa-text)' }}>{m.name}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.45)', marginTop: 1 }}>
+                      <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginTop: 1 }}>
                         {m.vendor_name || ''}
                         {m.position && ` · ${m.position}`}
                         {m.shift && ` · ${m.shift}조`}
@@ -1044,7 +1044,7 @@ function PmPersonnelTab({ vendors, members }) {
                         width: 24, height: 24, borderRadius: '50%',
                         background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', color: '#f87171', fontSize: 13, fontWeight: 700, flexShrink: 0,
+                        cursor: 'pointer', color: '#f87171', fontSize: 14, fontWeight: 700, flexShrink: 0,
                         transition: 'background 0.15s',
                       }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.22)'}

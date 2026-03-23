@@ -335,7 +335,7 @@ function SystemSettingsTab() {
           <SettingOutlined />
           <span>IP 접속 필터</span>
         </div>
-        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
           서버에 접속 가능한 IP를 허용/차단 목록으로 관리합니다.<br />
           ⚠️ 잘못 설정하면 본인 IP도 차단될 수 있으니 주의하세요.
         </div>
@@ -349,7 +349,7 @@ function SystemSettingsTab() {
           <Radio.Button value="allow">허용 모드 (화이트리스트)</Radio.Button>
           <Radio.Button value="block">차단 모드 (블랙리스트)</Radio.Button>
         </Radio.Group>
-        <div style={{ marginTop: 8, fontSize: 13, color: modeColor[mode] }}>
+        <div style={{ marginTop: 8, fontSize: 14, color: modeColor[mode] }}>
           {modeDesc[mode]}
         </div>
       </div>
@@ -372,7 +372,7 @@ function SystemSettingsTab() {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {ips.length === 0 && (
-              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>추가된 IP가 없습니다.</span>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>추가된 IP가 없습니다.</span>
             )}
             {ips.map((ip) => (
               <Tag
@@ -380,7 +380,7 @@ function SystemSettingsTab() {
                 closable
                 onClose={() => removeIp(ip)}
                 color={mode === 'allow' ? 'green' : 'red'}
-                style={{ fontSize: 13, padding: '3px 10px' }}
+                style={{ fontSize: 14, padding: '3px 10px' }}
               >
                 {ip}
               </Tag>
@@ -478,7 +478,7 @@ function LogTab() {
           <HistoryOutlined />
           <span>관리자 Log</span>
         </div>
-        <div style={{ marginTop: 6, color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+        <div style={{ marginTop: 6, color: 'var(--nowa-text-muted)', fontSize: 14 }}>
           시스템 로그와 사용자 활동 로그를 구분해서 확인합니다.
         </div>
       </div>
@@ -677,7 +677,7 @@ function HolidayTab() {
 
       {/* 동기화 버튼 */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>공휴일 업데이트:</span>
+        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>공휴일 업데이트:</span>
         {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
           <Button
             key={y}
@@ -720,7 +720,7 @@ function HolidayTab() {
             label: (
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <CalendarOutlined />{year}년
-                <Tag style={{ margin: 0, borderRadius: 99, fontSize: 11 }}>{items.length}</Tag>
+                <Tag style={{ margin: 0, borderRadius: 99, fontSize: 14 }}>{items.length}</Tag>
               </span>
             ),
             children: (

@@ -89,7 +89,7 @@ export default function Login() {
           <div style={{ fontSize: 28, fontWeight: 900, color: '#f8fafc', letterSpacing: -0.6 }}>
             EPI
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(196,210,226,0.78)', marginTop: 8, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.78)', marginTop: 8, lineHeight: 1.6 }}>
             EPI 운영 관리 페이지
           </div>
         </div>
@@ -159,11 +159,11 @@ export default function Login() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
           <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.12)' }} />
-          <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.42)', letterSpacing: 1.2 }}>MOCVD CONSOLE</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', letterSpacing: 1.2 }}>MOCVD CONSOLE</span>
           <div style={{ flex: 1, height: 1, background: 'rgba(245,158,11,0.12)' }} />
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'rgba(196,210,226,0.36)' }}>
+        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 14, color: 'rgba(196,210,226,0.58)' }}>
           2026 EPI Process Management System
         </div>
       </div>

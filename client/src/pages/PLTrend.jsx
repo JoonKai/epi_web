@@ -175,15 +175,15 @@ export default function PLTrend() {
     },
     legend: {
       bottom: 4,
-      textStyle: { color: 'rgba(196,210,226,0.8)', fontSize: 11 },
+      textStyle: { color: 'rgba(196,210,226,0.8)', fontSize: 14 },
       type: 'scroll',
     },
     xAxis: {
       name: xMeta ? `${xMeta.label}${xMeta.unit ? ` (${xMeta.unit})` : ''}` : 'Run Index',
       nameLocation: 'middle',
       nameGap: 40,
-      nameTextStyle: { color: 'rgba(196,210,226,0.6)', fontSize: 12 },
-      axisLabel: { color: '#64748b', fontSize: 11 },
+      nameTextStyle: { color: 'rgba(196,210,226,0.6)', fontSize: 14 },
+      axisLabel: { color: '#64748b', fontSize: 14 },
       axisLine: { lineStyle: { color: 'rgba(196,210,226,0.15)' } },
       splitLine: { lineStyle: { color: 'rgba(196,210,226,0.07)' } },
     },
@@ -191,8 +191,8 @@ export default function PLTrend() {
       name: `${yMeta.label}${yMeta.unit ? ` (${yMeta.unit})` : ''}`,
       nameLocation: 'middle',
       nameGap: 52,
-      nameTextStyle: { color: 'rgba(196,210,226,0.6)', fontSize: 12 },
-      axisLabel: { color: '#64748b', fontSize: 11 },
+      nameTextStyle: { color: 'rgba(196,210,226,0.6)', fontSize: 14 },
+      axisLabel: { color: '#64748b', fontSize: 14 },
       axisLine: { lineStyle: { color: 'rgba(196,210,226,0.15)' } },
       splitLine: { lineStyle: { color: 'rgba(196,210,226,0.07)' } },
     },
@@ -215,7 +215,7 @@ export default function PLTrend() {
         </Upload>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>Y축</span>
+          <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>Y축</span>
           <Select
             value={yParam}
             onChange={setYParam}
@@ -225,7 +225,7 @@ export default function PLTrend() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>X축</span>
+          <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>X축</span>
           <Select
             value={xParam}
             onChange={setXParam}
@@ -252,7 +252,7 @@ export default function PLTrend() {
               style={{
                 borderRadius: 99,
                 padding: '3px 12px',
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 color: COLORS[ri % COLORS.length],
                 background: `${COLORS[ri % COLORS.length]}18`,
@@ -287,7 +287,7 @@ export default function PLTrend() {
       {hasData && (
         <Card className="nowa-card" title={<span style={{ fontWeight: 800 }}>{yMeta.label} 통계 요약</span>} styles={{ body: { padding: 0 } }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr style={{ background: 'rgba(245,158,11,0.07)', borderBottom: '1px solid rgba(245,158,11,0.18)' }}>
                   {['Run', '측정수', '평균', '표준편차', '최솟값', '최댓값', '범위'].map((h) => (

@@ -116,7 +116,7 @@ function VendorTab({ vendors, members, refreshAll }) {
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <Input allowClear value={search} onChange={e => setSearch(e.target.value)}
             placeholder="업체명/담당자 검색" style={{ width: 220 }} />
-          <span style={{ fontSize: 13, color: 'var(--nowa-text-muted)' }}>{filtered.length}개 업체</span>
+          <span style={{ fontSize: 14, color: 'var(--nowa-text-muted)' }}>{filtered.length}개 업체</span>
         </div>
         <button
           onClick={openCreate}
@@ -124,7 +124,7 @@ function VendorTab({ vendors, members, refreshAll }) {
             display: 'flex', alignItems: 'center', gap: 4,
             background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
             borderRadius: 8, padding: '5px 14px', cursor: 'pointer',
-            color: 'rgba(245,158,11,0.85)', fontSize: 13, fontWeight: 700,
+            color: 'rgba(245,158,11,0.85)', fontSize: 14, fontWeight: 700,
           }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.85)' }}
@@ -136,7 +136,7 @@ function VendorTab({ vendors, members, refreshAll }) {
       {/* 업체 카드 그리드 */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {filtered.length === 0 && (
-          <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '8px 4px' }}>등록된 업체가 없습니다.</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '8px 4px' }}>등록된 업체가 없습니다.</span>
         )}
         {filtered.map(v => {
           const memberCount = members.filter(m => m.vendor_id === v.id).length
@@ -144,7 +144,7 @@ function VendorTab({ vendors, members, refreshAll }) {
           return (
             <div key={v.id} style={{
               display: 'flex', alignItems: 'center',
-              background: '#212535', border: '1px solid rgba(255,255,255,0.08)',
+              background: '#212535', border: '1px solid var(--nowa-border)',
               borderRadius: 16, minWidth: 240, overflow: 'hidden',
               borderLeft: `3px solid ${v.is_active ? '#f59e0b' : '#475569'}`,
               opacity: v.is_active ? 1 : 0.55,
@@ -164,10 +164,10 @@ function VendorTab({ vendors, members, refreshAll }) {
                 <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{v.name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {v.contact_name && (
-                    <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.6)' }}>{v.contact_name}</span>
+                    <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)' }}>{v.contact_name}</span>
                   )}
                   <span style={{
-                    fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 999,
+                    fontSize: 14, fontWeight: 700, padding: '1px 7px', borderRadius: 999,
                     background: 'rgba(125,211,252,0.12)', color: '#7dd3fc',
                     border: '1px solid rgba(125,211,252,0.2)',
                   }}>
@@ -180,9 +180,9 @@ function VendorTab({ vendors, members, refreshAll }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, paddingRight: 12, alignItems: 'center' }}>
                 <Switch size="small" checked={v.is_active} onChange={checked => handleToggle(v, checked)} />
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <EditOutlined onClick={() => openEdit(v)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                  <EditOutlined onClick={() => openEdit(v)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }} />
                   <Popconfirm title="업체와 소속 인원을 삭제합니다." onConfirm={() => handleDelete(v)}>
-                    <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                    <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
                   </Popconfirm>
                 </div>
               </div>
@@ -351,7 +351,7 @@ function MemberTab({ vendors, members, refreshAll }) {
                     display: 'inline-block',
                   }} />
                   <span style={{ fontWeight: 800, fontSize: 15, color: '#f59e0b' }}>{vendor.name}</span>
-                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.5)' }}>{groupMembers.length}명</span>
+                  <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>{groupMembers.length}명</span>
                 </div>
                 <button
                   onClick={() => openCreate(vendor.id)}
@@ -359,7 +359,7 @@ function MemberTab({ vendors, members, refreshAll }) {
                     display: 'flex', alignItems: 'center', gap: 4,
                     background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
                     borderRadius: 8, padding: '3px 12px', cursor: 'pointer',
-                    color: 'rgba(245,158,11,0.7)', fontSize: 13, fontWeight: 700,
+                    color: 'rgba(245,158,11,0.7)', fontSize: 14, fontWeight: 700,
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.7)' }}
@@ -371,7 +371,7 @@ function MemberTab({ vendors, members, refreshAll }) {
               {/* 멤버 카드 */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {groupMembers.length === 0 && (
-                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.35)', padding: '8px 4px' }}>등록된 인원이 없습니다.</span>
+                  <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '8px 4px' }}>등록된 인원이 없습니다.</span>
                 )}
                 {groupMembers.map((m) => (
                   <div
@@ -379,7 +379,7 @@ function MemberTab({ vendors, members, refreshAll }) {
                     style={{
                       display: 'flex', alignItems: 'center',
                       background: '#212535',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      border: '1px solid var(--nowa-border)',
                       borderRadius: 16, minWidth: 220, overflow: 'hidden',
                       borderLeft: `3px solid ${m.is_active ? '#f59e0b' : '#475569'}`,
                       opacity: m.is_active ? 1 : 0.55,
@@ -400,8 +400,8 @@ function MemberTab({ vendors, members, refreshAll }) {
                       <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{m.name}</span>
                       {(m.position || m.shift) && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                          {m.position && <Tag style={{ margin: 0, fontSize: 11 }}>{m.position}</Tag>}
-                          {m.shift && <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.5)' }}>{m.shift}조</span>}
+                          {m.position && <Tag style={{ margin: 0, fontSize: 14 }}>{m.position}</Tag>}
+                          {m.shift && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>{m.shift}조</span>}
                         </div>
                       )}
                     </div>
@@ -410,9 +410,9 @@ function MemberTab({ vendors, members, refreshAll }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, paddingRight: 12, alignItems: 'center' }}>
                       <Switch size="small" checked={m.is_active} onChange={(checked) => handleToggle(m, checked)} />
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <EditOutlined onClick={() => openEdit(m)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                        <EditOutlined onClick={() => openEdit(m)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }} />
                         <Popconfirm title="인원을 삭제합니다." onConfirm={() => handleDelete(m)}>
-                          <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                          <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
                         </Popconfirm>
                       </div>
                     </div>

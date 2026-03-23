@@ -25,7 +25,7 @@ const navBtnStyle = {
   background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)',
   borderRadius: 8, width: 32, height: 32,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 13,
+  cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 14,
 }
 
 /* ── 자동 일정 생성 알고리즘 ────────────────────────────────── */
@@ -191,30 +191,30 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
 
         {/* 대상 선택 */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>① 일정 대상 선택</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>① 일정 대상 선택</div>
           <div style={{ display: 'flex', gap: 12 }}>
 
             {/* PM 정비 */}
             <div style={{ flex: 1, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', marginBottom: 8 }}>PM 정비 (챔버)</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc', marginBottom: 8 }}>PM 정비 (챔버)</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <Checkbox checked={config.includePmCritical} onChange={() => toggle('includePmCritical')} />
-                  <span style={{ fontSize: 13 }}>긴급</span>
-                  <span style={{ fontSize: 12, color: '#f87171', marginLeft: 2 }}>({pmCritical.length}대)</span>
+                  <span style={{ fontSize: 14 }}>긴급</span>
+                  <span style={{ fontSize: 14, color: '#f87171', marginLeft: 2 }}>({pmCritical.length}대)</span>
                 </label>
                 {pmCritical.length > 0 && config.includePmCritical && (
-                  <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.4)', paddingLeft: 24, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
                     {pmCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
                   </div>
                 )}
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <Checkbox checked={config.includePmUrgent} onChange={() => toggle('includePmUrgent')} />
-                  <span style={{ fontSize: 13 }}>임박</span>
-                  <span style={{ fontSize: 12, color: '#fbbf24', marginLeft: 2 }}>({pmUrgent.length}대)</span>
+                  <span style={{ fontSize: 14 }}>임박</span>
+                  <span style={{ fontSize: 14, color: '#fbbf24', marginLeft: 2 }}>({pmUrgent.length}대)</span>
                 </label>
                 {pmUrgent.length > 0 && config.includePmUrgent && (
-                  <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.4)', paddingLeft: 24, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
                     {pmUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
                   </div>
                 )}
@@ -223,25 +223,25 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
 
             {/* 필터 교체 */}
             <div style={{ flex: 1, background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa', marginBottom: 8 }}>필터 교체</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa', marginBottom: 8 }}>필터 교체</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <Checkbox checked={config.includeFilterCritical} onChange={() => toggle('includeFilterCritical')} />
-                  <span style={{ fontSize: 13 }}>긴급</span>
-                  <span style={{ fontSize: 12, color: '#f87171', marginLeft: 2 }}>({filterCritical.length}대)</span>
+                  <span style={{ fontSize: 14 }}>긴급</span>
+                  <span style={{ fontSize: 14, color: '#f87171', marginLeft: 2 }}>({filterCritical.length}대)</span>
                 </label>
                 {filterCritical.length > 0 && config.includeFilterCritical && (
-                  <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.4)', paddingLeft: 24, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
                     {filterCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
                   </div>
                 )}
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <Checkbox checked={config.includeFilterUrgent} onChange={() => toggle('includeFilterUrgent')} />
-                  <span style={{ fontSize: 13 }}>임박</span>
-                  <span style={{ fontSize: 12, color: '#fbbf24', marginLeft: 2 }}>({filterUrgent.length}대)</span>
+                  <span style={{ fontSize: 14 }}>임박</span>
+                  <span style={{ fontSize: 14, color: '#fbbf24', marginLeft: 2 }}>({filterUrgent.length}대)</span>
                 </label>
                 {filterUrgent.length > 0 && config.includeFilterUrgent && (
-                  <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.4)', paddingLeft: 24, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
                     {filterUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
                   </div>
                 )}
@@ -250,17 +250,17 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
 
             {/* 소스 교체 */}
             <div style={{ flex: 1, background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#a3e635', marginBottom: 8 }}>소스 교체</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#a3e635', marginBottom: 8 }}>소스 교체</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <Checkbox checked={config.includeSourceOverdue} onChange={() => toggle('includeSourceOverdue')} />
-                  <span style={{ fontSize: 13 }}>긴급</span>
-                  <span style={{ fontSize: 12, color: '#f87171', marginLeft: 2 }}>({srcOverdue.length}건)</span>
+                  <span style={{ fontSize: 14 }}>긴급</span>
+                  <span style={{ fontSize: 14, color: '#f87171', marginLeft: 2 }}>({srcOverdue.length}건)</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <Checkbox checked={config.includeSourceUrgent} onChange={() => toggle('includeSourceUrgent')} />
-                  <span style={{ fontSize: 13 }}>임박</span>
-                  <span style={{ fontSize: 12, color: '#fbbf24', marginLeft: 2 }}>({srcUrgent.length}건)</span>
+                  <span style={{ fontSize: 14 }}>임박</span>
+                  <span style={{ fontSize: 14, color: '#fbbf24', marginLeft: 2 }}>({srcUrgent.length}건)</span>
                 </label>
               </div>
             </div>
@@ -270,7 +270,7 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
 
         {/* 배분 설정 */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>② 배분 설정</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>② 배분 설정</div>
           <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
             {[
               { label: 'PM 인원', key: 'pmPersonCount', color: '#7dd3fc' },
@@ -278,7 +278,7 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
               { label: '소스교체 인원', key: 'sourcePersonCount', color: '#a3e635' },
             ].map(({ label, key, color }) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 13, color, fontWeight: 600 }}>{label}</span>
+                <span style={{ fontSize: 14, color, fontWeight: 600 }}>{label}</span>
                 <Select
                   value={config[key]}
                   onChange={v => setConfig(p => ({ ...p, [key]: v }))}
@@ -289,7 +289,7 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
               </div>
             ))}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)' }}>하루 최대</span>
+              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)' }}>하루 최대</span>
               <Select
                 value={config.maxPerDay}
                 onChange={v => setConfig(p => ({ ...p, maxPerDay: v }))}
@@ -299,20 +299,20 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)' }}>작업일</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13 }}>
+              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)' }}>작업일</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
                 <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토요일
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
                 <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
                 <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일 포함
               </label>
             </div>
           </div>
           {pmMembers.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(196,210,226,0.4)' }}>
+            <div style={{ marginTop: 8, fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>
               투입 인원 {pmMembers.length}명 중 {Math.min(config.pmPersonCount, pmMembers.length)}명 배정 →&nbsp;
               {pmMembers.slice(0, config.pmPersonCount).map(m => m.name).join(', ')}
               {config.pmPersonCount > pmMembers.length && ' (인원 부족, 순환 배정)'}
@@ -335,11 +335,11 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
         {/* 미리보기 */}
         {preview !== null && (
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 8 }}>
               ③ 생성 미리보기 <span style={{ color: preview.length > 0 ? '#7dd3fc' : '#f87171', fontWeight: 800 }}>{preview.length}건</span>
             </div>
             {preview.length === 0 ? (
-              <div style={{ fontSize: 13, color: 'rgba(196,210,226,0.3)', textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)', textAlign: 'center', padding: '16px 0' }}>
                 조건에 해당하는 항목이 없습니다.
               </div>
             ) : (
@@ -352,20 +352,20 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
                 {preview.map((item, i) => {
                   const cfg = evtCfg(item.event_type)
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, padding: '4px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
-                      <span style={{ color: 'rgba(196,210,226,0.5)', minWidth: 80 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '4px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
+                      <span style={{ color: 'rgba(196,210,226,0.75)', minWidth: 80 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
                       <span style={{
-                        fontSize: 10, fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0,
+                        fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0,
                         color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
                       }}>{cfg.label}</span>
                       <span style={{ color: 'var(--nowa-text)', flex: 1 }}>
                         {item.machine_no ? `${formatMachineLabel(item.machine_no)} ` : ''}{item.title}
                       </span>
                       {item.actor && (
-                        <span style={{ color: '#7dd3fc', fontSize: 11, flexShrink: 0 }}>{item.actor}</span>
+                        <span style={{ color: '#7dd3fc', fontSize: 14, flexShrink: 0 }}>{item.actor}</span>
                       )}
                       <span style={{
-                        fontSize: 9, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
+                        fontSize: 14, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
                         color: item.badge === '긴급' ? '#f87171' : '#fbbf24',
                         background: item.badge === '긴급' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
                         border: `1px solid ${item.badge === '긴급' ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.3)'}`,
@@ -548,27 +548,27 @@ export default function MocvdScheduler() {
 
         {/* 이번 달 통계 */}
         <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, padding: '14px 16px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.5)', marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.75)', marginBottom: 12 }}>
             {year}년 {month}월 현황
           </div>
           {monthStats.map(({ key, cfg, count }) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ width: 42, textAlign: 'center', fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '1px 6px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+              <span style={{ width: 42, textAlign: 'center', fontSize: 14, fontWeight: 700, borderRadius: 4, padding: '1px 6px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
               <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
                 {count > 0 && <div style={{ height: '100%', borderRadius: 2, background: cfg.color, width: `${Math.min(100, count * 10)}%`, opacity: 0.7 }} />}
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: count > 0 ? cfg.color : 'rgba(196,210,226,0.25)', minWidth: 20, textAlign: 'right' }}>{count}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: count > 0 ? cfg.color : 'rgba(196,210,226,0.62)', minWidth: 20, textAlign: 'right' }}>{count}</span>
             </div>
           ))}
         </div>
 
         {/* 범례 */}
         <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, padding: '14px 16px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.5)', marginBottom: 10 }}>범례</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.75)', marginBottom: 10 }}>범례</div>
           {Object.entries(EVENT_CONFIG).map(([key, cfg]) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ width: 42, textAlign: 'center', fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '1px 6px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-              <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.55)' }}>
+              <span style={{ width: 42, textAlign: 'center', fontSize: 14, fontWeight: 700, borderRadius: 4, padding: '1px 6px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.78)' }}>
                 {key === 'pm' ? 'PM 정비 (챔버)' : key === 'filter' ? '필터 교체' : key === 'bm' ? 'BM 수리' : key === 'source_change' ? '소스 교체' : '기타 일정'}
               </span>
             </div>
@@ -577,21 +577,21 @@ export default function MocvdScheduler() {
 
         {/* PM 투입 인원 */}
         <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, padding: '14px 16px', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.5)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.75)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <ToolOutlined style={{ color: '#7dd3fc' }} />
             PM 투입 인원
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#7dd3fc', background: 'rgba(125,211,252,0.12)', padding: '0 6px', borderRadius: 8, marginLeft: 2 }}>{pmMembers.length}명</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc', background: 'rgba(125,211,252,0.12)', padding: '0 6px', borderRadius: 8, marginLeft: 2 }}>{pmMembers.length}명</span>
           </div>
           {pmMembers.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'rgba(196,210,226,0.25)', textAlign: 'center', padding: '16px 0' }}>배정된 인원이 없습니다</div>
+            <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)', textAlign: 'center', padding: '16px 0' }}>배정된 인원이 없습니다</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, overflowY: 'auto' }}>
               {pmMembers.map(m => (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(125,211,252,0.1)', border: '1.5px solid rgba(125,211,252,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#7dd3fc', flexShrink: 0, boxShadow: '0 0 6px rgba(125,211,252,0.2)' }}>{m.name?.[0] || '?'}</div>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(125,211,252,0.1)', border: '1.5px solid rgba(125,211,252,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#7dd3fc', flexShrink: 0, boxShadow: '0 0 6px rgba(125,211,252,0.2)' }}>{m.name?.[0] || '?'}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-                    {pmAssign[m.id] && <div style={{ fontSize: 10, color: '#7dd3fc', opacity: 0.65 }}>{pmAssign[m.id]}</div>}
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
+                    {pmAssign[m.id] && <div style={{ fontSize: 14, color: '#7dd3fc', opacity: 0.65 }}>{pmAssign[m.id]}</div>}
                   </div>
                 </div>
               ))}
@@ -614,7 +614,7 @@ export default function MocvdScheduler() {
               <button onClick={() => navMonth(1)} style={navBtnStyle}><RightOutlined /></button>
               <button
                 onClick={() => { setYear(today.year()); setMonth(today.month() + 1); setSelectedDate(today.format('YYYY-MM-DD')) }}
-                style={{ fontSize: 12, color: 'rgba(196,210,226,0.5)', cursor: 'pointer', background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 6, padding: '4px 12px' }}
+                style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', cursor: 'pointer', background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 6, padding: '4px 12px' }}
               >오늘</button>
             </div>
 
@@ -622,13 +622,13 @@ export default function MocvdScheduler() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => openCreate(selectedDate)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(125,211,252,0.35)', background: 'rgba(125,211,252,0.1)', color: '#7dd3fc' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(125,211,252,0.35)', background: 'rgba(125,211,252,0.1)', color: '#7dd3fc' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
               ><PlusOutlined /> 수동 추가</button>
               <button
                 onClick={() => setAutoOpen(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,222,128,0.2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(74,222,128,0.1)'}
               ><RobotOutlined /> 자동 생성</button>
@@ -646,7 +646,7 @@ export default function MocvdScheduler() {
               >
                 <button
                   disabled={monthEvents.length === 0}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, cursor: monthEvents.length === 0 ? 'default' : 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.08)', color: monthEvents.length === 0 ? 'rgba(248,113,113,0.3)' : '#f87171' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: monthEvents.length === 0 ? 'default' : 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.08)', color: monthEvents.length === 0 ? 'rgba(248,113,113,0.3)' : '#f87171' }}
                   onMouseEnter={e => { if (monthEvents.length > 0) e.currentTarget.style.background = 'rgba(248,113,113,0.18)' }}
                   onMouseLeave={e => { if (monthEvents.length > 0) e.currentTarget.style.background = 'rgba(248,113,113,0.08)' }}
                 >초기화 ({monthEvents.length})</button>
@@ -657,7 +657,7 @@ export default function MocvdScheduler() {
           {/* 요일 헤더 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
             {WEEK_DAYS.map((d, i) => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, padding: '6px 0', color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.45)' }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, padding: '6px 0', color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.72)' }}>{d}</div>
             ))}
           </div>
 
@@ -690,23 +690,23 @@ export default function MocvdScheduler() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                     <span style={isToday ? {
                       background: '#f59e0b', color: '#171b26', width: 22, height: 22,
-                      borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800,
-                    } : { fontSize: 13, fontWeight: 600, color: isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.65)' }}>{d.date()}</span>
-                    {dayEvents.length > 0 && isCurrentMonth && <span style={{ fontSize: 9, color: 'rgba(196,210,226,0.3)' }}>{dayEvents.length}</span>}
+                      borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800,
+                    } : { fontSize: 14, fontWeight: 600, color: isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.65)' }}>{d.date()}</span>
+                    {dayEvents.length > 0 && isCurrentMonth && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)' }}>{dayEvents.length}</span>}
                   </div>
                   {holidayName && isCurrentMonth && (
-                    <div style={{ fontSize: 9, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 1 }}>{holidayName}</div>
+                    <div style={{ fontSize: 14, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 1 }}>{holidayName}</div>
                   )}
                   {dayEvents.slice(0, 3).map(ev => {
                     const cfg = evtCfg(ev.event_type)
                     return (
-                      <div key={ev.id} style={{ fontSize: 10, borderRadius: 3, padding: '1px 5px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '15px' }}>
+                      <div key={ev.id} style={{ fontSize: 14, borderRadius: 3, padding: '1px 5px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '15px' }}>
                         <span style={{ fontWeight: 700, marginRight: 2 }}>{cfg.label}</span>
                         {ev.machine_no ? `${formatMachineLabel(ev.machine_no)} ` : ''}{ev.title}
                       </div>
                     )
                   })}
-                  {dayEvents.length > 3 && <div style={{ fontSize: 10, color: 'rgba(196,210,226,0.3)', paddingLeft: 2 }}>+{dayEvents.length - 3}개 더</div>}
+                  {dayEvents.length > 3 && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)', paddingLeft: 2 }}>+{dayEvents.length - 3}개 더</div>}
                 </div>
               )
             })}
@@ -720,11 +720,11 @@ export default function MocvdScheduler() {
             <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--nowa-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800 }}>{dayjs(selectedDate).format('M월 D일')}</div>
-                <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.4)', marginTop: 1 }}>{dayjs(selectedDate).format('dddd')}</div>
+                <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', marginTop: 1 }}>{dayjs(selectedDate).format('dddd')}</div>
               </div>
               <button
                 onClick={() => openCreate(selectedDate)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(125,211,252,0.1)', border: '1px solid rgba(125,211,252,0.3)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', color: '#7dd3fc', fontSize: 12, fontWeight: 700 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(125,211,252,0.1)', border: '1px solid rgba(125,211,252,0.3)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', color: '#7dd3fc', fontSize: 14, fontWeight: 700 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.22)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
               ><PlusOutlined /> 추가</button>
@@ -733,7 +733,7 @@ export default function MocvdScheduler() {
             {/* 이벤트 목록 */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {selectedEvents.length === 0 ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(196,210,226,0.25)', fontSize: 13, gap: 8 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(196,210,226,0.62)', fontSize: 14, gap: 8 }}>
                   <span style={{ fontSize: 28, opacity: 0.3 }}>📅</span>
                   <span>등록된 일정이 없습니다</span>
                 </div>
@@ -744,21 +744,21 @@ export default function MocvdScheduler() {
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 3, padding: '1px 5px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-                          {ev.machine_no && <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.5)' }}>{formatMachineLabel(ev.machine_no)}</span>}
+                          <span style={{ fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 5px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+                          {ev.machine_no && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>{formatMachineLabel(ev.machine_no)}</span>}
                         </div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--nowa-text)', lineHeight: 1.4 }}>{ev.title || '-'}</div>
-                        {ev.detail && <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.45)', marginTop: 4, lineHeight: 1.4 }}>{ev.detail}</div>}
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', lineHeight: 1.4 }}>{ev.title || '-'}</div>
+                        {ev.detail && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginTop: 4, lineHeight: 1.4 }}>{ev.detail}</div>}
                         {ev.actor && (
-                          <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.35)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <UserOutlined style={{ fontSize: 10 }} />{ev.actor}
+                          <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <UserOutlined style={{ fontSize: 14 }} />{ev.actor}
                           </div>
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: 7, flexShrink: 0, paddingTop: 2 }}>
-                        <EditOutlined onClick={() => openEdit(ev)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 13, cursor: 'pointer' }} />
+                        <EditOutlined onClick={() => openEdit(ev)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }} />
                         <Popconfirm title="일정을 삭제하시겠습니까?" onConfirm={() => handleDelete(ev.id)} okText="삭제" cancelText="취소">
-                          <DeleteOutlined style={{ color: '#f87171', fontSize: 13, cursor: 'pointer', opacity: 0.8 }} />
+                          <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
                         </Popconfirm>
                       </div>
                     </div>

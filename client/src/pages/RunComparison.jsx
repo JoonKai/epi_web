@@ -131,7 +131,7 @@ function MiniWaferMap({ wafer, param, rangeStart, rangeEnd, colors, size }) {
           opts={{ renderer: 'canvas' }}
         />
       </div>
-      <div style={{ fontSize: 11, color: '#b0c0d0', fontWeight: 600, letterSpacing: 0.3 }}>
+      <div style={{ fontSize: 14, color: '#b0c0d0', fontWeight: 600, letterSpacing: 0.3 }}>
         {wafer.id}
       </div>
     </div>
@@ -222,7 +222,7 @@ export default function RunComparison() {
       }}>
         <div>
           <div style={{ color: 'var(--nowa-text)', fontSize: 17, fontWeight: 800, marginBottom: 2 }}>런 비교</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
             {wafers.length}개 웨이퍼 · 공통 범위 [{rangeStart.toFixed(3)} – {rangeEnd.toFixed(3)}]
           </div>
         </div>
@@ -248,11 +248,11 @@ export default function RunComparison() {
         border: '1px solid var(--nowa-border)',
         background: 'var(--nowa-soft-fill)',
       }}>
-        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 12, flexShrink: 0, minWidth: 50, textAlign: 'right' }}>
+        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14, flexShrink: 0, minWidth: 50, textAlign: 'right' }}>
           {rangeStart.toFixed(3)}
         </span>
         <div style={{ flex: 1, height: 12, borderRadius: 6, background: `linear-gradient(to right, ${colors.join(',')})` }} />
-        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 12, flexShrink: 0, minWidth: 50 }}>
+        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14, flexShrink: 0, minWidth: 50 }}>
           {rangeEnd.toFixed(3)}
         </span>
       </div>
@@ -272,19 +272,19 @@ export default function RunComparison() {
                   <span style={{
                     position: 'absolute', top: -10, left: 8,
                     background: '#0b0f1a', padding: '0 10px',
-                    color: '#475569', fontSize: 11, fontWeight: 700, letterSpacing: 1,
+                    color: '#475569', fontSize: 14, fontWeight: 700, letterSpacing: 1,
                   }}>
                     {label}
                   </span>
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, marginTop: groupIdx === 0 ? 0 : 4 }}>
-                <span style={{ color: '#475569', fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>
+                <span style={{ color: '#475569', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>
                   {label}
                 </span>
                 {groupIdx < 2 && (
                   <Upload showUploadList={false} beforeUpload={makeUploadHandler(groupIdx)} accept=".map" multiple>
-                    <Button size="small" icon={<PlusOutlined />} style={{ fontSize: 11, height: 22, padding: '0 8px' }}>
+                    <Button size="small" icon={<PlusOutlined />} style={{ fontSize: 14, height: 22, padding: '0 8px' }}>
                       PL+ 추가
                     </Button>
                   </Upload>

@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Tabs } from 'antd'
-import { BarChartOutlined, BookOutlined, EditOutlined, HeatMapOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import { BarChartOutlined, BookOutlined, EditOutlined, HeatMapOutlined, ReloadOutlined, SaveOutlined, TableOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { authFetch } from '../../../context/AuthContext'
 import SourceChangeLogTab from './SourceChangeLogTab'
 import SourceStatusBoard from './SourceStatusBoard'
 import SourceMachineBoard from './SourceMachineBoard'
+import SourceTableSheetTab from './SourceTableSheetTab'
 import { formatMachineLabel } from './machineLabel'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
@@ -48,7 +49,7 @@ const th2Base = {
   border: BORDER,
   padding: '0 3px',
   textAlign: 'center',
-  fontSize: 12,
+  fontSize: 14,
   whiteSpace: 'nowrap',
   height: HEAD2_H,
   zIndex: 9,
@@ -168,7 +169,7 @@ function EditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, color
           background: 'rgba(245,158,11,0.12)',
           border: '1px solid #f59e0b',
           color: color ?? '#c4cdd8',
-          fontSize: 13,
+          fontSize: 14,
           textAlign: 'right',
           padding: '0 4px',
           outline: 'none',
@@ -193,7 +194,7 @@ function EditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, color
         paddingRight: 5,
         cursor: 'text',
         color: color ?? '#c4cdd8',
-        fontSize: 13,
+        fontSize: 14,
         background: pending ? 'rgba(245,158,11,0.08)' : (bg ?? 'transparent'),
         userSelect: 'none',
       }}
@@ -250,7 +251,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
   }, [machines, sourceNames, cellData, dateRows])
 
   if (colCount === 0) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>데이터가 없습니다.</div>
+    return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>?곗씠?곌? ?놁뒿?덈떎.</div>
   }
 
   return (
@@ -275,11 +276,11 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                 zIndex: 12,
                 background: '#171b26',
                 width: LABEL_W,
-                fontSize: 13,
+                fontSize: 14,
                 color: 'rgba(196,210,226,0.6)',
               }}
             >
-              구분
+              援щ텇
             </th>
             {machines.map((machine) => (
               <th
@@ -318,7 +319,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
 
         <tbody>
           <tr>
-            <td style={{ ...tdLabelBase, background: '#0d1520', color: '#38bdf8', borderRight: GROUP_BORDER }}>초기량</td>
+            <td style={{ ...tdLabelBase, background: '#0d1520', color: '#38bdf8', borderRight: GROUP_BORDER }}>???</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -341,7 +342,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1a1400', color: '#f59e0b', borderRight: GROUP_BORDER }}>교체기준(%)</td>
+            <td style={{ ...tdLabelBase, background: '#1a1400', color: '#f59e0b', borderRight: GROUP_BORDER }}>援먯껜湲곗?(%)</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -364,7 +365,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#191500', color: '#fbbf24', borderRight: GROUP_BORDER }}>일사용량</td>
+            <td style={{ ...tdLabelBase, background: '#191500', color: '#fbbf24', borderRight: GROUP_BORDER }}>?쇱궗?⑸웾</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -387,7 +388,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#0a1a0a', color: '#86efac', borderRight: GROUP_BORDER }}>잔량</td>
+            <td style={{ ...tdLabelBase, background: '#0a1a0a', color: '#86efac', borderRight: GROUP_BORDER }}>?붾웾</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -410,7 +411,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1a0d00', color: '#f97316', borderRight: GROUP_BORDER }}>교체기준량</td>
+            <td style={{ ...tdLabelBase, background: '#1a0d00', color: '#f97316', borderRight: GROUP_BORDER }}>?????</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -428,7 +429,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       color: '#f97316',
                       textAlign: 'right',
                       paddingRight: 5,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: 700,
                     }}
                   >
@@ -440,7 +441,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#161200', color: '#facc15', borderRight: GROUP_BORDER }}>예상 잔여일</td>
+            <td style={{ ...tdLabelBase, background: '#161200', color: '#facc15', borderRight: GROUP_BORDER }}>?? ???</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -458,11 +459,11 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       color: derived.days_left != null && derived.days_left <= 7 ? '#f87171' : '#facc15',
                       textAlign: 'right',
                       paddingRight: 5,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: 700,
                     }}
                   >
-                    {derived.days_left == null ? '-' : `${derived.days_left}일`}
+                    {derived.days_left == null ? '-' : `${derived.days_left}?`}
                   </td>
                 )
               }),
@@ -470,7 +471,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#091420', color: '#60a5fa', borderRight: GROUP_BORDER }}>예상 교체일</td>
+            <td style={{ ...tdLabelBase, background: '#091420', color: '#60a5fa', borderRight: GROUP_BORDER }}>?? ???</td>
             {machines.map((machine) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
@@ -488,7 +489,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       color: '#60a5fa',
                       textAlign: 'right',
                       paddingRight: 5,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: 700,
                     }}
                   >
@@ -531,7 +532,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                         color: isCritical ? '#f87171' : isLow ? '#fbbf24' : 'rgba(196,210,226,0.8)',
                         textAlign: 'right',
                         paddingRight: 5,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: isCritical || isLow ? 700 : 500,
                       }}
                     >
@@ -589,7 +590,7 @@ function SourceInputTab() {
         setPendingKeys(new Set())
         setStatusSettings(json.status_settings ?? { overdue_days: 0, urgent_days: 7 })
       })
-      .catch((err) => setError(typeof err === 'string' ? err : '전체 소스 데이터를 불러오지 못했습니다.'))
+      .catch((err) => setError(typeof err === 'string' ? err : '?꾩껜 ?뚯뒪 ?곗씠?곕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -630,10 +631,10 @@ function SourceInputTab() {
         body: JSON.stringify(changes),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.detail || '전체 저장에 실패했습니다.')
+      if (!res.ok) throw new Error(json.detail || '?꾩껜 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.')
       fetchData()
     } catch (err) {
-      setError(err.message || '전체 저장 중 오류가 발생했습니다.')
+      setError(err.message || '?꾩껜 ???以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.')
     } finally {
       setSaving(false)
     }
@@ -669,10 +670,10 @@ function SourceInputTab() {
         body: JSON.stringify(payload),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.detail || '상태 기준 저장에 실패했습니다.')
+      if (!res.ok) throw new Error(json.detail || '?곹깭 湲곗? ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.')
       setStatusSettings(json)
     } catch (err) {
-      setError(err.message || '상태 기준 저장에 실패했습니다.')
+      setError(err.message || '?곹깭 湲곗? ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.')
     } finally {
       setSettingsSaving(false)
     }
@@ -682,7 +683,7 @@ function SourceInputTab() {
     const keyword = quickFilter.trim().toLowerCase()
     if (!keyword) return machines
     return machines.filter(
-      (machine) => String(machine.machine_no).includes(keyword) || `mo#${machine.machine_no}호기`.includes(keyword),
+      (machine) => String(machine.machine_no).includes(keyword) || `mo#${machine.machine_no}?멸린`.includes(keyword),
     )
   }, [machines, quickFilter])
 
@@ -700,37 +701,35 @@ function SourceInputTab() {
       <div className="console-toolbar">
         <div>
           <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>
-            MOCVD 전체 소스 입력
+            MOCVD ?꾩껜 ?뚯뒪 ?낅젰
           </div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>
-            초기량, 교체기준, 일사용량, 잔량을 한 화면에서 입력하고 아래 예측값을 바로 확인합니다.
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
+            珥덇린?? 援먯껜湲곗?, ?쇱궗?⑸웾, ?붾웾?????붾㈃?먯꽌 ?낅젰?섍퀬 ?꾨옒 ?덉륫媛믪쓣 諛붾줈 ?뺤씤?⑸땲??
           </div>
         </div>
         <div className="console-toolbar-group">
-          <div className="console-pill">{machines.length}대</div>
-          <div className="console-pill">{sourceNames.length}종류</div>
+          <div className="console-pill">{machines.length}?</div>
+          <div className="console-pill">{sourceNames.length}醫낅쪟</div>
           <div className="console-pill" style={{ color: pendingKeys.size > 0 ? '#c4b5fd' : undefined }}>
-            변경 {pendingKeys.size}건
-          </div>
+            蹂寃?{pendingKeys.size}嫄?          </div>
         </div>
       </div>
 
       <Card className="nowa-card" styles={{ body: { padding: 16 } }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Space wrap size={16}>
-            <div style={{ color: 'var(--nowa-text-soft)', fontSize: 13, fontWeight: 700 }}>상태 기준 설정</div>
+            <div style={{ color: 'var(--nowa-text-soft)', fontSize: 14, fontWeight: 700 }}>?곹깭 湲곗? ?ㅼ젙</div>
             <Space size={8}>
-              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>부족 기준(일)</span>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>遺議?湲곗?(??</span>
               <InputNumber min={0} value={statusSettings.overdue_days} onChange={(value) => handleStatusSettingChange('overdue_days', value)} />
             </Space>
             <Space size={8}>
-              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>임박 기준(일)</span>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>?꾨컯 湲곗?(??</span>
               <InputNumber min={0} value={statusSettings.urgent_days} onChange={(value) => handleStatusSettingChange('urgent_days', value)} />
             </Space>
           </Space>
           <Button onClick={handleSaveStatusSettings} loading={settingsSaving}>
-            기준 저장
-          </Button>
+            湲곗? ???          </Button>
         </div>
       </Card>
 
@@ -740,13 +739,13 @@ function SourceInputTab() {
         className="console-panel"
         style={{ ...panelStyle, minHeight: 0, overflow: 'hidden' }}
         styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
-        title="전체 설비 소스 입력"
+        title="?꾩껜 ?ㅻ퉬 ?뚯뒪 ?낅젰"
         extra={(
           <Space wrap>
             <Input
               value={quickFilter}
               onChange={(event) => setQuickFilter(event.target.value)}
-              placeholder="호기 검색"
+              placeholder="?멸린 寃??
               style={{ width: 150 }}
               allowClear
             />
@@ -755,27 +754,26 @@ function SourceInputTab() {
               onChange={setForecastDays}
               style={{ width: 120 }}
               options={[
-                { value: 15, label: '15일' },
-                { value: 30, label: '30일' },
-                { value: 60, label: '60일' },
-                { value: 90, label: '90일' },
+                { value: 15, label: '15?? },
+                { value: 30, label: '30?? },
+                { value: 60, label: '60?? },
+                { value: 90, label: '90?? },
               ]}
             />
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-              새로고침
+              ?덈줈怨좎묠
             </Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>
-              전체 저장
-            </Button>
+              ?꾩껜 ???            </Button>
           </Space>
         )}
       >
-        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 12 }}>
-          기존 소스 입력 표에 교체 기준 입력을 통합했습니다. 초기량, 교체기준(%), 일사용량, 잔량을 입력하면 교체기준량과 예상 교체일이 자동 계산되며 예측 기간은 15/30/60/90일로 바꿔 볼 수 있습니다.
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
+          湲곗〈 ?뚯뒪 ?낅젰 ?쒖뿉 援먯껜 湲곗? ?낅젰???듯빀?덉뒿?덈떎. 珥덇린?? 援먯껜湲곗?(%), ?쇱궗?⑸웾, ?붾웾???낅젰?섎㈃ 援먯껜湲곗??됯낵 ?덉긽 援먯껜?쇱씠 ?먮룞 怨꾩궛?섎ŉ ?덉륫 湲곌컙? 15/30/60/90?쇰줈 諛붽퓭 蹂????덉뒿?덈떎.
         </div>
         {loading ? (
           <div style={{ display: 'grid', placeItems: 'center', minHeight: 420 }}>
-            <Spin tip="전체 설비 데이터를 불러오는 중입니다." />
+            <Spin tip="?꾩껜 ?ㅻ퉬 ?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎." />
           </div>
         ) : (
           <ExcelTable
@@ -791,11 +789,11 @@ function SourceInputTab() {
 
       <Card
         className="nowa-card"
-        title="설비별 잔량 도달율"
+        title="?ㅻ퉬蹂??붾웾 ?꾨떖??
         styles={{ body: { padding: 0 } }}
       >
-        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 12 }}>
-          위 입력표와 같은 열 기준으로 소스별 잔량 도달율을 표시합니다. 초기량 대비 잔량 비율이 막대로 보입니다.
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
+          ???낅젰?쒖? 媛숈? ??湲곗??쇰줈 ?뚯뒪蹂??붾웾 ?꾨떖?⑥쓣 ?쒖떆?⑸땲?? 珥덇린???鍮??붾웾 鍮꾩쑉??留됰?濡?蹂댁엯?덈떎.
         </div>
         <div style={{ overflowX: 'auto', overflowY: 'hidden', position: 'relative' }}>
           <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
@@ -816,11 +814,11 @@ function SourceInputTab() {
                     zIndex: 12,
                     background: '#171b26',
                     width: LABEL_W,
-                    fontSize: 13,
+                    fontSize: 14,
                     color: 'rgba(196,210,226,0.6)',
                   }}
                 >
-                  구분
+                  援щ텇
                 </th>
                 {filteredMachines.map((machine) => (
                   <th
@@ -859,8 +857,7 @@ function SourceInputTab() {
             <tbody>
               <tr>
                 <td style={{ ...tdLabelBase, background: '#171b26', color: '#86efac', borderRight: GROUP_BORDER }}>
-                  잔량 도달율
-                </td>
+                  ?붾웾 ?꾨떖??                </td>
                 {filteredMachines.map((machine) =>
                   sourceNames.map((sourceName, index) => {
                     const key = `${machine.machine_no}:${sourceName}`
@@ -895,7 +892,7 @@ function SourceInputTab() {
                             }}
                           />
                         </div>
-                        <div style={{ marginTop: 8, textAlign: 'center', color, fontSize: 12, fontWeight: 800 }}>
+                        <div style={{ marginTop: 8, textAlign: 'center', color, fontSize: 14, fontWeight: 800 }}>
                           {rate.toFixed(0)}%
                         </div>
                       </td>
@@ -916,7 +913,7 @@ export default function Source() {
   const navigate = useNavigate()
   const activeTab = useMemo(() => {
     const tab = new URLSearchParams(location.search).get('tab')
-    const allowed = ['status-board', 'machine-board', 'input', 'change-log']
+    const allowed = ['status-board', 'machine-board', 'input', 'table-sheet', 'change-log']
     return allowed.includes(tab) ? tab : 'status-board'
   }, [location.search])
 
@@ -930,10 +927,11 @@ export default function Source() {
         paddingBottom: 0,
       }}
       items={[
-        { key: 'status-board', label: <span><BarChartOutlined /> 소스교체 현황판</span>, children: <SourceStatusBoard /> },
-        { key: 'machine-board', label: <span><HeatMapOutlined /> 설비별 소스현황</span>, children: <SourceMachineBoard /> },
-        { key: 'input', label: <span><EditOutlined /> 소스 입력</span>, children: <SourceInputTab /> },
-        { key: 'change-log', label: <span><BookOutlined /> 소스교체 작업 일지</span>, children: <SourceChangeLogTab /> },
+        { key: 'status-board', label: <span><BarChartOutlined />{"\uC18C\uC2A4\uAD50\uCCB4 \uD604\uD669\uD310"}</span>, children: <SourceStatusBoard /> },
+        { key: 'machine-board', label: <span><HeatMapOutlined />{"\uC124\uBE44\uBCC4 \uC18C\uC2A4\uD604\uD669"}</span>, children: <SourceMachineBoard /> },
+        { key: 'input', label: <span><EditOutlined />{"\uC794\uB7C9\uAE30\uC785"}</span>, children: <SourceInputTab /> },
+        { key: 'table-sheet', label: <span><TableOutlined />TABLE</span>, children: <SourceTableSheetTab /> },
+        { key: 'change-log', label: <span><BookOutlined />{"\uC18C\uC2A4\uAD50\uCCB4 \uC791\uC5C5\uC77C\uC9C0"}</span>, children: <SourceChangeLogTab /> },
       ]}
     />
   )

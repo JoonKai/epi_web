@@ -24,14 +24,14 @@ function KpiCard({ title, value, suffix, gradient, icon, sub, trend }) {
     <div className="nowa-kpi-card" style={{ background: gradient }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--nowa-contrast-text-soft)', letterSpacing: 0.5, marginBottom: 10 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--nowa-contrast-text-soft)', letterSpacing: 0.5, marginBottom: 10 }}>
             {title}
           </div>
           <div style={{ fontSize: 34, fontWeight: 800, color: 'var(--nowa-contrast-text)', lineHeight: 1, letterSpacing: -1 }}>
             {value ?? '-'}
             {suffix ? <span style={{ fontSize: 16, fontWeight: 600, marginLeft: 4, opacity: 0.9 }}>{suffix}</span> : null}
           </div>
-          {sub ? <div style={{ fontSize: 11, color: 'var(--nowa-contrast-text-muted)', marginTop: 8 }}>{sub}</div> : null}
+          {sub ? <div style={{ fontSize: 14, color: 'var(--nowa-contrast-text-muted)', marginTop: 8 }}>{sub}</div> : null}
         </div>
         <div
           style={{
@@ -52,8 +52,8 @@ function KpiCard({ title, value, suffix, gradient, icon, sub, trend }) {
       </div>
       {trend ? (
         <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <ArrowUpOutlined style={{ color: 'var(--nowa-contrast-text)', fontSize: 11 }} />
-          <span style={{ fontSize: 12, color: 'var(--nowa-contrast-text-soft)' }}>{trend}</span>
+          <ArrowUpOutlined style={{ color: 'var(--nowa-contrast-text)', fontSize: 14 }} />
+          <span style={{ fontSize: 14, color: 'var(--nowa-contrast-text-soft)' }}>{trend}</span>
         </div>
       ) : null}
     </div>
@@ -65,14 +65,14 @@ function MetricCard({ title, value, suffix, color, icon, hint }) {
     <Card className="nowa-card" styles={{ body: { padding: 20 } }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10 }}>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10 }}>
             {title}
           </div>
           <div style={{ color, fontSize: 30, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1 }}>
             {value ?? '-'}
             {suffix ? <span style={{ fontSize: 15, fontWeight: 600, marginLeft: 4, opacity: 0.85 }}>{suffix}</span> : null}
           </div>
-          {hint ? <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 6 }}>{hint}</div> : null}
+          {hint ? <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 6 }}>{hint}</div> : null}
         </div>
         <div
           style={{
@@ -241,13 +241,13 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
             개요
           </div>
           <div style={{ color: 'var(--nowa-text)', fontSize: 26, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1 }}>
             EPI 운영 대시보드
           </div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13, marginTop: 6 }}>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 6 }}>
             설비, 소스, 시스템 상태를 한 화면에서 모니터링합니다.
           </div>
         </div>
@@ -300,7 +300,7 @@ export default function Dashboard() {
       </div>
 
       <div>
-        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
           운영 현황
         </div>
         <Row gutter={[16, 16]}>
@@ -346,12 +346,12 @@ export default function Dashboard() {
               <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 8 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ color: '#6366f1', fontSize: 20, fontWeight: 800 }}>{stats?.active_machines ?? '-'}</div>
-                  <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700 }}>가동 중</div>
+                  <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700 }}>가동 중</div>
                 </div>
                 <div style={{ width: 1, background: 'var(--nowa-border)' }} />
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ color: 'var(--nowa-text-soft)', fontSize: 20, fontWeight: 800 }}>{stats?.total_machines ?? '-'}</div>
-                  <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700 }}>전체</div>
+                  <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700 }}>전체</div>
                 </div>
               </div>
             </Card>
@@ -360,7 +360,7 @@ export default function Dashboard() {
       </div>
 
       <div>
-        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
           운영 요약
         </div>
         <Row gutter={[16, 16]}>
@@ -372,13 +372,13 @@ export default function Dashboard() {
           </Col>
           <Col xs={24} md={8}>
             <Card className="nowa-card" styles={{ body: { padding: 20 } }}>
-              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10 }}>
+              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10 }}>
                 종합 가용성
               </div>
               <div style={{ color: '#6366f1', fontSize: 34, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
                 {healthScore}%
               </div>
-              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 6, marginBottom: 14 }}>
+              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 6, marginBottom: 14 }}>
                 API와 DB 응답 기준 종합 점수
               </div>
               <Progress

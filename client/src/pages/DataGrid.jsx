@@ -260,13 +260,13 @@ export default function DataGrid() {
       })
       cover.addText(`생성일 ${dayjs().format('YYYY-MM-DD HH:mm')}`, {
         x: 0.6, y: 1.6, w: 4.5, h: 0.3,
-        fontSize: 10, color: '94A3B8',
+        fontSize: 14, color: '94A3B8',
       })
       cover.addText(
         Object.entries(summary).map(([group, count]) => `${group}: ${count}개 메뉴`).join('   '),
         {
           x: 0.6, y: 2.0, w: 10.5, h: 0.4,
-          fontSize: 12, color: 'CBD5E1',
+          fontSize: 14, color: 'CBD5E1',
         },
       )
 
@@ -279,11 +279,11 @@ export default function DataGrid() {
         })
         slide.addText(section.group, {
           x: 0.6, y: 1.05, w: 2.5, h: 0.3,
-          fontSize: 10, bold: true, color: 'F59E0B',
+          fontSize: 14, bold: true, color: 'F59E0B',
         })
         slide.addText(section.path, {
           x: 0.6, y: 1.35, w: 6.4, h: 0.3,
-          fontSize: 9, color: '94A3B8',
+          fontSize: 14, color: '94A3B8',
         })
         slide.addShape(pptx.ShapeType.roundRect, {
           x: 0.6, y: 1.9, w: 12.0, h: 1.1,
@@ -318,7 +318,7 @@ export default function DataGrid() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="console-toolbar">
         <div>
-          <div style={{ color: 'rgba(245,158,11,0.72)', fontSize: 12, fontWeight: 700, letterSpacing: 1.2 }}>REPORT BUILDER</div>
+          <div style={{ color: 'rgba(245,158,11,0.72)', fontSize: 14, fontWeight: 700, letterSpacing: 1.2 }}>REPORT BUILDER</div>
           <div style={{ color: 'var(--nowa-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>메뉴 기반 보고서 만들기</div>
           <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>
             메뉴 트리에서 필요한 화면을 체크하고 PDF 또는 PPTX 형태로 정리된 보고서를 생성합니다.
@@ -408,17 +408,17 @@ export default function DataGrid() {
                     style={{
                       borderRadius: 16,
                       padding: '16px 18px',
-                      border: '1px solid rgba(196,210,226,0.14)',
+                      border: '1px solid var(--nowa-border)',
                       background: 'rgba(15,23,42,0.44)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                       <div>
-                        <div style={{ color: '#f59e0b', fontSize: 12, fontWeight: 700 }}>{section.group}</div>
+                        <div style={{ color: '#f59e0b', fontSize: 14, fontWeight: 700 }}>{section.group}</div>
                         <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800, marginTop: 2 }}>
                           {section.order}. {section.title}
                         </div>
-                        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>{section.path}</div>
+                        <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>{section.path}</div>
                       </div>
                       <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.22)', color: '#7dd3fc' }}>
                         <FolderOpenOutlined /> 포함

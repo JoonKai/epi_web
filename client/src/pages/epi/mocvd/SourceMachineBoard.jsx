@@ -86,6 +86,7 @@ export default function SourceMachineBoard() {
     () =>
       rows.map((row) => {
         const sources = sourceNames.map((sourceName) => {
+          const isDisabled = Boolean(row[`${sourceName}_is_disabled`] ?? false)
           const remaining = Number(row[sourceName] ?? 0)
           const dailyUsage = Number(row[`${sourceName}_daily_usage`] ?? 0)
           const initialAmount = Number(row[`${sourceName}_initial_amount`] ?? 0)
@@ -101,8 +102,9 @@ export default function SourceMachineBoard() {
             key: event?.status ?? 'normal',
             daysLeft: event?.days_left ?? null,
             projectedReplacementDate: event?.projected_replacement_date ?? null,
+            isDisabled,
           }
-        })
+        }).filter((item) => !item.isDisabled)
 
         const highest = sources.reduce((current, item) => {
           if (item.key === 'overdue') return 'overdue'
@@ -191,10 +193,10 @@ export default function SourceMachineBoard() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+            <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
               부족 기준 {statusSettings.overdue_days}일 / 임박 기준 {statusSettings.urgent_days}일
             </span>
-            <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>{filteredCards.length}대 표시</span>
+            <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>{filteredCards.length}대 표시</span>
             <Button icon={<ReloadOutlined />} onClick={fetchData}>
               새로고침
             </Button>
@@ -241,7 +243,7 @@ export default function SourceMachineBoard() {
                       {formatMachineLabel(card.machine_no)}
                     </div>
                     {card.description ? (
-                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginTop: 4 }}>{card.description}</div>
+                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>{card.description}</div>
                     ) : null}
                   </div>
                   <span
@@ -254,7 +256,7 @@ export default function SourceMachineBoard() {
                       background: meta.bg,
                       border: `1px solid ${meta.border}`,
                       fontWeight: 700,
-                      fontSize: 11,
+                      fontSize: 14,
                     }}
                   >
                     {meta.label}
@@ -276,7 +278,7 @@ export default function SourceMachineBoard() {
                             display: 'flex',
                             justifyContent: 'space-between',
                             color: 'var(--nowa-text-soft)',
-                            fontSize: 11,
+                            fontSize: 14,
                             marginBottom: 3,
                             lineHeight: 1.2,
                           }}
@@ -318,7 +320,7 @@ export default function SourceMachineBoard() {
                             borderColor: itemMeta.border,
                             borderRadius: 999,
                             fontWeight: 700,
-                            fontSize: 11,
+                            fontSize: 14,
                             lineHeight: '18px',
                           }}
                         >

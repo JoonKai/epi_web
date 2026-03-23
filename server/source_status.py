@@ -22,6 +22,8 @@ def _to_float(value: Any, default: float = 0.0) -> float:
 def _build_event(machine, source_type, source_row, overdue_days: int, urgent_days: int) -> dict[str, Any] | None:
     if source_row is None:
         return None
+    if bool(getattr(source_row, "is_disabled", False)):
+        return None
 
     initial_amount = _to_float(getattr(source_row, "initial_amount", 0.0))
     threshold_ratio = _to_float(getattr(source_row, "threshold_ratio", DEFAULT_THRESHOLD_RATIO), DEFAULT_THRESHOLD_RATIO)

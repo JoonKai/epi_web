@@ -283,7 +283,7 @@ function Layout({ children, isDark, onThemeToggle }) {
               >
                 EPI
               </div>
-              <div style={{ color: 'rgba(253,230,138,0.5)', fontSize: 11, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'rgba(253,230,138,0.5)', fontSize: 14, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
                 운영 시스템
               </div>
             </div>
@@ -295,7 +295,7 @@ function Layout({ children, isDark, onThemeToggle }) {
             style={{
               padding: '16px 20px 4px',
               color: 'rgba(245,158,11,0.45)',
-              fontSize: 10,
+              fontSize: 14,
               fontWeight: 700,
               letterSpacing: 2,
               textTransform: 'uppercase',
@@ -372,7 +372,7 @@ function Layout({ children, isDark, onThemeToggle }) {
                 height: 38,
               }}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--nowa-text-muted)', fontSize: 14 }}>
               {breadcrumbs.slice(0, -1).map((crumb, index) => (
                 <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>{crumb}</span>
@@ -435,8 +435,8 @@ function Layout({ children, isDark, onThemeToggle }) {
               >
                 <Avatar size={30} icon={<UserOutlined />} style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', flexShrink: 0 }} />
                 <div style={{ lineHeight: 1.3 }}>
-                  <div style={{ color: 'var(--nowa-text)', fontSize: 13, fontWeight: 600 }}>{user?.username}</div>
-                  <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11 }}>{isAdmin ? '관리자' : '사용자'}</div>
+                  <div style={{ color: 'var(--nowa-text)', fontSize: 14, fontWeight: 600 }}>{user?.username}</div>
+                  <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>{isAdmin ? '관리자' : '사용자'}</div>
                 </div>
               </div>
             </Dropdown>

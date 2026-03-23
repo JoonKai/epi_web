@@ -14,9 +14,9 @@
   --nowa-border-strong: rgba(245, 158, 11, 0.4);
 
   /* Text */
-  --nowa-text: #cdd6e0;
-  --nowa-text-soft: rgba(196, 212, 224, 0.85);
-  --nowa-text-muted: rgba(148, 168, 188, 0.92);
+  --nowa-text: #d9e2ec;
+  --nowa-text-soft: rgba(205, 220, 232, 0.95);
+  --nowa-text-muted: rgba(160, 180, 200, 0.95);
 
   /* Brand / Primary */
   --nowa-primary: #f59e0b;
@@ -277,7 +277,7 @@ a { color: inherit; }
 
 .nowa-menu.ant-menu .ant-menu-item-group-title {
   color: rgba(129,140,248,0.5) !important;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -496,7 +496,7 @@ a { color: inherit; }
   border: 1px solid var(--nowa-border);
   background: var(--nowa-primary-soft);
   color: var(--nowa-primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -522,7 +522,7 @@ a { color: inherit; }
 /* ── Section Labels ─────────────────────────────────────────────── */
 .console-label, .nowa-label {
   color: var(--nowa-text-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -530,7 +530,7 @@ a { color: inherit; }
 
 .nowa-section-title {
   color: var(--nowa-text-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -547,7 +547,7 @@ a { color: inherit; }
 
 .nowa-page-kicker {
   color: var(--nowa-text-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -564,7 +564,7 @@ a { color: inherit; }
 
 .nowa-page-desc {
   color: var(--nowa-text-muted);
-  font-size: 13px;
+  font-size: 14px;
   margin-top: 6px;
 }
 
@@ -606,7 +606,7 @@ a { color: inherit; }
 
 .nowa-metric-label {
   color: var(--nowa-text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -628,7 +628,7 @@ a { color: inherit; }
 
 .nowa-metric-sub {
   color: var(--nowa-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 8px;
 }
 
@@ -684,7 +684,7 @@ a { color: inherit; }
   background: linear-gradient(180deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.04) 100%);
   color: var(--nowa-text-muted);
   border-bottom: 1px solid rgba(245,158,11,0.2);
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
@@ -880,7 +880,7 @@ a { color: inherit; }
   --ag-row-border-color: var(--nowa-border);
   --ag-header-column-separator-color: var(--nowa-border);
   --ag-input-focus-border-color: rgba(245, 158, 11, 0.45);
-  --ag-font-size: 12px;
+  --ag-font-size: 14px;
 }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
@@ -949,7 +949,7 @@ a { color: inherit; }
 .ant-tag {
   border-radius: 8px !important;
   font-weight: 600 !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   padding: 1px 9px !important;
 }
 

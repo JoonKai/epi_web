@@ -22,6 +22,7 @@ class SourceUpdate(BaseModel):
     threshold_ratio: float = DEFAULT_THRESHOLD_RATIO
     remaining: float = 0.0
     daily_usage: float = 0.0
+    is_disabled: bool = False
     unit: str = "kg"
 
 
@@ -32,6 +33,7 @@ class BulkSourceUpdate(BaseModel):
     threshold_ratio: float = DEFAULT_THRESHOLD_RATIO
     remaining: float = 0.0
     daily_usage: float = 0.0
+    is_disabled: bool = False
     unit: str = "kg"
 
 
@@ -292,6 +294,7 @@ def get_sources(machine_no: int, db: Session = Depends(get_db), _=Depends(get_cu
                 "threshold_ratio": row.threshold_ratio if row and row.threshold_ratio is not None else DEFAULT_THRESHOLD_RATIO,
                 "remaining": row.remaining if row else 0.0,
                 "daily_usage": row.daily_usage if row and row.daily_usage is not None else 0.0,
+                "is_disabled": row.is_disabled if row else False,
                 "unit": row.unit if row and row.unit else "kg",
                 "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M") if row and row.updated_at else None,
             }
@@ -311,6 +314,7 @@ def update_sources(machine_no: int, items: list[SourceUpdate], db: Session = Dep
             row.threshold_ratio = item.threshold_ratio
             row.remaining = item.remaining
             row.daily_usage = item.daily_usage
+            row.is_disabled = item.is_disabled
             row.unit = item.unit
         else:
             db.add(
@@ -321,6 +325,7 @@ def update_sources(machine_no: int, items: list[SourceUpdate], db: Session = Dep
                     threshold_ratio=item.threshold_ratio,
                     remaining=item.remaining,
                     daily_usage=item.daily_usage,
+                    is_disabled=item.is_disabled,
                     unit=item.unit,
                 )
             )
@@ -338,6 +343,7 @@ def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_
             row.threshold_ratio = item.threshold_ratio
             row.remaining = item.remaining
             row.daily_usage = item.daily_usage
+            row.is_disabled = item.is_disabled
             row.unit = item.unit
         else:
             db.add(
@@ -348,6 +354,7 @@ def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_
                     threshold_ratio=item.threshold_ratio,
                     remaining=item.remaining,
                     daily_usage=item.daily_usage,
+                    is_disabled=item.is_disabled,
                     unit=item.unit,
                 )
             )
@@ -369,6 +376,7 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
             "threshold_ratio": row.threshold_ratio if row.threshold_ratio is not None else DEFAULT_THRESHOLD_RATIO,
             "remaining": row.remaining,
             "daily_usage": row.daily_usage if row.daily_usage is not None else 0.0,
+            "is_disabled": bool(row.is_disabled),
             "unit": row.unit,
             "updated_at": row.updated_at,
         }
@@ -383,6 +391,7 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
             row[f"{source_name}_initial_amount"] = entry["initial_amount"] if entry else 0.0
             row[f"{source_name}_threshold_ratio"] = entry["threshold_ratio"] if entry else DEFAULT_THRESHOLD_RATIO
             row[f"{source_name}_daily_usage"] = entry["daily_usage"] if entry else 0.0
+            row[f"{source_name}_is_disabled"] = entry["is_disabled"] if entry else False
             row[f"{source_name}_unit"] = entry["unit"] if entry and entry["unit"] else "kg"
             if entry and entry["updated_at"] and (latest_at is None or entry["updated_at"] > latest_at):
                 latest_at = entry["updated_at"]

@@ -34,7 +34,7 @@ const pmLabelBase = {
   whiteSpace: 'nowrap',
   height: PM_ROW_H,
   fontWeight: 700,
-  fontSize: 13,
+  fontSize: 14,
   textAlign: 'center',
 }
 
@@ -91,7 +91,7 @@ function SummaryCard({ label, value, suffix, sub, accent, gradient = 'linear-gra
         padding: '16px 18px',
         borderRadius: 18,
         background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-        border: '1px solid rgba(196,210,226,0.16)',
+        border: '1px solid var(--nowa-border)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)',
         position: 'relative',
         overflow: 'hidden',
@@ -100,7 +100,7 @@ function SummaryCard({ label, value, suffix, sub, accent, gradient = 'linear-gra
       <div style={{ position: 'absolute', inset: 0, background: gradient, opacity: 0.14, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: gradient, opacity: 0.95 }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, position: 'relative', zIndex: 1 }}>
-        <div style={{ color: resolvedAccent, fontSize: 12, fontWeight: 700, paddingTop: 2 }}>{label}</div>
+        <div style={{ color: resolvedAccent, fontSize: 14, fontWeight: 700, paddingTop: 2 }}>{label}</div>
         <div
           style={{
             width: 30,
@@ -123,7 +123,7 @@ function SummaryCard({ label, value, suffix, sub, accent, gradient = 'linear-gra
         {value}
         {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: `${resolvedAccent}cc`, fontWeight: 700 }}>{suffix}</span> : null}
       </div>
-      <div style={{ color: `${resolvedAccent}cc`, fontSize: 12, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div>
+      <div style={{ color: `${resolvedAccent}cc`, fontSize: 14, marginTop: 10, position: 'relative', zIndex: 1 }}>{sub}</div>
     </div>
   )
 }
@@ -182,7 +182,7 @@ function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, col
           background: 'rgba(245,158,11,0.12)',
           border: '1px solid #f59e0b',
           color,
-          fontSize: 13,
+          fontSize: 14,
           textAlign: 'right',
           padding: '0 6px',
           outline: 'none',
@@ -207,7 +207,7 @@ function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, col
         paddingRight: 6,
         cursor: 'text',
         color,
-        fontSize: 13,
+        fontSize: 14,
         background: bg,
         userSelect: 'none',
       }}
@@ -368,14 +368,14 @@ function MachineStatusCard({ row, thresholds = {} }) {
               {formatMachineLabel(row.machine_no)}
             </div>
             {row.description && (
-              <div style={{ fontSize: 11, color: 'var(--nowa-text-muted)', marginTop: 2 }}>{row.description}</div>
+              <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginTop: 2 }}>{row.description}</div>
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
-            <div style={{ padding: '3px 10px', borderRadius: 999, background: pmSt.bg, color: pmSt.color, fontSize: 11, fontWeight: 800, border: `1px solid ${pmSt.border}` }}>
+            <div style={{ padding: '3px 10px', borderRadius: 999, background: pmSt.bg, color: pmSt.color, fontSize: 14, fontWeight: 800, border: `1px solid ${pmSt.border}` }}>
               Chamber {pmSt.label}
             </div>
-            <div style={{ padding: '3px 10px', borderRadius: 999, background: filterSt.bg, color: filterSt.color, fontSize: 11, fontWeight: 800, border: `1px solid ${filterSt.border}` }}>
+            <div style={{ padding: '3px 10px', borderRadius: 999, background: filterSt.bg, color: filterSt.color, fontSize: 14, fontWeight: 800, border: `1px solid ${filterSt.border}` }}>
               Filter {filterSt.label}
             </div>
           </div>
@@ -384,8 +384,8 @@ function MachineStatusCard({ row, thresholds = {} }) {
         {/* PM 진행률 */}
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#7dd3fc' }}>Chamber Count</span>
-            <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc' }}>Chamber Count</span>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)' }}>
               {row.chamber_count} / {row.pm_base_count}
               <span style={{ color: pmBarColor, fontWeight: 700, marginLeft: 4 }}>
                 ({pmRemaining > 0 ? `잔여 ${pmRemaining}` : `${Math.abs(pmRemaining)} 초과`})
@@ -404,8 +404,8 @@ function MachineStatusCard({ row, thresholds = {} }) {
         {/* Filter 진행률 */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa' }}>Filter Count</span>
-            <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa' }}>Filter Count</span>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)' }}>
               {row.filter_count} / {row.filter_base_count}
               <span style={{ color: filterBarColor, fontWeight: 700, marginLeft: 4 }}>
                 ({filterRemaining > 0 ? `잔여 ${filterRemaining}` : `${Math.abs(filterRemaining)} 초과`})
@@ -471,9 +471,9 @@ function PmStatusBoard({ refreshKey, thresholds = {} }) {
       {/* 페이지 헤더 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(245,158,11,0.6)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>PM 주기 현황판</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(245,158,11,0.6)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>PM 주기 현황판</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--nowa-text)', letterSpacing: -0.5 }}>MOCVD PM 주기 현황</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13, marginTop: 6 }}>PM 기준 횟수 대비 현재 사용 횟수를 기준으로 교체 필요 설비를 확인합니다.</div>
+          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 6 }}>PM 기준 횟수 대비 현재 사용 횟수를 기준으로 교체 필요 설비를 확인합니다.</div>
         </div>
         <Button icon={<ReloadOutlined />} onClick={fetchRows} loading={loading}>새로고침</Button>
       </div>
@@ -602,13 +602,13 @@ function PmCalendarBoard({ refreshKey }) {
           <div style={{
             width: 24, height: 24, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 800, flexShrink: 0,
+            fontSize: 14, fontWeight: 800, flexShrink: 0,
             color: isToday ? '#fff' : isSelected ? '#fbbf24' : dateNumColor,
             background: isToday ? 'linear-gradient(135deg,#3b82f6,#2563eb)' : isSelected ? 'rgba(245,158,11,0.15)' : 'transparent',
             boxShadow: isToday ? '0 2px 8px rgba(59,130,246,0.5)' : 'none',
           }}>{current.date()}</div>
           {items.length > 0 && (
-            <div style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: 'rgba(148,163,184,0.6)', flexShrink: 0 }}>
+            <div style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: 'rgba(148,163,184,0.6)', flexShrink: 0 }}>
               {items.length}건
             </div>
           )}
@@ -619,7 +619,7 @@ function PmCalendarBoard({ refreshKey }) {
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '3px 7px 3px 5px', borderRadius: 6,
               background: 'rgba(125,211,252,0.1)', borderLeft: '3px solid #7dd3fc',
-              color: '#7dd3fc', fontSize: 11, fontWeight: 700,
+              color: '#7dd3fc', fontSize: 14, fontWeight: 700,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {formatMachineLabel(e.machine_no)}
@@ -627,7 +627,7 @@ function PmCalendarBoard({ refreshKey }) {
           ))}
           {items.length > 3 && (
             <div style={{
-              padding: '2px 7px', fontSize: 10, fontWeight: 600,
+              padding: '2px 7px', fontSize: 14, fontWeight: 600,
               color: 'rgba(148,163,184,0.65)', background: 'rgba(255,255,255,0.04)',
               borderRadius: 6, textAlign: 'center',
             }}>+{items.length - 3}건 더보기</div>
@@ -643,8 +643,8 @@ function PmCalendarBoard({ refreshKey }) {
       <div style={{ minHeight: 120, padding: 14, borderRadius: 16, border: '1px solid var(--nowa-border)', background: 'rgba(255,255,255,0.02)' }}>
         <div style={{ color: 'var(--nowa-text)', fontSize: 16, fontWeight: 800, marginBottom: 10 }}>{current.format('M월')}</div>
         {items.length === 0
-          ? <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12 }}>PM 없음</div>
-          : <div style={{ color: '#7dd3fc', fontSize: 13, fontWeight: 700 }}>{items.length}건</div>
+          ? <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>PM 없음</div>
+          : <div style={{ color: '#7dd3fc', fontSize: 14, fontWeight: 700 }}>{items.length}건</div>
         }
       </div>
     )
@@ -797,7 +797,7 @@ function PmCalendarBoard({ refreshKey }) {
             </div>
 
             {selectedDateEvents.length === 0 ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: 'var(--nowa-text-muted)', fontSize: 14 }}>
                 선택한 날짜 일정이 없습니다.
               </div>
             ) : (
@@ -810,10 +810,10 @@ function PmCalendarBoard({ refreshKey }) {
                     boxShadow: 'inset 3px 0 0 #7dd3fc',
                   }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ color: '#7dd3fc', fontWeight: 800, fontSize: 13 }}>{formatMachineLabel(e.machine_no)}</div>
-                      <div style={{ color: 'var(--nowa-text)', fontSize: 12, marginTop: 2 }}>{e.title}</div>
-                      {e.detail && <div style={{ color: 'var(--nowa-text-muted)', fontSize: 11, marginTop: 2 }}>{e.detail}</div>}
-                      {e.actor && <div style={{ color: 'rgba(196,210,226,0.4)', fontSize: 11, marginTop: 2 }}>담당: {e.actor}</div>}
+                      <div style={{ color: '#7dd3fc', fontWeight: 800, fontSize: 14 }}>{formatMachineLabel(e.machine_no)}</div>
+                      <div style={{ color: 'var(--nowa-text)', fontSize: 14, marginTop: 2 }}>{e.title}</div>
+                      {e.detail && <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 2 }}>{e.detail}</div>}
+                      {e.actor && <div style={{ color: 'rgba(196,210,226,0.68)', fontSize: 14, marginTop: 2 }}>담당: {e.actor}</div>}
                     </div>
                     <Button size="small" type="text" danger icon={<DeleteOutlined />}
                       loading={deleting === e.id} onClick={() => handleDelete(e.id)} style={{ flexShrink: 0 }} />
@@ -842,7 +842,7 @@ function PmCalendarBoard({ refreshKey }) {
             </div>
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>설비 *</div>
+                <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>설비 *</div>
                 <Select style={{ width: '100%' }} placeholder="설비 선택" showSearch
                   value={addForm.machine_no}
                   onChange={v => setAddForm(f => ({ ...f, machine_no: v }))}
@@ -850,15 +850,15 @@ function PmCalendarBoard({ refreshKey }) {
                   filterOption={(input, option) => String(option.label).includes(input)} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>제목</div>
+                <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>제목</div>
                 <Input placeholder="예: Chamber PM 수행" value={addForm.title} onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>상세</div>
+                <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>상세</div>
                 <Input.TextArea rows={2} placeholder="상세 내용 (선택)" value={addForm.detail} onChange={e => setAddForm(f => ({ ...f, detail: e.target.value }))} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>담당자</div>
+                <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>담당자</div>
                 <Input placeholder="담당자명" value={addForm.actor} onChange={e => setAddForm(f => ({ ...f, actor: e.target.value }))} />
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
@@ -915,7 +915,7 @@ function PmMachineBoard({ refreshKey, thresholds = {} }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="호기 검색" style={{ width: 220 }} allowClear />
-        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>{rows.length}대 표시</span>
+        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>{rows.length}대 표시</span>
       </div>
       <Spin spinning={loading}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
@@ -990,21 +990,21 @@ function PmCycleGlobalCard({ onApplied }) {
         PM 주기 일괄 설정
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>PM 주기</span>
+        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>PM 주기</span>
         <Input
           value={pmBase}
           onChange={e => setPmBase(e.target.value)}
           style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 11, opacity: 0.5 }}>런</span>}
+          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
         />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>필터 주기</span>
+        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>필터 주기</span>
         <Input
           value={filterBase}
           onChange={e => setFilterBase(e.target.value)}
           style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 11, opacity: 0.5 }}>런</span>}
+          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
         />
       </div>
       <Button
@@ -1015,7 +1015,7 @@ function PmCycleGlobalCard({ onApplied }) {
       >
         전체 적용
       </Button>
-      <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.4)' }}>전체 기기에 기준횟수 일괄 적용</span>
+      <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>전체 기기에 기준횟수 일괄 적용</span>
     </div>
   )
 }
@@ -1127,15 +1127,15 @@ function PmSyncCard({ onSynced }) {
     >
       {/* 경로 설정 */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>엑셀 파일 경로</div>
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>엑셀 파일 경로</div>
         {paths.map((p, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span style={{ width: 40, opacity: 0.5, fontSize: 12, flexShrink: 0 }}>파일 {i + 1}</span>
+            <span style={{ width: 40, opacity: 0.5, fontSize: 14, flexShrink: 0 }}>파일 {i + 1}</span>
             <Input
               value={p}
               onChange={e => setPaths(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
               placeholder={`예: \\\\서버\\공유폴더\\파일${i + 1}.xlsm`}
-              style={{ fontFamily: 'monospace', fontSize: 12 }}
+              style={{ fontFamily: 'monospace', fontSize: 14 }}
             />
           </div>
         ))}
@@ -1146,7 +1146,7 @@ function PmSyncCard({ onSynced }) {
 
       {/* 자동 실행 시간 설정 */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>자동 실행 시간</div>
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>자동 실행 시간</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           {schedule.map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1191,14 +1191,14 @@ function PmSyncCard({ onSynced }) {
           style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}>
           지금 동기화
         </Button>
-        <span style={{ fontSize: 12, opacity: 0.55 }}>
+        <span style={{ fontSize: 14, opacity: 0.55 }}>
           매일 {schedule.join(' / ')} 자동 실행 · 네트워크 드라이브 업무일지 → PM 카운터 DB 업데이트
         </span>
       </div>
 
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ opacity: 0.6, fontSize: 12 }}>마지막 동기화: {result.synced_at}</div>
+          <div style={{ opacity: 0.6, fontSize: 14 }}>마지막 동기화: {result.synced_at}</div>
           {result.updated_count > 0 && (
             <Alert type="success" icon={<CheckCircleOutlined />} showIcon
               message={`${result.updated_count}개 호기 업데이트 완료`}
@@ -1215,7 +1215,7 @@ function PmSyncCard({ onSynced }) {
             <Alert type="warning" icon={<WarningOutlined />} showIcon
               message={`${result.error_count}건 경고`}
               description={<ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
-                {result.errors.map((e, i) => <li key={i} style={{ fontSize: 12 }}>{e}</li>)}
+                {result.errors.map((e, i) => <li key={i} style={{ fontSize: 14 }}>{e}</li>)}
               </ul>}
             />
           )}
@@ -1228,23 +1228,23 @@ function PmSyncCard({ onSynced }) {
       {/* 동기화 실행 로그 */}
       {logs.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>실행 로그</div>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>실행 로그</div>
           <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {logs.map((log) => {
               const isOk = log.error_count === 0
               return (
                 <div key={log.id} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 8,
-                  padding: '6px 10px', borderRadius: 6, fontSize: 12,
+                  padding: '6px 10px', borderRadius: 6, fontSize: 14,
                   background: isOk ? 'rgba(34,197,94,0.07)' : 'rgba(248,113,113,0.08)',
                   border: `1px solid ${isOk ? 'rgba(34,197,94,0.18)' : 'rgba(248,113,113,0.2)'}`,
                 }}>
-                  <span style={{ color: isOk ? '#4ade80' : '#f87171', flexShrink: 0, fontSize: 13 }}>
+                  <span style={{ color: isOk ? '#4ade80' : '#f87171', flexShrink: 0, fontSize: 14 }}>
                     {isOk ? '✓' : '!'}
                   </span>
-                  <span style={{ color: 'rgba(196,210,226,0.5)', flexShrink: 0 }}>{log.synced_at}</span>
+                  <span style={{ color: 'rgba(196,210,226,0.75)', flexShrink: 0 }}>{log.synced_at}</span>
                   <span style={{
-                    flexShrink: 0, fontSize: 10, padding: '1px 6px', borderRadius: 10,
+                    flexShrink: 0, fontSize: 14, padding: '1px 6px', borderRadius: 10,
                     background: log.triggered_by === 'auto' ? 'rgba(125,211,252,0.15)' : 'rgba(245,158,11,0.15)',
                     color: log.triggered_by === 'auto' ? '#7dd3fc' : '#f59e0b',
                   }}>
@@ -1297,23 +1297,23 @@ function PmThresholdCard({ thresholds = {}, onChange }) {
         상태 기준 설정
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13, color: '#f87171', whiteSpace: 'nowrap', fontWeight: 600 }}>긴급 기준</span>
+        <span style={{ fontSize: 14, color: '#f87171', whiteSpace: 'nowrap', fontWeight: 600 }}>긴급 기준</span>
         <Input
           value={localCritical}
           onChange={e => setLocalCritical(e.target.value)}
           onPressEnter={handleSave}
           style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 11, opacity: 0.5 }}>런</span>}
+          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
         />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13, color: '#fbbf24', whiteSpace: 'nowrap', fontWeight: 600 }}>임박 기준</span>
+        <span style={{ fontSize: 14, color: '#fbbf24', whiteSpace: 'nowrap', fontWeight: 600 }}>임박 기준</span>
         <Input
           value={localUrgent}
           onChange={e => setLocalUrgent(e.target.value)}
           onPressEnter={handleSave}
           style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 11, opacity: 0.5 }}>런</span>}
+          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
         />
       </div>
       <Button
@@ -1322,7 +1322,7 @@ function PmThresholdCard({ thresholds = {}, onChange }) {
       >
         기준 저장
       </Button>
-      <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.4)' }}>긴급 &lt; 임박 순서로 설정</span>
+      <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>긴급 &lt; 임박 순서로 설정</span>
     </div>
   )
 }
@@ -1523,7 +1523,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
               styles={{ body: { padding: '10px 10px 4px' } }}
               style={{ height: '100%' }}
             >
-              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 12, marginBottom: 8 }}>
+              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginBottom: 8 }}>
                 현재 Count가 기준 Count 대비 얼마나 진행됐는지 함께 표시합니다.
               </div>
               <div style={{ maxHeight: 'calc(100vh - 330px)', overflowY: 'auto', overflowX: 'hidden' }}>
@@ -1542,7 +1542,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                       backgroundColor: '#1a2236',
                       borderColor: 'rgba(245,158,11,0.25)',
                       extraCssText: 'white-space:nowrap;z-index:9999;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);',
-                      textStyle: { color: '#e2e8f0', fontSize: 13 },
+                      textStyle: { color: '#e2e8f0', fontSize: 14 },
                       formatter: (params) => {
                         const row = chartRows[params?.[0]?.dataIndex ?? 0]
                         const pmRate = row.pmBase > 0 ? (row.pm / row.pmBase) * 100 : 0
@@ -1557,7 +1557,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                     legend: {
                       top: 4, right: 8,
                       itemWidth: 10, itemHeight: 10,
-                      textStyle: { color: 'rgba(214,222,232,0.65)', fontSize: 12 },
+                      textStyle: { color: 'rgba(214,222,232,0.65)', fontSize: 14 },
                       data: [
                         { name: '챔버사용횟수', icon: 'roundRect', itemStyle: { color: '#7dd3fc' } },
                         { name: '필터사용횟수', icon: 'roundRect', itemStyle: { color: '#fcd34d' } },
@@ -1566,7 +1566,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                     xAxis: {
                       type: 'value',
                       minInterval: 1,
-                      axisLabel: { color: 'rgba(196,210,226,0.4)', fontSize: 11 },
+                      axisLabel: { color: 'rgba(196,210,226,0.68)', fontSize: 14 },
                       axisLine: { show: false },
                       axisTick: { show: false },
                       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } },
@@ -1575,7 +1575,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                       type: 'category',
                       data: chartRows.map((row) => row.label),
                       inverse: true,
-                      axisLabel: { color: 'rgba(245,158,11,0.85)', fontSize: 12, fontWeight: 700 },
+                      axisLabel: { color: 'rgba(245,158,11,0.85)', fontSize: 14, fontWeight: 700 },
                       axisLine: { lineStyle: { color: 'rgba(245,158,11,0.15)' } },
                       axisTick: { show: false },
                     },
@@ -1592,7 +1592,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                         },
                         label: {
                           show: true, position: 'right',
-                          color: 'rgba(196,210,226,0.7)', fontSize: 11,
+                          color: 'rgba(196,210,226,0.7)', fontSize: 14,
                           formatter: ({ dataIndex, value }) => {
                             const row = chartRows[dataIndex]
                             const rate = row?.pmBase > 0 ? (Number(value) / row.pmBase) * 100 : 0
@@ -1612,7 +1612,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                         },
                         label: {
                           show: true, position: 'right',
-                          color: 'rgba(196,210,226,0.7)', fontSize: 11,
+                          color: 'rgba(196,210,226,0.7)', fontSize: 14,
                           formatter: ({ dataIndex, value }) => {
                             const row = chartRows[dataIndex]
                             const rate = row?.filterBase > 0 ? (Number(value) / row.filterBase) * 100 : 0
