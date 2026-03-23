@@ -677,7 +677,7 @@ function AttendanceCard() {
               return (
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
                   <span style={{ fontSize: 22, fontWeight: 900, color: dateColor, lineHeight: 1 }}>{selectedDay.format('M월 D일')}</span>
-                  <span style={{ fontSize: 22, fontWeight: 600, color: `${dateColor}99` }}>{selectedDay.format('(ddd)')}</span>
+                  <span style={{ fontSize: 22, fontWeight: 600, color: dateColor }}>{selectedDay.format('(ddd)')}</span>
                   {selectedHoliday && <span style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>{selectedHoliday}</span>}
                 </div>
               )
@@ -776,6 +776,7 @@ function SchedulerMiniCalCard() {
   const [events, setEvents] = useState([])
   const [selectedDate, setSelectedDate] = useState(today.format('YYYY-MM-DD'))
   const [holidays, setHolidays] = useState({})
+  const [searchMachine, setSearchMachine] = useState('')
 
   useEffect(() => {
     authFetch('/api/mocvd/equipment-history')
@@ -795,13 +796,19 @@ function SchedulerMiniCalCard() {
   const eventsByDate = useMemo(() => {
     const map = {}
     events.forEach(ev => {
+      const keyword = searchMachine.trim().toLowerCase()
+      if (keyword) {
+        const machineLabel = ev.machine_no ? formatMachineLabel(ev.machine_no).toLowerCase() : ''
+        const title = String(ev.title || '').toLowerCase()
+        if (!machineLabel.includes(keyword) && !title.includes(keyword)) return
+      }
       const d = ev.occurred_at?.slice(0, 10)
       if (!d) return
       if (!map[d]) map[d] = []
       map[d].push(ev)
     })
     return map
-  }, [events])
+  }, [events, searchMachine])
 
   const calDays = useMemo(() => {
     const first = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
@@ -830,7 +837,7 @@ function SchedulerMiniCalCard() {
         <CardBtn onClick={() => navigate('/epi/mocvd/scheduler')}>스케줄러 열기</CardBtn>
       }
     >
-      <div style={{ display: 'flex', gap: 20, minHeight: 560 }}>
+      <div style={{ display: 'flex', gap: 20, minHeight: 560, alignItems: 'flex-start' }}>
         {/* 캘린더 */}
         <div style={{ flex: 7, minWidth: 0 }}>
           {/* 월 네비 */}
@@ -893,13 +900,30 @@ function SchedulerMiniCalCard() {
         </div>
 
         {/* 선택일 일정 목록 */}
+        <div style={{ width: 1, background: 'rgba(245,158,11,0.12)', alignSelf: 'stretch', flexShrink: 0 }} />
         <div style={{ flex: 3, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--nowa-text)' }}>
-            {dayjs(selectedDate).format('M월 D일 (ddd)')}
-            <span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(196,210,226,0.72)', marginLeft: 8 }}>{selectedEvents.length}건</span>
-          </div>
+          {(() => {
+            const selected = dayjs(selectedDate)
+            const dow = selected.day()
+            const holidayName = holidays[selected.format('YYYY-MM-DD')]
+            const dateColor = holidayName || dow === 0 ? '#f87171' : dow === 6 ? '#7dd3fc' : '#e2e8f0'
+            return (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: dateColor, lineHeight: 1 }}>{selected.format('M월 D일')}</span>
+                <span style={{ fontSize: 22, fontWeight: 600, color: dateColor }}>{selected.format('(ddd)')}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(196,210,226,0.72)' }}>{selectedEvents.length}건</span>
+              </div>
+            )
+          })()}
+          <Input
+            placeholder="설비 검색"
+            value={searchMachine}
+            onChange={(e) => setSearchMachine(e.target.value)}
+            allowClear
+            style={{ marginBottom: 4 }}
+          />
           {selectedEvents.length === 0 ? (
-            <Empty description="일정이 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty description={searchMachine ? '검색 조건에 맞는 일정이 없습니다.' : '일정이 없습니다.'} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {selectedEvents.map(ev => {

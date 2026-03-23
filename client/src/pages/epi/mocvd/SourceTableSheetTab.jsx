@@ -73,12 +73,23 @@ function getHatchBackground(base) {
 
 function buildDerivedCell(cell) {
   if (cell?.is_disabled) {
-    return { thresholdAmount: null }
+    return { thresholdAmount: null, replacementDate: '-' }
   }
   const initialAmount = toNumber(cell.initial_amount)
   const thresholdRatio = toNumber(cell.threshold_ratio, DEFAULT_THRESHOLD_RATIO)
+  const dailyUsage = toNumber(cell.daily_usage)
+  const remaining = toNumber(cell.remaining)
   const thresholdAmount = initialAmount > 0 ? (initialAmount * thresholdRatio) / 100 : 0
-  return { thresholdAmount }
+
+  let replacementDate = '-'
+  if (dailyUsage > 0) {
+    const daysLeft = Math.ceil((remaining - thresholdAmount) / dailyUsage)
+    const next = new Date()
+    next.setDate(next.getDate() + Math.max(daysLeft, 0))
+    replacementDate = next.toISOString().slice(0, 10)
+  }
+
+  return { thresholdAmount, replacementDate }
 }
 
 function ToggleBadge({ active, onClick }) {
@@ -253,7 +264,7 @@ export default function SourceTableSheetTab() {
         <div>
           <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>소스 계산</div>
           <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
-            설비별 행 기준으로 사용 여부, 초기량, 일사용량, 잔량, 교체기준량, 교체예정일을 관리합니다.
+            설비별 행 기준으로 사용 여부, 초기량, 일사용량, 잔량, 교체기준(%), 교체 기준량, 교체예정일을 관리합니다.
           </div>
         </div>
       </div>
@@ -290,14 +301,16 @@ export default function SourceTableSheetTab() {
                   <col key={`${sourceName}:initial`} style={{ width: 84 }} />,
                   <col key={`${sourceName}:daily`} style={{ width: 84 }} />,
                   <col key={`${sourceName}:remain`} style={{ width: 84 }} />,
+                  <col key={`${sourceName}:ratio`} style={{ width: 92 }} />,
                   <col key={`${sourceName}:threshold`} style={{ width: 90 }} />,
+                  <col key={`${sourceName}:date`} style={{ width: 112 }} />,
                 ])}
               </colgroup>
               <thead>
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', top: 0, left: 0, zIndex: 4, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>MO</th>
                   {sourceNames.map((sourceName) => (
-                    <th key={`group:${sourceName}`} colSpan={5} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14 }}>
+                    <th key={`group:${sourceName}`} colSpan={7} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14 }}>
                       {sourceName}
                     </th>
                   ))}
@@ -308,7 +321,9 @@ export default function SourceTableSheetTab() {
                     <th key={`${sourceName}:head-initial`} style={{ ...th2Base, color: '#38bdf8' }}>초기량</th>,
                     <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24' }}>일사용량</th>,
                     <th key={`${sourceName}:head-remaining`} style={{ ...th2Base, color: '#86efac' }}>잔량</th>,
-                    <th key={`${sourceName}:head-threshold`} style={{ ...th2Base, color: '#f97316' }}>교체기준량</th>,
+                    <th key={`${sourceName}:head-ratio`} style={{ ...th2Base, color: '#f59e0b' }}>교체기준(%)</th>,
+                    <th key={`${sourceName}:head-threshold`} style={{ ...th2Base, color: '#f97316' }}>교체 기준량</th>,
+                    <th key={`${sourceName}:head-date`} style={{ ...th2Base, color: '#60a5fa' }}>예상 교체일</th>,
                   ])}
                 </tr>
               </thead>
@@ -336,8 +351,14 @@ export default function SourceTableSheetTab() {
                         <td key={`${key}:remaining`} style={{ ...tdCellBase, background: '#060f06' }}>
                           <EditField value={cell.remaining ?? 0} color="#86efac" bg="#060f06" pending={pendingKeys.has(key)} readOnly />
                         </td>,
+                        <td key={`${key}:ratio`} style={{ ...tdCellBase, background: '#110e00' }}>
+                          <EditField value={cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO} color="#f59e0b" bg="#110e00" pending={pendingKeys.has(key)} disabled={disabled} onChange={(value) => handleChange(machine.machine_no, sourceName, 'threshold_ratio', value)} />
+                        </td>,
                         <td key={`${key}:threshold`} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#110a00') : '#110a00', color: disabled ? 'rgba(196,210,226,0.5)' : '#f97316', textAlign: 'right', paddingRight: 6, fontWeight: 700 }}>
                           {disabled ? '-' : fmt(derived.thresholdAmount)}
+                        </td>,
+                        <td key={`${key}:date`} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#060f18') : '#060f18', color: disabled ? 'rgba(196,210,226,0.5)' : '#60a5fa', textAlign: 'center', fontWeight: 700 }}>
+                          {disabled ? '-' : derived.replacementDate}
                         </td>,
                       ]
                     })}

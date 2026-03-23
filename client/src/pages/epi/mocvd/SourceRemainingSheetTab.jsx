@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -9,22 +9,27 @@ import { panelStyle } from '../../../theme/consoleTheme'
 const BORDER = '1px solid rgba(245,158,11,0.12)'
 const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
 const DEFAULT_THRESHOLD_RATIO = 15
+const HEADER_TOP_1 = 0
+const HEADER_TOP_2 = 36
+const ROW_TOP_DISABLED = 62
+const ROW_TOP_DAILY = 92
+const ROW_TOP_REMAINING = 122
 
 const th1Base = {
   position: 'sticky',
-  top: 0,
+  top: HEADER_TOP_1,
   background: '#242834',
   border: BORDER,
   padding: '0 4px',
   textAlign: 'center',
   whiteSpace: 'nowrap',
   height: 36,
-  zIndex: 3,
+  zIndex: 4,
 }
 
 const th2Base = {
   position: 'sticky',
-  top: 36,
+  top: HEADER_TOP_2,
   background: '#1e222e',
   border: BORDER,
   padding: '0 3px',
@@ -32,13 +37,13 @@ const th2Base = {
   fontSize: 14,
   whiteSpace: 'nowrap',
   height: 26,
-  zIndex: 3,
+  zIndex: 4,
 }
 
 const tdLabelBase = {
   position: 'sticky',
   left: 0,
-  zIndex: 2,
+  zIndex: 3,
   border: BORDER,
   padding: '0 8px',
   whiteSpace: 'nowrap',
@@ -46,6 +51,16 @@ const tdLabelBase = {
   fontWeight: 600,
   fontSize: 14,
   textAlign: 'center',
+}
+
+function stickyDataRowStyle(top, bg, color = 'inherit', zIndex = 3) {
+  return {
+    position: 'sticky',
+    top,
+    background: bg,
+    color,
+    zIndex,
+  }
 }
 
 function toNumber(value, fallback = 0) {
@@ -63,16 +78,6 @@ function fmt(v) {
 
 function getHatchBackground(base) {
   return `repeating-linear-gradient(155deg, rgba(245,158,11,0.22) 0px, rgba(245,158,11,0.22) 1px, ${base} 1px, ${base} 18px)`
-}
-
-function buildDerivedCell(cell) {
-  if (cell?.is_disabled) {
-    return { thresholdAmount: null }
-  }
-  const initialAmount = toNumber(cell.initial_amount)
-  const thresholdRatio = toNumber(cell.threshold_ratio, DEFAULT_THRESHOLD_RATIO)
-  const thresholdAmount = initialAmount > 0 ? (initialAmount * thresholdRatio) / 100 : 0
-  return { thresholdAmount }
 }
 
 function ToggleBadge({ active, onClick }) {
@@ -193,8 +198,8 @@ export default function SourceRemainingSheetTab() {
   const dateRows = useMemo(
     () =>
       Array.from({ length: forecastDays }, (_, index) => {
-        const next = dayjs().add(index + 1, 'day')
-        return { label: `${next.month() + 1}/${next.date()}`, daysAhead: index + 1 }
+        const next = dayjs().add(index, 'day')
+        return { label: `${next.month() + 1}/${next.date()}`, daysAhead: index }
       }),
     [forecastDays],
   )
@@ -273,8 +278,8 @@ export default function SourceRemainingSheetTab() {
   }
 
   const editableRows = [
-    ['일사용량', 'daily_usage', '#fbbf24', '#100e00'],
-    ['잔량', 'remaining', '#86efac', '#060f06'],
+    ['일사용량', 'daily_usage', '#fbbf24', '#100e00', ROW_TOP_DAILY],
+    ['잔량', 'remaining', '#86efac', '#060f06', ROW_TOP_REMAINING],
   ]
 
   return (
@@ -301,9 +306,7 @@ export default function SourceRemainingSheetTab() {
               <InputNumber min={0} value={statusSettings.urgent_days} onChange={(value) => setStatusSettings((prev) => ({ ...prev, urgent_days: Number(value ?? 0) }))} />
             </Space>
           </Space>
-          <Button onClick={saveStatusSettings} loading={settingsSaving}>
-            기준 저장
-          </Button>
+          <Button onClick={saveStatusSettings} loading={settingsSaving}>기준 저장</Button>
         </div>
       </Card>
 
@@ -341,9 +344,9 @@ export default function SourceRemainingSheetTab() {
               </colgroup>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ position: 'sticky', top: 0, left: 0, zIndex: 4, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>구분</th>
+                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 5, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>구분</th>
                   {filteredMachines.map((machine) => (
-                    <th key={machine.machine_no} colSpan={sourceNames.length} style={{ position: 'sticky', top: 0, background: '#242834', color: '#fbbf24', border: BORDER, borderLeft: GROUP_BORDER, height: 36, fontWeight: 700 }}>
+                    <th key={machine.machine_no} colSpan={sourceNames.length} style={{ position: 'sticky', top: HEADER_TOP_1, background: '#242834', color: '#fbbf24', border: BORDER, borderLeft: GROUP_BORDER, height: 36, fontWeight: 700, zIndex: 4 }}>
                       {formatMachineLabel(machine.machine_no)}
                     </th>
                   ))}
@@ -360,28 +363,28 @@ export default function SourceRemainingSheetTab() {
               </thead>
               <tbody>
                 <tr>
-                  <td style={{ ...tdLabelBase, background: '#1a1510', color: '#fbbf24', borderRight: GROUP_BORDER }}>사용안함</td>
+                  <td style={{ ...tdLabelBase, ...stickyDataRowStyle(ROW_TOP_DISABLED, '#1a1510', '#fbbf24', 6), borderRight: GROUP_BORDER }}>사용안함</td>
                   {filteredMachines.map((machine) =>
                     sourceNames.map((sourceName, index) => {
                       const key = `${machine.machine_no}:${sourceName}`
                       const disabled = Boolean(cellData[key]?.is_disabled)
                       return (
-                        <td key={`${key}:disabled`} style={{ border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: disabled ? getHatchBackground('#1a1510') : '#1a1510', height: 30, textAlign: 'center' }}>
+                        <td key={`${key}:disabled`} style={{ ...stickyDataRowStyle(ROW_TOP_DISABLED, disabled ? getHatchBackground('#1a1510') : '#1a1510', 'inherit', 6), border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, height: 30, textAlign: 'center' }}>
                           <ToggleBadge active={disabled} onClick={() => handleToggleDisabled(machine.machine_no, sourceName)} />
                         </td>
                       )
                     }),
                   )}
                 </tr>
-                {editableRows.map(([label, field, color, bg]) => (
+                {editableRows.map(([label, field, color, bg, top]) => (
                   <tr key={field}>
-                    <td style={{ ...tdLabelBase, background: bg, color, borderRight: GROUP_BORDER }}>{label}</td>
+                    <td style={{ ...tdLabelBase, ...stickyDataRowStyle(top, bg, color, field === 'daily_usage' ? 5 : 4), borderRight: GROUP_BORDER }}>{label}</td>
                     {filteredMachines.map((machine) =>
                       sourceNames.map((sourceName, index) => {
                         const key = `${machine.machine_no}:${sourceName}`
                         const disabled = Boolean(cellData[key]?.is_disabled)
                         return (
-                          <td key={`${key}:${field}`} style={{ border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: bg, height: 30 }}>
+                          <td key={`${key}:${field}`} style={{ ...stickyDataRowStyle(top, bg, 'inherit', field === 'daily_usage' ? 5 : 4), border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, height: 30 }}>
                             <EditField
                               value={cellData[key]?.[field] ?? 0}
                               color={color}
@@ -407,6 +410,20 @@ export default function SourceRemainingSheetTab() {
                         const dailyUsage = cellData[key]?.daily_usage ?? 0
                         const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
                         const baseBg = rowIndex % 2 === 0 ? '#171b26' : '#131619'
+                        if (daysAhead === 0) {
+                          return (
+                            <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: baseBg, height: 30 }}>
+                              <EditField
+                                value={cellData[key]?.remaining ?? 0}
+                                color="rgba(196,210,226,0.8)"
+                                bg={baseBg}
+                                pending={pendingKeys.has(key)}
+                                disabled={disabled}
+                                onChange={(value) => handleChange(machine.machine_no, sourceName, 'remaining', value)}
+                              />
+                            </td>
+                          )
+                        }
                         return (
                           <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: disabled ? getHatchBackground(baseBg) : baseBg, color: disabled ? 'rgba(196,210,226,0.42)' : 'rgba(196,210,226,0.8)', textAlign: 'right', paddingRight: 6, height: 30 }}>
                             {disabled || projected == null ? '-' : fmt(projected)}

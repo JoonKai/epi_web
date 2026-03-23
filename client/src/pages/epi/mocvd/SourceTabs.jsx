@@ -21,6 +21,7 @@ export default function SourceTabs() {
   return (
     <Tabs
       activeKey={activeTab}
+      destroyInactiveTabPane
       onChange={(key) => navigate(`/epi/mocvd/source?tab=${key}`)}
       tabBarStyle={{ borderBottom: '1px solid rgba(245,158,11,0.18)', marginBottom: 20, paddingBottom: 0 }}
       items={[
