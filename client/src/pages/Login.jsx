@@ -25,7 +25,7 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at top left, rgba(245,158,11,0.15) 0%, transparent 28%), radial-gradient(circle at right center, rgba(249,115,22,0.12) 0%, transparent 24%), linear-gradient(135deg, #1c2030 0%, #222840 45%, #1e2335 100%)',
+        background: 'radial-gradient(circle at top left, rgba(245,158,11,0.15) 0%, transparent 28%), radial-gradient(circle at right center, rgba(249,115,22,0.10) 0%, transparent 24%), linear-gradient(135deg, #1a1e2c 0%, #1e2230 45%, #1a1e2c 100%)',
         position: 'relative',
         overflow: 'hidden',
         padding: 24,
