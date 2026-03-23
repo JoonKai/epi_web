@@ -10,6 +10,8 @@ from database import get_db
 from models import (
     AuditLog,
     KoreanHoliday,
+    MachineGroup,
+    MachineGroupMember,
     MocvdMachine,
     PersonnelMember,
     PersonnelVendor,
@@ -675,6 +677,62 @@ def get_sync_status(_=Depends(require_admin)):
         "running": _sync_state["running"],
         "result": _sync_state["result"],
     }
+
+
+class MachineGroupCreate(BaseModel):
+    name: str
+    description: str = ""
+    machine_nos: List[int] = []
+
+
+@router.get("/machine-groups")
+def list_machine_groups(db: Session = Depends(get_db), _=Depends(require_admin)):
+    groups = db.query(MachineGroup).order_by(MachineGroup.id).all()
+    members = db.query(MachineGroupMember).all()
+    member_map = {}
+    for m in members:
+        member_map.setdefault(m.group_id, []).append(m.machine_no)
+    return [
+        {"id": g.id, "name": g.name, "description": g.description,
+         "machine_nos": sorted(member_map.get(g.id, []))}
+        for g in groups
+    ]
+
+
+@router.post("/machine-groups")
+def create_machine_group(body: MachineGroupCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    group = MachineGroup(name=body.name, description=body.description)
+    db.add(group)
+    db.flush()
+    for no in body.machine_nos:
+        db.add(MachineGroupMember(group_id=group.id, machine_no=no))
+    db.commit()
+    return {"id": group.id}
+
+
+@router.put("/machine-groups/{group_id}")
+def update_machine_group(group_id: int, body: MachineGroupCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    group = db.query(MachineGroup).filter(MachineGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    group.name = body.name
+    group.description = body.description
+    db.query(MachineGroupMember).filter(MachineGroupMember.group_id == group_id).delete()
+    for no in body.machine_nos:
+        db.add(MachineGroupMember(group_id=group_id, machine_no=no))
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.delete("/machine-groups/{group_id}")
+def delete_machine_group(group_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    group = db.query(MachineGroup).filter(MachineGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    db.query(MachineGroupMember).filter(MachineGroupMember.group_id == group_id).delete()
+    db.delete(group)
+    db.commit()
+    return {"result": "ok"}
 
 
 @router.get("/sync-pm-counter/logs")

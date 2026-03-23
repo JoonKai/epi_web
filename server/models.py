@@ -298,6 +298,23 @@ class PmSyncLog(Base):
     errors_json   = Column(Text, default="[]")
 
 
+class MachineGroup(Base):
+    __tablename__ = "machine_group"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    description = Column(String(200), default="")
+    created_at = Column(DateTime, default=func.now())
+
+
+class MachineGroupMember(Base):
+    __tablename__ = "machine_group_member"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, nullable=False, index=True)
+    machine_no = Column(Integer, nullable=False, index=True)
+
+
 class EquipmentHistory(Base):
     __tablename__ = "equipment_history"
 

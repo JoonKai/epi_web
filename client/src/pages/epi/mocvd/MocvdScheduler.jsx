@@ -29,7 +29,7 @@ const navBtnStyle = {
 }
 
 /* ── 자동 일정 생성 알고리즘 ────────────────────────────────── */
-function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays = {} }) {
+function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays = {}, groups = [] }) {
   const {
     includePmCritical, includePmUrgent,
     includeFilterCritical, includeFilterUrgent,
@@ -72,6 +72,27 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
       items.push({ priority: 1, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '임박' })
     }
   })
+
+  // 그룹 확장: 한 호기가 그룹에 속해 있으면 같은 그룹의 모든 호기에 동일 이벤트 추가
+  if (groups.length > 0) {
+    const machineGroupMap = {}
+    groups.forEach(g => g.machine_nos.forEach(no => { machineGroupMap[no] = g }))
+    const expanded = []
+    const seen = new Set() // 중복 방지: "machine_no:event_type"
+    items.forEach(item => {
+      const group = item.machine_no ? machineGroupMap[item.machine_no] : null
+      const targets = group ? group.machine_nos : [item.machine_no]
+      targets.forEach(no => {
+        const key = `${no}:${item.event_type}:${item.title}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          expanded.push({ ...item, machine_no: no })
+        }
+      })
+    })
+    items.length = 0
+    items.push(...expanded)
+  }
 
   items.sort((a, b) => a.priority - b.priority)
   if (items.length === 0) return []
@@ -117,7 +138,7 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
 }
 
 /* ── 자동 생성 모달 ─────────────────────────────────────────── */
-function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year, month, holidays, onConfirm }) {
+function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year, month, holidays, groups = [], onConfirm }) {
   const [config, setConfig] = useState({
     includePmCritical: true,     includePmUrgent: false,
     includeFilterCritical: true, includeFilterUrgent: false,
@@ -147,7 +168,7 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
   const filterUrgent   = pmCounters.filter(r => { const v = r.filter_base_count - r.filter_count; return v > thresholds.critical && v <= thresholds.urgent })
 
   const handlePreview = () => {
-    const result = autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays })
+    const result = autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays, groups })
     setPreview(result)
   }
 
@@ -410,15 +431,30 @@ export default function MocvdScheduler() {
   const [sourceStatus, setSourceStatus] = useState(null)
   const [events, setEvents] = useState([])
   const [holidays, setHolidays] = useState({}) // { 'YYYY-MM-DD': '공휴일명' }
+  const [groups, setGroups] = useState([])     // [{ id, name, machine_nos }]
 
   const [manualOpen, setManualOpen] = useState(false)
   const [autoOpen, setAutoOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
+  const [applyGroup, setApplyGroup] = useState(false)
   const [form] = Form.useForm()
+  const watchedMachineNo = Form.useWatch('machine_no', form)
+
+  // 선택 호기가 속한 그룹 (없으면 null)
+  const selectedGroup = useMemo(() =>
+    groups.find(g => watchedMachineNo && g.machine_nos.includes(watchedMachineNo)) ?? null
+  , [groups, watchedMachineNo])
+
+  // machine_no → group 역방향 맵
+  const machineGroupMap = useMemo(() => {
+    const map = {}
+    groups.forEach(g => g.machine_nos.forEach(no => { map[no] = g }))
+    return map
+  }, [groups])
 
   const fetchAll = useCallback(async () => {
     try {
-      const [mRes, mbRes, paRes, evRes, pcRes, ssRes, hdRes] = await Promise.all([
+      const [mRes, mbRes, paRes, evRes, pcRes, ssRes, hdRes, grRes] = await Promise.all([
         authFetch('/api/admin/machines'),
         authFetch('/api/admin/personnel/members'),
         authFetch('/api/admin/personnel/pm-assign'),
@@ -426,9 +462,11 @@ export default function MocvdScheduler() {
         authFetch('/api/mocvd/pm-counters'),
         authFetch('/api/mocvd/source-status'),
         authFetch(`/api/shift/holidays?year=${today.year()}`),
+        authFetch('/api/admin/machine-groups'),
       ])
       if (mRes.ok) setMachines(await mRes.json())
       if (mbRes.ok) setMembers(await mbRes.json())
+      if (grRes.ok) setGroups(await grRes.json())
       if (paRes.ok) {
         const list = await paRes.json()
         const map = {}
@@ -490,6 +528,7 @@ export default function MocvdScheduler() {
 
   const openCreate = (date) => {
     setEditingEvent(null)
+    setApplyGroup(false)
     form.resetFields()
     form.setFieldsValue({ occurred_at: date, event_type: 'pm' })
     setManualOpen(true)
@@ -510,15 +549,29 @@ export default function MocvdScheduler() {
 
   const handleSubmit = async (values) => {
     try {
-      const url = editingEvent ? `/api/mocvd/equipment-history/${editingEvent.id}` : '/api/mocvd/equipment-history'
-      const res = await authFetch(url, {
-        method: editingEvent ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, occurred_at: values.occurred_at + 'T00:00:00' }),
-      })
-      if (!res.ok) throw new Error()
-      message.success(editingEvent ? '수정했습니다.' : '일정을 추가했습니다.')
+      const payload = { ...values, occurred_at: values.occurred_at + 'T00:00:00' }
+      if (editingEvent) {
+        const res = await authFetch(`/api/mocvd/equipment-history/${editingEvent.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error()
+        message.success('수정했습니다.')
+      } else {
+        // 그룹 전체 적용: 같은 그룹의 모든 호기에 동일 이벤트 생성
+        const group = applyGroup && values.machine_no ? machineGroupMap[values.machine_no] : null
+        const targetMachineNos = group ? group.machine_nos : [values.machine_no]
+        for (const no of targetMachineNos) {
+          const res = await authFetch('/api/mocvd/equipment-history', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, machine_no: no }),
+          })
+          if (!res.ok) throw new Error()
+        }
+        message.success(group ? `그룹 ${group.machine_nos.length}대에 일정을 추가했습니다.` : '일정을 추가했습니다.')
+      }
       setManualOpen(false)
+      setApplyGroup(false)
       fetchAll()
     } catch { message.error('저장에 실패했습니다.') }
   }
@@ -782,6 +835,23 @@ export default function MocvdScheduler() {
           <Form.Item name="machine_no" label="호기">
             <Select allowClear showSearch options={machineOptions} placeholder="호기 선택 (선택사항)" />
           </Form.Item>
+          {!editingEvent && selectedGroup && (
+            <div style={{ marginBottom: 16, padding: '8px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8 }}>
+              <div style={{ fontSize: 14, color: '#fbbf24', fontWeight: 700, marginBottom: 6 }}>
+                그룹: {selectedGroup.name}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                {selectedGroup.machine_nos.map(no => (
+                  <span key={no} style={{ fontSize: 13, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 4, padding: '1px 7px', color: '#fbbf24' }}>
+                    {formatMachineLabel(no)}
+                  </span>
+                ))}
+              </div>
+              <Checkbox checked={applyGroup} onChange={e => setApplyGroup(e.target.checked)} style={{ color: 'rgba(196,210,226,0.85)', fontSize: 14 }}>
+                그룹 전체 {selectedGroup.machine_nos.length}대에 적용
+              </Checkbox>
+            </div>
+          )}
           <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
             <Input placeholder="일정 제목" />
           </Form.Item>
@@ -804,6 +874,7 @@ export default function MocvdScheduler() {
         year={year}
         month={month}
         holidays={holidays}
+        groups={groups}
         onConfirm={fetchAll}
       />
     </div>

@@ -6,11 +6,12 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Select,
   Switch,
   Tabs,
   message,
 } from 'antd'
-import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, GroupOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
 import { HexColorPicker, RgbaStringColorPicker } from 'react-colorful'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -767,6 +768,165 @@ function ShiftTypeTab() {
   )
 }
 
+function GroupTab() {
+  const [groups, setGroups] = useState([])
+  const [machines, setMachines] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingGroup, setEditingGroup] = useState(null)
+  const [createForm] = Form.useForm()
+  const [editForm] = Form.useForm()
+
+  const fetchAll = async () => {
+    setLoading(true)
+    try {
+      const [gRes, mRes] = await Promise.all([
+        authFetch('/api/admin/machine-groups'),
+        authFetch('/api/admin/machines'),
+      ])
+      if (gRes.ok) setGroups(await gRes.json())
+      if (mRes.ok) setMachines(await mRes.json())
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchAll() }, [])
+
+  const machineOptions = machines
+    .filter(m => m.is_active)
+    .sort((a, b) => a.machine_no - b.machine_no)
+    .map(m => ({ label: formatMachineLabel(m.machine_no), value: m.machine_no }))
+
+  const handleCreate = async (values) => {
+    const res = await authFetch('/api/admin/machine-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) { message.error('그룹 추가에 실패했습니다.'); return }
+    message.success('그룹을 추가했습니다.')
+    setCreateOpen(false)
+    createForm.resetFields()
+    fetchAll()
+  }
+
+  const handleEdit = async (values) => {
+    const res = await authFetch(`/api/admin/machine-groups/${editingGroup.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) { message.error('그룹 수정에 실패했습니다.'); return }
+    message.success('그룹을 수정했습니다.')
+    setEditOpen(false)
+    setEditingGroup(null)
+    fetchAll()
+  }
+
+  const handleDelete = async (id) => {
+    const res = await authFetch(`/api/admin/machine-groups/${id}`, { method: 'DELETE' })
+    if (!res.ok) { message.error('그룹 삭제에 실패했습니다.'); return }
+    message.success('그룹을 삭제했습니다.')
+    fetchAll()
+  }
+
+  const openEdit = (group) => {
+    setEditingGroup(group)
+    editForm.setFieldsValue({ name: group.name, description: group.description, machine_nos: group.machine_nos })
+    setEditOpen(true)
+  }
+
+  const groupFormFields = (
+    <>
+      <Form.Item name="name" label="그룹명" rules={[{ required: true, message: '그룹명을 입력하세요.' }]}>
+        <Input placeholder="예: TMGa 라인 A" />
+      </Form.Item>
+      <Form.Item name="description" label="설명">
+        <Input placeholder="그룹 설명 (선택)" />
+      </Form.Item>
+      <Form.Item name="machine_nos" label="포함 호기">
+        <Select mode="multiple" options={machineOptions} placeholder="호기 선택" showSearch allowClear />
+      </Form.Item>
+    </>
+  )
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>전체 {groups.length}개 그룹</span>
+        <button
+          onClick={() => setCreateOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
+            borderRadius: 8, padding: '4px 14px', cursor: 'pointer',
+            color: 'rgba(245,158,11,0.8)', fontSize: 14, fontWeight: 700,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
+        >+ 그룹 추가</button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {groups.length === 0 && !loading && (
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '24px 4px' }}>등록된 그룹이 없습니다.</span>
+        )}
+        {groups.map((group) => (
+          <div key={group.id} style={{
+            background: '#212535',
+            border: '1px solid var(--nowa-border)',
+            borderRadius: 14, padding: '14px 16px',
+            borderLeft: '3px solid #f59e0b',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#fbbf24' }}>{group.name}</span>
+                  {group.description && (
+                    <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)' }}>{group.description}</span>
+                  )}
+                  <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.45)' }}>{group.machine_nos.length}대</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {group.machine_nos.length === 0 ? (
+                    <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.4)' }}>호기 없음</span>
+                  ) : group.machine_nos.map(no => (
+                    <span key={no} style={{
+                      fontSize: 14, fontWeight: 700,
+                      background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+                      borderRadius: 6, padding: '2px 10px', color: '#fbbf24',
+                    }}>{formatMachineLabel(no)}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+                <EditOutlined onClick={() => openEdit(group)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 15, cursor: 'pointer' }} />
+                <Popconfirm title="이 그룹을 삭제하시겠습니까?" onConfirm={() => handleDelete(group.id)}>
+                  <DeleteOutlined style={{ color: '#f87171', fontSize: 15, cursor: 'pointer', opacity: 0.8 }} />
+                </Popconfirm>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Modal title="그룹 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
+        <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
+          {groupFormFields}
+        </Form>
+      </Modal>
+
+      <Modal title="그룹 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
+        <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
+          {groupFormFields}
+        </Form>
+      </Modal>
+    </>
+  )
+}
+
 const tabBarStyle = {
   borderBottom: '1px solid rgba(245,158,11,0.18)',
   marginBottom: 20,
@@ -783,6 +943,7 @@ export default function MasterData() {
           { key: 'machines', label: <span><AppstoreOutlined /> MOCVD 호기 관리</span>, children: <MachineTab /> },
           { key: 'sources', label: <span><ExperimentOutlined /> 소스 종류 관리</span>, children: <SourceTab /> },
           { key: 'shift-types', label: <span><CalendarOutlined /> 근무 유형 관리</span>, children: <ShiftTypeTab /> },
+          { key: 'groups', label: <span><GroupOutlined /> 호기 그룹 관리</span>, children: <GroupTab /> },
         ]}
       />
     </div>
