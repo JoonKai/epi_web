@@ -6,10 +6,10 @@ import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { getSourceColor, getGroupColor } from './sourceColors'
 import { panelStyle } from '../../../theme/consoleTheme'
+import { useThemeMode } from '../../../theme/useThemeMode'
 import SourceRidgelineChart from './SourceRidgelineChart'
 
-const BORDER = '1px solid rgba(180,196,210,0.32)'
-const GROUP_BORDER = '3px solid #2d7aaa'
+const BORDER = '1px solid var(--nowa-border)'
 const DEFAULT_THRESHOLD_RATIO = 15
 const HEADER_TOP_1 = 0
 const HEADER_TOP_2 = 52
@@ -17,34 +17,39 @@ const ROW_TOP_DAILY = 78
 const ROW_TOP_REMAINING = 108
 const STICKY_CONTENT_HEIGHT = ROW_TOP_REMAINING + 30
 
-const EDITABLE_ROWS = [
-  ['일사용량', 'daily_usage', '#fbbf24', '#100e00', ROW_TOP_DAILY],
-  ['잔량', 'remaining', '#86efac', '#060f06', ROW_TOP_REMAINING],
-]
+function makeTheme(isLight) {
+  const bg        = isLight ? '#f8f9ff' : '#1e222e'
+  const bgAlt     = isLight ? '#eaedff' : '#242834'
+  const bgDeep    = isLight ? '#eef2f8' : '#171b26'
+  const bgDeeper  = isLight ? '#e8ecf5' : '#131619'
+  const groupBorder = isLight ? '3px solid rgba(99,102,241,0.45)' : '3px solid #2d7aaa'
 
-const th1Base = {
-  position: 'sticky',
-  top: HEADER_TOP_1,
-  background: '#242834',
-  border: BORDER,
-  padding: '0 4px',
-  textAlign: 'center',
-  whiteSpace: 'nowrap',
-  height: 52,
-  zIndex: 4,
-}
-
-const th2Base = {
-  position: 'sticky',
-  top: HEADER_TOP_2,
-  background: '#1e222e',
-  border: BORDER,
-  padding: '0 3px',
-  textAlign: 'center',
-  fontSize: 14,
-  whiteSpace: 'nowrap',
-  height: 26,
-  zIndex: 4,
+  return {
+    bg, bgAlt, bgDeep, bgDeeper, groupBorder,
+    editableRows: [
+      ['일사용량', 'daily_usage',
+        isLight ? '#b45309' : '#fbbf24',
+        isLight ? '#fffbeb' : '#100e00',
+        ROW_TOP_DAILY],
+      ['잔량', 'remaining',
+        isLight ? '#15803d' : '#86efac',
+        isLight ? '#f0fdf4' : '#060f06',
+        ROW_TOP_REMAINING],
+    ],
+    th1Base: {
+      position: 'sticky', top: HEADER_TOP_1,
+      background: bgAlt, border: BORDER,
+      padding: '0 4px', textAlign: 'center',
+      whiteSpace: 'nowrap', height: 52, zIndex: 4,
+    },
+    th2Base: {
+      position: 'sticky', top: HEADER_TOP_2,
+      background: bg, border: BORDER,
+      padding: '0 3px', textAlign: 'center',
+      fontSize: 14, whiteSpace: 'nowrap',
+      height: 26, zIndex: 4,
+    },
+  }
 }
 
 const tdLabelBase = {
@@ -154,6 +159,9 @@ function EditField({ value, color, bg, onChange, onPaste, pending, disabled = fa
 }
 
 export default function SourceRemainingSheetTab() {
+  const { isLight } = useThemeMode()
+  const T = makeTheme(isLight)
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -268,14 +276,9 @@ export default function SourceRemainingSheetTab() {
 
   const dateRows = useMemo(
     () =>
-      Array.from({ length: forecastDays * 2 + 1 }, (_, index) => {
-        const daysAhead = index - forecastDays
-        const next = dayjs().add(daysAhead, 'day')
-        return {
-          label: `${next.month() + 1}/${next.date()}`,
-          daysAhead,
-          dateKey: next.format('YYYY-MM-DD'),
-        }
+      Array.from({ length: forecastDays + 1 }, (_, index) => {
+        const next = dayjs().add(index, 'day')
+        return { label: `${next.month() + 1}/${next.date()}`, daysAhead: index }
       }),
     [forecastDays],
   )
@@ -287,6 +290,14 @@ export default function SourceRemainingSheetTab() {
       map[row.recorded_date][`${row.machine_no}:${row.source_name}`] = row.remaining
     })
     return map
+  }, [historyData])
+
+  const historyDates = useMemo(() => {
+    const today = dayjs().format('YYYY-MM-DD')
+    return [...new Set(historyData.map((r) => r.recorded_date))]
+      .filter((d) => d < today)
+      .sort()
+      .reverse()
   }, [historyData])
 
   const handleChange = (machineNo, sourceName, field, value) => {
@@ -504,14 +515,14 @@ export default function SourceRemainingSheetTab() {
               </colgroup>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 5, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 52 }}>구분</th>
+                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 5, background: T.bgDeep, color: 'var(--nowa-text-muted)', border: BORDER, height: 52 }}>구분</th>
                   {filteredMachines.map((machine, mi) => {
                     const enabled = machineEnabledSources[machine.machine_no] ?? []
                     if (enabled.length === 0) return null
                     return (
-                      <th key={machine.machine_no} colSpan={enabled.length} style={{ position: 'sticky', top: HEADER_TOP_1, background: '#242834', border: BORDER, borderLeft: mi === 0 ? BORDER : GROUP_BORDER, height: 52, fontWeight: 700, zIndex: 4 }}>
+                      <th key={machine.machine_no} colSpan={enabled.length} style={{ position: 'sticky', top: HEADER_TOP_1, background: T.bgAlt, border: BORDER, borderLeft: mi === 0 ? BORDER : T.groupBorder, height: 52, fontWeight: 700, zIndex: 4 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <span style={{ color: '#fbbf24' }}>{formatMachineLabel(machine.machine_no)}</span>
+                          <span style={{ color: 'var(--nowa-primary)' }}>{formatMachineLabel(machine.machine_no)}</span>
                           {(() => { const gc = getGroupColor(machineGroupMap[machine.machine_no]); return gc ? (
                             <span style={{ fontSize: 11, fontWeight: 600, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 3, padding: '0 5px', lineHeight: '14px' }}>
                               {machineGroupMap[machine.machine_no]}
@@ -525,7 +536,7 @@ export default function SourceRemainingSheetTab() {
                 <tr>
                   {filteredMachines.map((machine, mi) =>
                     (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, index) => (
-                      <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER, color: getSourceColor(sourceOrder.indexOf(sourceName)).main }}>
+                      <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...T.th2Base, borderLeft: index === 0 && mi > 0 ? T.groupBorder : BORDER, color: getSourceColor(sourceOrder.indexOf(sourceName)).main }}>
                         {sourceName}
                       </th>
                     )),
@@ -533,7 +544,7 @@ export default function SourceRemainingSheetTab() {
                 </tr>
               </thead>
               <tbody>
-                {EDITABLE_ROWS.map(([label, field, color, bg, top], rowIndex) => (
+                {T.editableRows.map(([label, field, color, bg, top], rowIndex) => (
                   <tr key={field}>
                     <td style={{ ...tdLabelBase, ...stickyDataRowStyle(top, bg, color, field === 'daily_usage' ? 5 : 4), borderRight: BORDER }}>{label}</td>
                     {filteredMachines.map((machine, machineIndex) =>
@@ -541,7 +552,7 @@ export default function SourceRemainingSheetTab() {
                         const key = `${machine.machine_no}:${sourceName}`
                         const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
                         return (
-                          <td key={`${key}:${field}`} style={{ ...stickyDataRowStyle(top, bg, 'inherit', field === 'daily_usage' ? 5 : 4), border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER, height: 30 }}>
+                          <td key={`${key}:${field}`} style={{ ...stickyDataRowStyle(top, bg, 'inherit', field === 'daily_usage' ? 5 : 4), border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER, height: 30 }}>
                             <EditField
                               value={cellData[key]?.[field] ?? 0}
                               color={color}
@@ -556,73 +567,113 @@ export default function SourceRemainingSheetTab() {
                     )}
                   </tr>
                 ))}
-                {dateRows.map(({ label, daysAhead, dateKey }, rowIndex) => (
-                  <tr
-                    key={label}
-                    ref={daysAhead === 0 ? todayRowRef : null}
-                    style={{ background: rowIndex % 2 === 0 ? '#171b26' : '#131619' }}
-                  >
-                    <td
-                      style={{
-                        ...tdLabelBase,
-                        background: rowIndex % 2 === 0 ? '#171b26' : '#131619',
-                        color: daysAhead === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)',
-                        borderRight: BORDER,
-                      }}
+                {dateRows.map(({ label, daysAhead }, rowIndex) => {
+                  const baseBg = rowIndex % 2 === 0 ? T.bgDeep : T.bgDeeper
+                  return (
+                    <tr
+                      key={label}
+                      ref={daysAhead === 0 ? todayRowRef : null}
+                      style={{ background: baseBg }}
                     >
-                      {label}
-                    </td>
-                    {filteredMachines.map((machine, machineIndex) =>
-                      (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
-                        const key = `${machine.machine_no}:${sourceName}`
-                        const remaining = cellData[key]?.remaining ?? 0
-                        const dailyUsage = cellData[key]?.daily_usage ?? 0
-                        const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
-                        const historical = historyByDate[dateKey]?.[key]
-                        const baseBg = rowIndex % 2 === 0 ? '#171b26' : '#131619'
-                        const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
-                        if (daysAhead === 0) {
+                      <td
+                        style={{
+                          ...tdLabelBase,
+                          background: baseBg,
+                          color: daysAhead === 0 ? 'var(--nowa-primary)' : 'var(--nowa-text-muted)',
+                          borderRight: BORDER,
+                          fontWeight: daysAhead === 0 ? 700 : 600,
+                        }}
+                      >
+                        {label}
+                      </td>
+                      {filteredMachines.map((machine, machineIndex) =>
+                        (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
+                          const key = `${machine.machine_no}:${sourceName}`
+                          const remaining = cellData[key]?.remaining ?? 0
+                          const dailyUsage = cellData[key]?.daily_usage ?? 0
+                          const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
+                          const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
+                          if (daysAhead === 0) {
+                            return (
+                              <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER, background: baseBg, height: 30 }}>
+                                <EditField
+                                  value={cellData[key]?.remaining ?? 0}
+                                  color="var(--nowa-text-soft)"
+                                  bg={baseBg}
+                                  pending={pendingKeys.has(key)}
+                                  onChange={(value) => handleChange(machine.machine_no, sourceName, 'remaining', value)}
+                                  onPaste={(text) => handlePaste(1, colIndex, text)}
+                                />
+                              </td>
+                            )
+                          }
                           return (
-                            <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER, background: baseBg, height: 30 }}>
-                              <EditField
-                                value={cellData[key]?.remaining ?? 0}
-                                color="rgba(196,210,226,0.8)"
-                                bg={baseBg}
-                                pending={pendingKeys.has(key)}
-                                onChange={(value) => handleChange(machine.machine_no, sourceName, 'remaining', value)}
-                                onPaste={(text) => handlePaste(1, colIndex, text)}
-                              />
+                            <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER, background: baseBg, color: 'var(--nowa-text-soft)', textAlign: 'right', paddingRight: 6, height: 30 }}>
+                              {projected == null ? '-' : fmt(projected)}
                             </td>
                           )
-                        }
-                        if (daysAhead < 0) {
-                          return (
-                            <td
-                              key={`${key}:${label}`}
-                              style={{
-                                border: BORDER,
-                                borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER,
-                                background: baseBg,
-                                color: 'rgba(196,210,226,0.55)',
-                                textAlign: 'right',
-                                paddingRight: 6,
-                                height: 30,
-                                fontSize: 13,
-                              }}
-                            >
-                              {historical != null ? fmt(historical) : ''}
-                            </td>
-                          )
-                        }
-                        return (
-                          <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER, background: baseBg, color: 'rgba(196,210,226,0.8)', textAlign: 'right', paddingRight: 6, height: 30 }}>
-                            {projected == null ? '-' : fmt(projected)}
-                          </td>
-                        )
-                      }),
-                    )}
-                  </tr>
-                ))}
+                        }),
+                      )}
+                    </tr>
+                  )
+                })}
+                {historyDates.length > 0 && (
+                  <>
+                    <tr>
+                      <td
+                        colSpan={1 + columns.length}
+                        style={{
+                          background: T.bgDeeper,
+                          color: 'var(--nowa-text-muted)',
+                          fontSize: 11,
+                          padding: '5px 8px',
+                          borderTop: '2px solid var(--nowa-border)',
+                          textAlign: 'center',
+                          letterSpacing: 1,
+                          fontWeight: 600,
+                          opacity: 0.7,
+                        }}
+                      >
+                        과거 기록 (최근 {historyDates.length}일)
+                      </td>
+                    </tr>
+                    {historyDates.map((date, rowIndex) => {
+                      const dateObj = dayjs(date)
+                      const label = `${dateObj.month() + 1}/${dateObj.date()}`
+                      const dayRecord = historyByDate[date] ?? {}
+                      const bg = rowIndex % 2 === 0 ? T.bgDeeper : T.bgDeep
+                      return (
+                        <tr key={`hist:${date}`} style={{ background: bg }}>
+                          <td style={{ ...tdLabelBase, background: bg, color: 'var(--nowa-text-muted)', borderRight: BORDER, opacity: 0.7 }}>{label}</td>
+                          {filteredMachines.map((machine, machineIndex) =>
+                            (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
+                              const key = `${machine.machine_no}:${sourceName}`
+                              const val = dayRecord[key]
+                              return (
+                                <td
+                                  key={`${key}:hist:${date}`}
+                                  style={{
+                                    border: BORDER,
+                                    borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER,
+                                    background: bg,
+                                    color: 'var(--nowa-text-muted)',
+                                    textAlign: 'right',
+                                    paddingRight: 6,
+                                    height: 30,
+                                    fontSize: 13,
+                                    opacity: 0.75,
+                                  }}
+                                >
+                                  {val != null ? fmt(val) : ''}
+                                </td>
+                              )
+                            }),
+                          )}
+                        </tr>
+                      )
+                    })}
+                  </>
+                )}
               </tbody>
             </table>
           </div>

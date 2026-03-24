@@ -118,6 +118,7 @@
   --nowa-info-soft: rgba(37, 99, 235, 0.1);
   --nowa-teal: #0d9488;
   --nowa-teal-soft: rgba(13, 148, 136, 0.1);
+  --nowa-card-bg: #f8f9ff;
   --nowa-sider-bg: #1e1f3b;
   --nowa-header-bg: rgba(255, 255, 255, 0.92);
   --nowa-content-bg: #eef2f8;
@@ -402,15 +403,15 @@ a { color: inherit; }
   transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 
-.nowa-card.ant-card:hover,
-.console-panel.ant-card:hover {
+:root:not([data-theme='light']) .nowa-card.ant-card:hover,
+:root:not([data-theme='light']) .console-panel.ant-card:hover {
   border-color: rgba(245, 158, 11, 0.28);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(245,158,11,0.1), 0 1px 0 rgba(255,255,255,0.06) inset;
   transform: translateY(-1px);
 }
 
-.nowa-card .ant-card-head,
-.console-panel .ant-card-head {
+:root:not([data-theme='light']) .nowa-card .ant-card-head,
+:root:not([data-theme='light']) .console-panel .ant-card-head {
   border-bottom: 1px solid rgba(245,158,11,0.18);
   min-height: 52px;
   padding: 0 20px;
@@ -418,9 +419,21 @@ a { color: inherit; }
   border-left: 3px solid #f59e0b;
 }
 
+:root:not([data-theme='light']) .nowa-card .ant-card-head-title,
+:root:not([data-theme='light']) .console-panel .ant-card-head-title {
+  color: #e8c98a;
+  font-weight: 700;
+}
+
+/* light mode handles these in the LIGHT MODE OVERRIDES section below */
+.nowa-card .ant-card-head,
+.console-panel .ant-card-head {
+  min-height: 52px;
+  padding: 0 20px;
+}
+
 .nowa-card .ant-card-head-title,
 .console-panel .ant-card-head-title {
-  color: #e8c98a;
   font-weight: 700;
 }
 
@@ -1075,4 +1088,198 @@ a { color: inherit; }
   100% {
     transform: translateX(-100%);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT MODE — comprehensive overrides
+   (All dark-hardcoded values are re-mapped to indigo-based palette)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Card / Panel ─── */
+:root[data-theme='light'] .nowa-card.ant-card,
+:root[data-theme='light'] .console-panel.ant-card {
+  background: #ffffff;
+  border: 1px solid rgba(99, 102, 241, 0.14);
+  box-shadow: 0 2px 16px rgba(99, 102, 241, 0.08), 0 1px 0 rgba(255,255,255,0.9) inset;
+}
+
+:root[data-theme='light'] .nowa-card.ant-card:hover,
+:root[data-theme='light'] .console-panel.ant-card:hover {
+  border-color: rgba(99, 102, 241, 0.28);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.13), 0 1px 0 rgba(255,255,255,0.9) inset;
+  transform: translateY(-1px);
+}
+
+:root[data-theme='light'] .nowa-card .ant-card-head,
+:root[data-theme='light'] .console-panel .ant-card-head {
+  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.06) 0%, rgba(99, 102, 241, 0.01) 100%);
+  border-left: 3px solid #6366f1;
+}
+
+:root[data-theme='light'] .nowa-card .ant-card-head-title,
+:root[data-theme='light'] .console-panel .ant-card-head-title {
+  color: #1e1b4b;
+}
+
+:root[data-theme='light'] .nowa-card .ant-card-extra,
+:root[data-theme='light'] .console-panel .ant-card-extra {
+  color: rgba(100, 116, 139, 0.9);
+}
+
+/* ── Table ─── */
+:root[data-theme='light'] .console-table.ant-table-wrapper .ant-table-thead > tr > th {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.07) 0%, rgba(99, 102, 241, 0.02) 100%);
+  color: rgba(100, 116, 139, 0.9);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+:root[data-theme='light'] .console-table.ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: rgba(99, 102, 241, 0.06) !important;
+}
+
+:root[data-theme='light'] .console-table.ant-table-wrapper .ant-table-tbody > tr:nth-child(even):hover > td {
+  background: rgba(99, 102, 241, 0.07) !important;
+}
+
+/* ── Primary button → indigo in light ─── */
+:root[data-theme='light'] .ant-btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.38) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='light'] .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.52) !important;
+}
+
+:root[data-theme='light'] .ant-btn-primary span,
+:root[data-theme='light'] .ant-btn-primary .anticon {
+  color: #ffffff !important;
+}
+
+/* ── Pagination ─── */
+:root[data-theme='light'] .ant-pagination .ant-pagination-item-active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  border-color: transparent !important;
+}
+
+/* ── Tabs ─── */
+:root[data-theme='light'] .console-tabs.ant-tabs .ant-tabs-tab {
+  color: rgba(100, 116, 139, 0.82);
+}
+
+:root[data-theme='light'] .console-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #6366f1;
+}
+
+:root[data-theme='light'] .console-tabs.ant-tabs .ant-tabs-ink-bar {
+  background: #6366f1;
+}
+
+/* ── Notification / message ─── */
+:root[data-theme='light'] .ant-message-notice-content {
+  background: #ffffff !important;
+  border: 1px solid rgba(99, 102, 241, 0.14) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* ── AG Grid ─── */
+:root[data-theme='light'] .ag-theme-quartz {
+  --ag-header-background-color: rgba(99, 102, 241, 0.05);
+  --ag-odd-row-background-color: rgba(99, 102, 241, 0.015);
+  --ag-row-hover-color: rgba(99, 102, 241, 0.07);
+  --ag-selected-row-background-color: rgba(99, 102, 241, 0.1);
+  --ag-border-color: rgba(99, 102, 241, 0.12);
+  --ag-row-border-color: rgba(99, 102, 241, 0.1);
+  --ag-input-focus-border-color: rgba(99, 102, 241, 0.45);
+}
+
+/* ── Scrollbar ─── */
+:root[data-theme='light'] ::-webkit-scrollbar-track {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.28), rgba(139, 92, 246, 0.18));
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.48), rgba(139, 92, 246, 0.35));
+}
+
+/* ── Toolbar / pill / surface ─── */
+:root[data-theme='light'] .console-surface {
+  background: rgba(99, 102, 241, 0.04);
+  border-color: rgba(99, 102, 241, 0.12);
+}
+
+:root[data-theme='light'] .console-kpi {
+  background: #f8f9ff;
+  border-color: rgba(99, 102, 241, 0.12);
+}
+
+/* ── DatePicker inner cells ─── */
+:root[data-theme='light'] .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+}
+
+/* ── Select item active/selected ─── */
+:root[data-theme='light'] .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+:root[data-theme='light'] .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(99, 102, 241, 0.13) !important;
+  color: #6366f1 !important;
+  font-weight: 600 !important;
+}
+
+/* ── Select selector background fix ─── */
+:root[data-theme='light'] .ant-select:not(.ant-select-disabled) .ant-select-selector {
+  background: #ffffff !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  color: #0f172a !important;
+}
+
+:root[data-theme='light'] .ant-select-selection-item {
+  color: #0f172a !important;
+}
+
+:root[data-theme='light'] .ant-select-arrow {
+  color: rgba(100, 116, 139, 0.7) !important;
+}
+
+/* ── Tags ─── */
+:root[data-theme='light'] .ant-tag {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+/* ── Breadcrumb / Section label text ─── */
+:root[data-theme='light'] .nowa-section-title,
+:root[data-theme='light'] .nowa-label,
+:root[data-theme='light'] .console-label {
+  color: rgba(100, 116, 139, 0.85);
+}
+
+/* ── KPI metric cards adapt ─── */
+:root[data-theme='light'] .nowa-metric-card {
+  background: #ffffff;
+  border-color: rgba(99, 102, 241, 0.12);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.07);
+}
+
+/* ── Source / MOCVD table light mode ─── */
+/* Sticky header bg must match light panel */
+:root[data-theme='light'] table thead th {
+  color: #1e1b4b !important;
+}
+
+/* Force light bg on inline-styled dark panels inside cards */
+:root[data-theme='light'] .nowa-card .ant-card-body,
+:root[data-theme='light'] .console-panel .ant-card-body {
+  color: #0f172a;
 }
