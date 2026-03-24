@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, func
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, Date, UniqueConstraint, func
 from database import Base
 
 
@@ -121,6 +121,18 @@ class MocvdSource(Base):
     is_disabled = Column(Boolean, default=False)
     unit = Column(String(10), default="kg")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class SourceRemainingHistory(Base):
+    __tablename__ = "source_remaining_history"
+    __table_args__ = (UniqueConstraint("machine_no", "source_name", "recorded_date"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    machine_no = Column(Integer, nullable=False, index=True)
+    source_name = Column(String(20), nullable=False)
+    remaining = Column(Float, default=0.0)
+    daily_usage = Column(Float, default=0.0)
+    recorded_date = Column(Date, nullable=False, index=True)
 
 
 class MocvdPmCounter(Base):

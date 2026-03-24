@@ -35,7 +35,7 @@ const { Header, Sider, Content } = AntLayout
 
 function buildMenuItems(isAdmin) {
   const items = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: '종합 현황판', className: 'menu-color-amber' },
+    { key: '/dashboard', icon: <DashboardOutlined />, label: 'EPI 현황판', className: 'menu-color-amber' },
     {
       key: 'equipment',
       icon: <ToolOutlined />,
@@ -51,8 +51,8 @@ function buildMenuItems(isAdmin) {
             { key: '/epi/mocvd/management', icon: <ControlOutlined />, label: 'MOCVD 관리' },
             { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스 관리' },
             { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM/BM 관리' },
-            { key: '/epi/mocvd/scheduler', icon: <ScheduleOutlined />, label: '스케줄러' },
             { key: '/epi/mocvd/scrubber', icon: <ToolOutlined />, label: '스크러버 관리' },
+            { key: '/epi/mocvd/scheduler', icon: <ScheduleOutlined />, label: 'PM 스케쥴러' },
             { key: '/epi/mocvd/shift-schedule', icon: <UserOutlined />, label: '인원 관리' },
             { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 관리' },
           ],

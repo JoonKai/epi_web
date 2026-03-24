@@ -1,11 +1,12 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin } from 'antd'
+import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Switch } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { getSourceColor, getGroupColor } from './sourceColors'
 import { panelStyle } from '../../../theme/consoleTheme'
+import SourceRidgelineChart from './SourceRidgelineChart'
 
 const BORDER = '1px solid rgba(180,196,210,0.32)'
 const GROUP_BORDER = '3px solid #2d7aaa'
@@ -14,6 +15,7 @@ const HEADER_TOP_1 = 0
 const HEADER_TOP_2 = 52
 const ROW_TOP_DAILY = 78
 const ROW_TOP_REMAINING = 108
+const STICKY_CONTENT_HEIGHT = ROW_TOP_REMAINING + 30
 
 const EDITABLE_ROWS = [
   ['일사용량', 'daily_usage', '#fbbf24', '#100e00', ROW_TOP_DAILY],
@@ -166,6 +168,10 @@ export default function SourceRemainingSheetTab() {
   const [statusSettings, setStatusSettings] = useState({ overdue_days: 0, urgent_days: 7 })
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [machineGroupMap, setMachineGroupMap] = useState({})
+  const [historyData, setHistoryData] = useState([])
+  const [todayPinned, setTodayPinned] = useState(false)
+  const scrollWrapRef = useRef(null)
+  const todayRowRef = useRef(null)
 
   useEffect(() => {
     authFetch('/api/admin/machine-groups')
@@ -175,6 +181,13 @@ export default function SourceRemainingSheetTab() {
         groups.forEach((g) => g.machine_nos.forEach((no) => { map[no] = g.name }))
         setMachineGroupMap(map)
       })
+      .catch(() => {})
+  }, [])
+
+  const fetchHistory = useCallback(() => {
+    authFetch('/api/mocvd/sources/history?days=180')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setHistoryData(data))
       .catch(() => {})
   }, [])
 
@@ -224,7 +237,8 @@ export default function SourceRemainingSheetTab() {
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+    fetchHistory()
+  }, [fetchData, fetchHistory])
 
   const orderedMachines = useMemo(
     () => machineOrder.map((no) => machines.find((m) => m.machine_no === no)).filter(Boolean),
@@ -254,12 +268,26 @@ export default function SourceRemainingSheetTab() {
 
   const dateRows = useMemo(
     () =>
-      Array.from({ length: forecastDays }, (_, index) => {
-        const next = dayjs().add(index, 'day')
-        return { label: `${next.month() + 1}/${next.date()}`, daysAhead: index }
+      Array.from({ length: forecastDays * 2 + 1 }, (_, index) => {
+        const daysAhead = index - forecastDays
+        const next = dayjs().add(daysAhead, 'day')
+        return {
+          label: `${next.month() + 1}/${next.date()}`,
+          daysAhead,
+          dateKey: next.format('YYYY-MM-DD'),
+        }
       }),
     [forecastDays],
   )
+
+  const historyByDate = useMemo(() => {
+    const map = {}
+    historyData.forEach((row) => {
+      if (!map[row.recorded_date]) map[row.recorded_date] = {}
+      map[row.recorded_date][`${row.machine_no}:${row.source_name}`] = row.remaining
+    })
+    return map
+  }, [historyData])
 
   const handleChange = (machineNo, sourceName, field, value) => {
     const key = `${machineNo}:${sourceName}`
@@ -330,6 +358,7 @@ export default function SourceRemainingSheetTab() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.detail || '잔량기입 저장에 실패했습니다.')
       fetchData()
+      fetchHistory()
     } catch (err) {
       setError(err.message || '잔량기입 저장에 실패했습니다.')
     } finally {
@@ -359,6 +388,34 @@ export default function SourceRemainingSheetTab() {
       setSettingsSaving(false)
     }
   }
+
+  const getTodayMinScrollTop = useCallback(() => {
+    const row = todayRowRef.current
+    if (!row) return 0
+    return Math.max(0, row.offsetTop - STICKY_CONTENT_HEIGHT)
+  }, [])
+
+  const scrollToToday = useCallback(() => {
+    const wrap = scrollWrapRef.current
+    if (!wrap) return
+    wrap.scrollTop = getTodayMinScrollTop()
+  }, [getTodayMinScrollTop])
+
+  const handleSheetScroll = useCallback(() => {
+    if (!todayPinned) return
+    const wrap = scrollWrapRef.current
+    if (!wrap) return
+    const minTop = getTodayMinScrollTop()
+    if (wrap.scrollTop < minTop) {
+      wrap.scrollTop = minTop
+    }
+  }, [getTodayMinScrollTop, todayPinned])
+
+  useEffect(() => {
+    if (todayPinned) {
+      scrollToToday()
+    }
+  }, [todayPinned, scrollToToday])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
@@ -390,6 +447,22 @@ export default function SourceRemainingSheetTab() {
 
       {error ? <Alert type="error" message={error} /> : null}
 
+      {!loading && orderedMachines.length > 0 && sourceOrder.length > 0 && (
+        <Card
+          className="console-panel"
+          style={{ ...panelStyle, minHeight: 0, overflow: 'hidden' }}
+          styles={{ body: { padding: '10px 14px 0' } }}
+          title="소스별 잔량 예측 추이"
+        >
+          <SourceRidgelineChart
+            sourceOrder={sourceOrder}
+            cellData={cellData}
+            machines={orderedMachines}
+            forecastDays={forecastDays}
+            historyData={historyData}
+          />
+        </Card>
+      )}
 
       <Card
         className="console-panel"
@@ -398,17 +471,22 @@ export default function SourceRemainingSheetTab() {
         title="전체 설비 소스 입력"
         extra={(
           <Space wrap>
+            <Button onClick={scrollToToday}>오늘</Button>
+            <Space size={6}>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13, whiteSpace: 'nowrap' }}>오늘 고정</span>
+              <Switch size="small" checked={todayPinned} onChange={setTodayPinned} />
+            </Space>
             <Input value={quickFilter} onChange={(event) => setQuickFilter(event.target.value)} placeholder="호기 검색" style={{ width: 150 }} allowClear />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13, whiteSpace: 'nowrap' }}>예상 교체일 기준</span>
-              <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[15, 30, 60, 90].map((value) => ({ value, label: `${value}일` }))} />
+              <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[15, 30, 60, 90, 120, 150, 180].map((value) => ({ value, label: `${value}일` }))} />
             </div>
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
           </Space>
         )}
       >
-        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
+        <div style={{ padding: '6px 14px 6px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 13 }}>
           비활성 소스는 사선 처리되며 계산과 현황판에서 제외됩니다. 활성화 설정은 설비 구성 탭에서 변경하세요.
         </div>
         {loading ? (
@@ -416,7 +494,7 @@ export default function SourceRemainingSheetTab() {
             <Spin tip="잔량기입 데이터를 불러오는 중입니다." />
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+          <div ref={scrollWrapRef} onScroll={handleSheetScroll} style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
             <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
               <colgroup>
                 <col style={{ width: 88 }} />
@@ -478,15 +556,29 @@ export default function SourceRemainingSheetTab() {
                     )}
                   </tr>
                 ))}
-                {dateRows.map(({ label, daysAhead }, rowIndex) => (
-                  <tr key={label} style={{ background: rowIndex % 2 === 0 ? '#171b26' : '#131619' }}>
-                    <td style={{ ...tdLabelBase, background: rowIndex % 2 === 0 ? '#171b26' : '#131619', color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)', borderRight: BORDER }}>{label}</td>
+                {dateRows.map(({ label, daysAhead, dateKey }, rowIndex) => (
+                  <tr
+                    key={label}
+                    ref={daysAhead === 0 ? todayRowRef : null}
+                    style={{ background: rowIndex % 2 === 0 ? '#171b26' : '#131619' }}
+                  >
+                    <td
+                      style={{
+                        ...tdLabelBase,
+                        background: rowIndex % 2 === 0 ? '#171b26' : '#131619',
+                        color: daysAhead === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)',
+                        borderRight: BORDER,
+                      }}
+                    >
+                      {label}
+                    </td>
                     {filteredMachines.map((machine, machineIndex) =>
                       (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
                         const key = `${machine.machine_no}:${sourceName}`
                         const remaining = cellData[key]?.remaining ?? 0
                         const dailyUsage = cellData[key]?.daily_usage ?? 0
                         const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
+                        const historical = historyByDate[dateKey]?.[key]
                         const baseBg = rowIndex % 2 === 0 ? '#171b26' : '#131619'
                         const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
                         if (daysAhead === 0) {
@@ -500,6 +592,25 @@ export default function SourceRemainingSheetTab() {
                                 onChange={(value) => handleChange(machine.machine_no, sourceName, 'remaining', value)}
                                 onPaste={(text) => handlePaste(1, colIndex, text)}
                               />
+                            </td>
+                          )
+                        }
+                        if (daysAhead < 0) {
+                          return (
+                            <td
+                              key={`${key}:${label}`}
+                              style={{
+                                border: BORDER,
+                                borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER,
+                                background: baseBg,
+                                color: 'rgba(196,210,226,0.55)',
+                                textAlign: 'right',
+                                paddingRight: 6,
+                                height: 30,
+                                fontSize: 13,
+                              }}
+                            >
+                              {historical != null ? fmt(historical) : ''}
                             </td>
                           )
                         }

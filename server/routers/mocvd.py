@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from datetime import datetime
-from models import EquipmentHistory, MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, SourceChangeLog, SourceType, SystemSetting
+from datetime import datetime, date, timedelta
+from models import EquipmentHistory, MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, SourceChangeLog, SourceRemainingHistory, SourceType, SystemSetting
 from source_status import (
     DEFAULT_OVERDUE_DAYS,
     DEFAULT_THRESHOLD_RATIO,
@@ -42,7 +42,7 @@ class SourceChangeLogCreate(BaseModel):
     removal_date: str = ""
     machine_no: int
     source_name: str
-    work_type: str = "교체"
+    work_type: str = "援먯껜"
     zone: str = ""
     line_name: str = ""
     production_group: str = ""
@@ -113,7 +113,7 @@ def _can_manage_handover_note(current_user, row: MocvdHandoverNote) -> bool:
 
 def _require_admin(current_user):
     if getattr(current_user, "role", "") != "admin":
-        raise HTTPException(status_code=403, detail="관리자만 처리할 수 있습니다.")
+        raise HTTPException(status_code=403, detail="愿由ъ옄留?泥섎━?????덉뒿?덈떎.")
 
 
 def _active_source_types(db: Session):
@@ -359,7 +359,57 @@ def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_
                 )
             )
     db.commit()
+    _snapshot_today([
+        {"machine_no": item.machine_no, "source_name": item.source_name,
+         "remaining": item.remaining, "daily_usage": item.daily_usage}
+        for item in items
+    ], db)
+    db.commit()
     return {"result": "ok", "updated": len(items)}
+
+
+def _snapshot_today(items_iter, db: Session):
+    """??????ㅻ뒛 ?좎쭨 ?붾웾 ?ㅻ깄?룹쓣 upsert."""
+    today = date.today()
+    cutoff = today - timedelta(days=180)
+    db.query(SourceRemainingHistory).filter(
+        SourceRemainingHistory.recorded_date < cutoff
+    ).delete(synchronize_session=False)
+    for item in items_iter:
+        existing = db.query(SourceRemainingHistory).filter(
+            SourceRemainingHistory.machine_no == item["machine_no"],
+            SourceRemainingHistory.source_name == item["source_name"],
+            SourceRemainingHistory.recorded_date == today,
+        ).first()
+        if existing:
+            existing.remaining = item["remaining"]
+            existing.daily_usage = item["daily_usage"]
+        else:
+            db.add(SourceRemainingHistory(
+                machine_no=item["machine_no"],
+                source_name=item["source_name"],
+                remaining=item["remaining"],
+                daily_usage=item["daily_usage"],
+                recorded_date=today,
+            ))
+
+
+@router.get("/sources/history")
+def get_source_history(days: int = 180, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    since = date.today() - timedelta(days=days)
+    rows = db.query(SourceRemainingHistory).filter(
+        SourceRemainingHistory.recorded_date >= since
+    ).order_by(SourceRemainingHistory.recorded_date).all()
+    return [
+        {
+            "machine_no": r.machine_no,
+            "source_name": r.source_name,
+            "remaining": r.remaining,
+            "daily_usage": r.daily_usage,
+            "recorded_date": r.recorded_date.strftime("%Y-%m-%d"),
+        }
+        for r in rows
+    ]
 
 
 @router.get("/sources/all")
@@ -474,7 +524,7 @@ def update_notice(
     _require_admin(current_user)
     row = db.query(MocvdNotice).filter(MocvdNotice.id == notice_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="공지사항을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="怨듭??ы빆??李얠쓣 ???놁뒿?덈떎.")
     row.title = body.title.strip()
     row.content = body.content.strip()
     row.color = body.color or "#c4cdd8"
@@ -492,7 +542,7 @@ def delete_notice(
     _require_admin(current_user)
     row = db.query(MocvdNotice).filter(MocvdNotice.id == notice_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="공지사항을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="怨듭??ы빆??李얠쓣 ???놁뒿?덈떎.")
     db.delete(row)
     db.commit()
     return {"result": "ok"}
@@ -552,9 +602,9 @@ def update_handover_note(
 ):
     row = db.query(MocvdHandoverNote).filter(MocvdHandoverNote.id == note_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="인수인계 게시글을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="?몄닔?멸퀎 寃뚯떆湲??李얠쓣 ???놁뒿?덈떎.")
     if not _can_manage_handover_note(current_user, row):
-        raise HTTPException(status_code=403, detail="관리자를 제외하고 본인이 작성한 인수인계일지만 수정할 수 있습니다.")
+        raise HTTPException(status_code=403, detail="愿由ъ옄瑜??쒖쇅?섍퀬 蹂몄씤???묒꽦???몄닔?멸퀎?쇱?留??섏젙?????덉뒿?덈떎.")
     row.handover_date = body.handover_date
     row.shift_type = body.shift_type if body.shift_type in {"day", "night"} else row.shift_type
     row.title = body.title
@@ -567,9 +617,9 @@ def update_handover_note(
 def delete_handover_note(note_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     row = db.query(MocvdHandoverNote).filter(MocvdHandoverNote.id == note_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="인수인계 게시글을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="?몄닔?멸퀎 寃뚯떆湲??李얠쓣 ???놁뒿?덈떎.")
     if not _can_manage_handover_note(current_user, row):
-        raise HTTPException(status_code=403, detail="관리자를 제외하고 본인이 작성한 인수인계일지만 삭제할 수 있습니다.")
+        raise HTTPException(status_code=403, detail="愿由ъ옄瑜??쒖쇅?섍퀬 蹂몄씤???묒꽦???몄닔?멸퀎?쇱?留???젣?????덉뒿?덈떎.")
     db.delete(row)
     db.commit()
     return {"result": "ok"}
@@ -649,7 +699,7 @@ def create_source_change_log(body: SourceChangeLogCreate, db: Session = Depends(
 def update_source_change_log(log_id: int, body: SourceChangeLogUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
     row = db.query(SourceChangeLog).filter(SourceChangeLog.id == log_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="작업 일지를 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="?묒뾽 ?쇱?瑜?李얠쓣 ???놁뒿?덈떎.")
     row.install_date = body.install_date
     row.removal_date = body.removal_date
     row.machine_no = body.machine_no
@@ -682,13 +732,13 @@ def update_source_change_log(log_id: int, body: SourceChangeLogUpdate, db: Sessi
 def delete_source_change_log(log_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
     row = db.query(SourceChangeLog).filter(SourceChangeLog.id == log_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="작업 일지를 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="?묒뾽 ?쇱?瑜?李얠쓣 ???놁뒿?덈떎.")
     db.delete(row)
     db.commit()
     return {"result": "ok"}
 
 
-# ── 장비 이력 ──────────────────────────────────────────────────────────
+# ?? ?λ퉬 ?대젰 ??????????????????????????????????????????????????????????
 
 class EquipmentHistoryCreate(BaseModel):
     machine_no: int
@@ -767,7 +817,7 @@ def create_equipment_history(body: EquipmentHistoryCreate, db: Session = Depends
 def update_equipment_history(history_id: int, body: EquipmentHistoryUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
     row = db.query(EquipmentHistory).filter(EquipmentHistory.id == history_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="이력을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="?대젰??李얠쓣 ???놁뒿?덈떎.")
     if body.event_type is not None:
         row.event_type = body.event_type
     if body.severity is not None:
@@ -778,7 +828,7 @@ def update_equipment_history(history_id: int, body: EquipmentHistoryUpdate, db: 
         row.detail = body.detail
     if body.occurred_at is not None:
         row.occurred_at = _parse_dt(body.occurred_at)
-    # resolved_at은 null 포함 항상 덮어씀 (해제 지원)
+    # resolved_at? null ?ы븿 ??긽 ??뼱? (?댁젣 吏??
     row.resolved_at = _parse_dt(body.resolved_at)
     if body.actor is not None:
         row.actor = body.actor
@@ -790,7 +840,8 @@ def update_equipment_history(history_id: int, body: EquipmentHistoryUpdate, db: 
 def delete_equipment_history(history_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
     row = db.query(EquipmentHistory).filter(EquipmentHistory.id == history_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="이력을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="?대젰??李얠쓣 ???놁뒿?덈떎.")
     db.delete(row)
     db.commit()
     return {"result": "ok"}
+

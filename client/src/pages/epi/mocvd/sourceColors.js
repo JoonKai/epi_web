@@ -10,6 +10,11 @@ const GROUP_PALETTE = [
   { text: '#fed7aa', bg: 'rgba(249,115,22,0.12)',  border: 'rgba(249,115,22,0.3)',  row: 'rgba(249,115,22,0.05)'  }, // orange
 ]
 
+// 같은 색상을 공유할 그룹명 별칭 (value → key와 같은 색으로)
+const GROUP_COLOR_ALIASES = {
+  'C4': 'EPI700',
+}
+
 function hashGroupName(name) {
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
@@ -18,7 +23,8 @@ function hashGroupName(name) {
 
 export function getGroupColor(groupName) {
   if (!groupName) return null
-  return GROUP_PALETTE[hashGroupName(groupName)]
+  const key = GROUP_COLOR_ALIASES[groupName] ?? groupName
+  return GROUP_PALETTE[hashGroupName(key)]
 }
 
 export const SOURCE_PALETTE = [
