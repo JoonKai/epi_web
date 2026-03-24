@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Form,
@@ -11,16 +11,22 @@ import {
   Tabs,
   message,
 } from 'antd'
-import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, GroupOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, ExperimentOutlined, GroupOutlined, PlusOutlined, RightOutlined, SaveOutlined } from '@ant-design/icons'
 import { HexColorPicker, RgbaStringColorPicker } from 'react-colorful'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { getSourceColor } from './sourceColors'
 
 function usePendingActiveMap(rows) {
   return useMemo(() => Object.fromEntries(rows.map((row) => [row.id, row.is_active])), [rows])
 }
 
-function MachineTab() {
+function formatScrubberLabel(machineNo) {
+  if (machineNo == null || machineNo === '') return '-'
+  return `SCR#${machineNo}호기`
+}
+
+function MachineTab({ labelFormatter = formatMachineLabel }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -126,7 +132,7 @@ function MachineTab() {
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
-          throw new Error(err.detail || `${formatMachineLabel(row.machine_no)} 저장에 실패했습니다.`)
+          throw new Error(err.detail || `${labelFormatter(row.machine_no)} 저장에 실패했습니다.`)
         }
       }
 
@@ -151,7 +157,7 @@ function MachineTab() {
 
   return (
     <>
-      {/* 툴바 */}
+      {/* 상단 바 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>전체 {rows.length}대</span>
@@ -170,7 +176,9 @@ function MachineTab() {
               border: `1px solid ${hasPendingChanges ? 'rgba(125,211,252,0.4)' : 'rgba(255,255,255,0.1)'}`,
               color: hasPendingChanges ? '#7dd3fc' : 'rgba(196,210,226,0.65)',
             }}
-          >저장</Button>
+          >
+            저장
+          </Button>
           <button
             onClick={() => setCreateOpen(true)}
             style={{
@@ -181,7 +189,9 @@ function MachineTab() {
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
-          >+ 호기 추가</button>
+          >
+            + 호기 추가
+          </button>
         </div>
       </div>
 
@@ -205,7 +215,7 @@ function MachineTab() {
                 opacity: isActive ? 1 : 0.55,
               }}
             >
-              {/* 아바타 (호기번호) */}
+              {/* 아바타(호기 번호) */}
               <div style={{
                 width: 44, height: 44, borderRadius: '50%',
                 background: isActive ? 'rgba(245,158,11,0.12)' : '#2a2f45',
@@ -220,7 +230,7 @@ function MachineTab() {
               {/* 정보 */}
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 4 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>
-                  {formatMachineLabel(row.machine_no)}
+                  {labelFormatter(row.machine_no)}
                 </span>
                 {row.description && (
                   <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', marginTop: 2, whiteSpace: 'nowrap' }}>
@@ -262,7 +272,7 @@ function MachineTab() {
         </Form>
       </Modal>
 
-      <Modal title="호기 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
+      <Modal title="호기 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="수정">
         <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
           <Form.Item name="machine_no" label="호기 번호" rules={[{ required: true, message: '호기 번호를 입력하세요.' }]}>
             <InputNumber min={1} style={{ width: '100%' }} />
@@ -426,7 +436,9 @@ function SourceTab() {
               border: `1px solid ${hasPendingChanges ? 'rgba(125,211,252,0.4)' : 'rgba(255,255,255,0.1)'}`,
               color: hasPendingChanges ? '#7dd3fc' : 'rgba(196,210,226,0.65)',
             }}
-          >저장</Button>
+          >
+            저장
+          </Button>
           <button
             onClick={() => setCreateOpen(true)}
             style={{
@@ -437,7 +449,9 @@ function SourceTab() {
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
-          >+ 소스 추가</button>
+          >
+            + 소스 추가
+          </button>
         </div>
       </div>
 
@@ -445,33 +459,34 @@ function SourceTab() {
         {rows.length === 0 && !loading && (
           <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '24px 4px' }}>등록된 소스가 없습니다.</span>
         )}
-        {rows.map((row) => {
+        {rows.map((row, idx) => {
           const isActive = pendingActiveMap[row.id] ?? row.is_active
           const changed = pendingActiveMap[row.id] !== row.is_active
+          const c = getSourceColor(idx)
           return (
             <div key={row.id} style={{
               display: 'flex', alignItems: 'center',
               background: '#212535',
               border: `1px solid ${changed ? 'rgba(251,191,36,0.3)' : 'var(--nowa-border)'}`,
               borderRadius: 16, minWidth: 180, overflow: 'hidden',
-              borderLeft: `3px solid ${isActive ? '#f59e0b' : '#475569'}`,
+              borderLeft: `3px solid ${isActive ? c.main : '#475569'}`,
               opacity: isActive ? 1 : 0.55,
             }}>
               {/* 아바타 */}
               <div style={{
                 width: 44, height: 44, borderRadius: '50%',
-                background: isActive ? 'rgba(245,158,11,0.12)' : '#2a2f45',
+                background: isActive ? c.bg : '#2a2f45',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, margin: '12px 10px 12px 10px',
-                border: `2px solid ${isActive ? '#f59e0b' : '#475569'}`,
-                boxShadow: isActive ? '0 0 8px rgba(245,158,11,0.35)' : 'none',
+                border: `2px solid ${isActive ? c.main : '#475569'}`,
+                boxShadow: isActive ? `0 0 8px ${c.glow}` : 'none',
               }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: isActive ? '#fbbf24' : '#64748b', lineHeight: 1 }}>{row.name?.[0] || '?'}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: isActive ? c.main : '#64748b', lineHeight: 1 }}>{row.name?.[0] || '?'}</span>
               </div>
 
               {/* 정보 */}
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 4 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{row.name}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: isActive ? c.main : 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{row.name}</span>
                 <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginTop: 2 }}>순서 {row.order_idx}</span>
               </div>
 
@@ -505,7 +520,7 @@ function SourceTab() {
         </Form>
       </Modal>
 
-      <Modal title="소스 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
+      <Modal title="소스 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="수정">
         <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
           <Form.Item name="name" label="소스명" rules={[{ required: true, message: '소스명을 입력하세요.' }]}>
             <Input />
@@ -550,7 +565,7 @@ function ColorPickerField({ value, onChange, rgba = false }) {
           border: '1px solid rgba(255,255,255,0.2)',
           flexShrink: 0,
         }} />
-        <span style={{ fontSize: 14, color: 'var(--nowa-text)', flex: 1 }}>{value || '선택 안됨'}</span>
+        <span style={{ fontSize: 14, color: 'var(--nowa-text)', flex: 1 }}>{value || '선택 안 됨'}</span>
       </div>
 
       {open && (
@@ -653,12 +668,16 @@ function ShiftTypeTab() {
 
   const shiftFormFields = (
     <>
-      <Form.Item name="name" label="코드값" rules={[{ required: true, message: '코드값을 입력하세요.' }]}
-        tooltip="근무표에 표시될 짧은 코드 (예: 1, 2, 휴무, 반반차A)">
-        <Input placeholder="예: 반반차A" />
+      <Form.Item
+        name="name"
+        label="코드값"
+        rules={[{ required: true, message: '코드값을 입력하세요.' }]}
+        tooltip="근무표에 표시될 코드값입니다."
+      >
+        <Input placeholder="예: 1, 2, 휴, 반차" />
       </Form.Item>
       <Form.Item name="label" label="표시명" rules={[{ required: true, message: '표시명을 입력하세요.' }]}>
-        <Input placeholder="예: 반반차A" />
+        <Input placeholder="예: 반차, 교육" />
       </Form.Item>
       <Form.Item name="order_idx" label="순서" initialValue={0}>
         <InputNumber min={0} style={{ width: '100%' }} />
@@ -698,7 +717,9 @@ function ShiftTypeTab() {
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
-        >+ 유형 추가</button>
+        >
+          + 근무 유형 추가
+        </button>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -714,7 +735,7 @@ function ShiftTypeTab() {
             borderLeft: `3px solid ${row.is_active ? (row.color || '#f59e0b') : '#475569'}`,
             opacity: row.is_active ? 1 : 0.55,
           }}>
-            {/* 아바타 (근무 유형 태그) */}
+            {/* 아바타(근무 유형 태그) */}
             <div style={{
               width: 48, height: 44, borderRadius: 10,
               background: row.bg_color || 'rgba(245,158,11,0.12)',
@@ -756,7 +777,7 @@ function ShiftTypeTab() {
         </Form>
       </Modal>
 
-      <Modal title="근무 유형 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
+      <Modal title="근무 유형 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="수정">
         <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
           {shiftFormFields}
           <Form.Item name="is_active" label="사용" valuePropName="checked">
@@ -768,15 +789,57 @@ function ShiftTypeTab() {
   )
 }
 
+const GROUP_LEVEL_STYLE = {
+  1: { color: '#f59e0b', bg: 'rgba(245,158,11,0.07)',  border: 'rgba(245,158,11,0.3)',  left: '#f59e0b' },
+  2: { color: '#22d3ee', bg: 'rgba(34,211,238,0.07)',  border: 'rgba(34,211,238,0.28)', left: '#22d3ee' },
+  3: { color: '#fb7185', bg: 'rgba(251,113,133,0.07)', border: 'rgba(251,113,133,0.28)', left: '#fb7185' },
+}
+
 function GroupTab() {
   const [groups, setGroups] = useState([])
   const [machines, setMachines] = useState([])
   const [loading, setLoading] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState(null)
-  const [createForm] = Form.useForm()
-  const [editForm] = Form.useForm()
+  const [collapsed, setCollapsed] = useState({})
+  const [orderDirty, setOrderDirty] = useState(false)
+  const [form] = Form.useForm()
+
+  const toggleCollapse = (id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] }))
+
+  // 媛숈? parent ?댁뿉?????꾨옒濡??대룞
+  const moveGroup = (groupId, dir) => {
+    const group = groups.find(g => g.id === groupId)
+    const siblings = groups
+      .filter(g => (g.parent_id ?? null) === (group.parent_id ?? null))
+      .sort((a, b) => (a.order_idx ?? 0) - (b.order_idx ?? 0))
+    const idx = siblings.findIndex(g => g.id === groupId)
+    const swapIdx = idx + dir
+    if (swapIdx < 0 || swapIdx >= siblings.length) return
+    const swapId = siblings[swapIdx].id
+    setGroups(prev => prev.map(g => {
+      if (g.id === groupId) return { ...g, order_idx: siblings[swapIdx].order_idx ?? swapIdx }
+      if (g.id === swapId)  return { ...g, order_idx: siblings[idx].order_idx ?? idx }
+      return g
+    }))
+    setOrderDirty(true)
+  }
+
+  const saveOrder = async () => {
+    setSaving(true)
+    try {
+      const items = groups.map((g, i) => ({ id: g.id, order_idx: g.order_idx ?? i }))
+      const res = await authFetch('/api/admin/machine-groups/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items),
+      })
+      if (!res.ok) { message.error('순서 저장 실패'); return }
+      message.success('순서를 저장했습니다.')
+      setOrderDirty(false)
+    } finally { setSaving(false) }
+  }
 
   const fetchAll = async () => {
     setLoading(true)
@@ -787,140 +850,249 @@ function GroupTab() {
       ])
       if (gRes.ok) setGroups(await gRes.json())
       if (mRes.ok) setMachines(await mRes.json())
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchAll() }, [])
 
-  const machineOptions = machines
-    .filter(m => m.is_active)
-    .sort((a, b) => a.machine_no - b.machine_no)
-    .map(m => ({ label: formatMachineLabel(m.machine_no), value: m.machine_no }))
+  const activeMachines = useMemo(() =>
+    machines.filter(m => m.is_active).sort((a, b) => a.machine_no - b.machine_no)
+  , [machines])
 
-  const handleCreate = async (values) => {
-    const res = await authFetch('/api/admin/machine-groups', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    })
-    if (!res.ok) { message.error('그룹 추가에 실패했습니다.'); return }
-    message.success('그룹을 추가했습니다.')
-    setCreateOpen(false)
-    createForm.resetFields()
-    fetchAll()
+  const machineOptions = useMemo(() =>
+    activeMachines.map(m => ({ label: formatMachineLabel(m.machine_no), value: m.machine_no }))
+  , [activeMachines])
+
+  const machineGroupMap = useMemo(() => {
+    const map = {}
+    groups.forEach(g => g.machine_nos.forEach(no => { map[no] = g.name }))
+    return map
+  }, [groups])
+
+  // 자식 ID 수집
+  const getDescendantIds = (id) => {
+    const children = groups.filter(g => g.parent_id === id)
+    return children.flatMap(c => [c.id, ...getDescendantIds(c.id)])
   }
 
-  const handleEdit = async (values) => {
-    const res = await authFetch(`/api/admin/machine-groups/${editingGroup.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    })
-    if (!res.ok) { message.error('그룹 수정에 실패했습니다.'); return }
-    message.success('그룹을 수정했습니다.')
-    setEditOpen(false)
+  const openCreate = () => {
     setEditingGroup(null)
-    fetchAll()
-  }
-
-  const handleDelete = async (id) => {
-    const res = await authFetch(`/api/admin/machine-groups/${id}`, { method: 'DELETE' })
-    if (!res.ok) { message.error('그룹 삭제에 실패했습니다.'); return }
-    message.success('그룹을 삭제했습니다.')
-    fetchAll()
+    form.resetFields()
+    setModalOpen(true)
   }
 
   const openEdit = (group) => {
     setEditingGroup(group)
-    editForm.setFieldsValue({ name: group.name, description: group.description, machine_nos: group.machine_nos })
-    setEditOpen(true)
+    form.resetFields()
+    form.setFieldsValue({
+      name: group.name,
+      description: group.description,
+      parent_id: group.parent_id ?? null,
+      machine_nos: group.machine_nos,
+    })
+    setModalOpen(true)
   }
 
-  const groupFormFields = (
-    <>
-      <Form.Item name="name" label="그룹명" rules={[{ required: true, message: '그룹명을 입력하세요.' }]}>
-        <Input placeholder="예: TMGa 라인 A" />
-      </Form.Item>
-      <Form.Item name="description" label="설명">
-        <Input placeholder="그룹 설명 (선택)" />
-      </Form.Item>
-      <Form.Item name="machine_nos" label="포함 호기">
-        <Select mode="multiple" options={machineOptions} placeholder="호기 선택" showSearch allowClear />
-      </Form.Item>
-    </>
-  )
+  const handleSubmit = async (values) => {
+    setSaving(true)
+    try {
+      const parentId = values.parent_id ?? null
+      const parentGroup = parentId ? groups.find(g => g.id === parentId) : null
+      const level = parentGroup ? (parentGroup.level ?? 1) + 1 : 1
+
+      const url = editingGroup ? `/api/admin/machine-groups/${editingGroup.id}` : '/api/admin/machine-groups'
+      const method = editingGroup ? 'PUT' : 'POST'
+      const body = {
+        name: values.name,
+        description: values.description ?? '',
+        machine_nos: values.machine_nos ?? [],
+        parent_id: parentId,
+        level,
+      }
+      const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (!res.ok) { message.error(editingGroup ? '그룹 수정 실패' : '그룹 추가 실패'); return }
+      message.success(editingGroup ? '수정했습니다.' : '그룹을 추가했습니다.')
+      setModalOpen(false)
+      fetchAll()
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (id) => {
+    const res = await authFetch(`/api/admin/machine-groups/${id}`, { method: 'DELETE' })
+    if (!res.ok) { message.error('삭제 실패했습니다.'); return }
+    message.success('삭제했습니다.')
+    fetchAll()
+  }
+
+  // ?곸쐞 洹몃９ ?좏깮吏 ???먭린 ?먯떊 諛??먯넀 ?쒖쇅, ?덈꺼 3? ?섏쐞 遺덇?
+  const parentOptions = useMemo(() => {
+    const excluded = new Set(editingGroup ? [editingGroup.id, ...getDescendantIds(editingGroup.id)] : [])
+    return groups
+      .filter(g => !excluded.has(g.id) && (g.level ?? 1) < 3)
+      .map(g => {
+        const indent = '\u00A0\u00A0'.repeat((g.level ?? 1) - 1)
+        return { label: `${indent}${g.name}`, value: g.id }
+      })
+  }, [groups, editingGroup])
+
+  const renderGroup = (group, depth = 0) => {
+    const st = GROUP_LEVEL_STYLE[group.level ?? 1] ?? GROUP_LEVEL_STYLE[1]
+    const children = groups.filter(g => g.parent_id === group.id).sort((a, b) => (a.order_idx ?? 0) - (b.order_idx ?? 0) || a.name.localeCompare(b.name, 'ko'))
+    const isCollapsed = collapsed[group.id]
+    const hasChildren = children.length > 0
+
+    return (
+      <div key={group.id} style={{ marginLeft: depth * 20, marginBottom: 5 }}>
+        <div style={{
+          background: st.bg,
+          border: `1px solid ${st.border}`,
+          borderLeft: `3px solid ${st.left}`,
+          borderRadius: 7,
+          padding: '9px 14px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* 접기/펼치기 토글 */}
+            <span
+              onClick={() => hasChildren && toggleCollapse(group.id)}
+              style={{
+                fontSize: 10, color: st.color, minWidth: 14, textAlign: 'center',
+                cursor: hasChildren ? 'pointer' : 'default',
+                opacity: hasChildren ? 0.8 : 0,
+                transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)',
+                transition: 'transform 0.15s',
+                display: 'inline-block',
+              }}
+            >
+              ▶
+            </span>
+            <span
+              onClick={() => hasChildren && toggleCollapse(group.id)}
+              style={{ fontSize: 14, fontWeight: 700, color: st.color, flex: 1, cursor: hasChildren ? 'pointer' : 'default' }}
+            >
+              {group.name}
+            </span>
+            {group.description && (
+              <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.45)' }}>{group.description}</span>
+            )}
+            {group.machine_nos.length > 0 && (
+              <span style={{ fontSize: 13, color: `${st.color}88` }}>{group.machine_nos.length}대</span>
+            )}
+            {hasChildren && (
+              <span style={{ fontSize: 12, color: `${st.color}66`, background: `${st.color}14`, border: `1px solid ${st.border}`, borderRadius: 4, padding: '1px 6px' }}>
+                {isCollapsed ? `+${children.length}` : `하위 ${children.length}개`}
+              </span>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span onClick={() => moveGroup(group.id, -1)} style={{ fontSize: 9, lineHeight: 1, cursor: 'pointer', color: `${st.color}77`, userSelect: 'none' }}>▲</span>
+              <span onClick={() => moveGroup(group.id,  1)} style={{ fontSize: 9, lineHeight: 1, cursor: 'pointer', color: `${st.color}77`, userSelect: 'none' }}>▼</span>
+            </div>
+            <EditOutlined onClick={() => openEdit(group)} style={{ color: `${st.color}88`, fontSize: 14, cursor: 'pointer' }} />
+            <Popconfirm title={`"${group.name}" 삭제?`} description={hasChildren ? '하위 그룹도 모두 삭제됩니다.' : undefined} onConfirm={() => handleDelete(group.id)} okText="삭제" cancelText="취소">
+              <DeleteOutlined style={{ color: 'rgba(248,113,113,0.7)', fontSize: 14, cursor: 'pointer' }} />
+            </Popconfirm>
+          </div>
+          {!isCollapsed && group.machine_nos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+              {group.machine_nos.map(no => (
+                <span key={no} style={{
+                  fontSize: 12, fontWeight: 700,
+                  background: `${st.color}18`, border: `1px solid ${st.border}`,
+                  borderRadius: 5, padding: '1px 8px', color: st.color,
+                }}>
+                  {formatMachineLabel(no)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {!isCollapsed && children.map(c => renderGroup(c, depth + 1))}
+      </div>
+    )
+  }
+
+  const rootGroups = groups.filter(g => !g.parent_id).sort((a, b) => (a.order_idx ?? 0) - (b.order_idx ?? 0) || a.name.localeCompare(b.name, 'ko'))
+  const unassigned = activeMachines.filter(m => !machineGroupMap[m.machine_no])
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>전체 {groups.length}개 그룹</span>
-        <button
-          onClick={() => setCreateOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.35)',
-            borderRadius: 8, padding: '4px 14px', cursor: 'pointer',
-            color: 'rgba(245,158,11,0.8)', fontSize: 14, fontWeight: 700,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.color = '#f59e0b' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = 'rgba(245,158,11,0.8)' }}
-        >+ 그룹 추가</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)' }}>전체 {groups.length}개 그룹</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {orderDirty && (
+            <Button onClick={saveOrder} loading={saving} type="primary" icon={<SaveOutlined />}>
+              순서 저장
+            </Button>
+          )}
+          <Button onClick={openCreate} style={{ background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.4)', color: '#f59e0b', fontWeight: 700 }}>
+            + 그룹 추가
+          </Button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {groups.length === 0 && !loading && (
-          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', padding: '24px 4px' }}>등록된 그룹이 없습니다.</span>
-        )}
-        {groups.map((group) => (
-          <div key={group.id} style={{
-            background: '#212535',
-            border: '1px solid var(--nowa-border)',
-            borderRadius: 14, padding: '14px 16px',
-            borderLeft: '3px solid #f59e0b',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#fbbf24' }}>{group.name}</span>
-                  {group.description && (
-                    <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)' }}>{group.description}</span>
-                  )}
-                  <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.45)' }}>{group.machine_nos.length}대</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {group.machine_nos.length === 0 ? (
-                    <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.4)' }}>호기 없음</span>
-                  ) : group.machine_nos.map(no => (
-                    <span key={no} style={{
-                      fontSize: 14, fontWeight: 700,
-                      background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-                      borderRadius: 6, padding: '2px 10px', color: '#fbbf24',
-                    }}>{formatMachineLabel(no)}</span>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                <EditOutlined onClick={() => openEdit(group)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 15, cursor: 'pointer' }} />
-                <Popconfirm title="이 그룹을 삭제하시겠습니까?" onConfirm={() => handleDelete(group.id)}>
-                  <DeleteOutlined style={{ color: '#f87171', fontSize: 15, cursor: 'pointer', opacity: 0.8 }} />
-                </Popconfirm>
-              </div>
-            </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(196,210,226,0.5)' }}>불러오는 중..</div>
+      ) : groups.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(196,210,226,0.4)', fontSize: 14 }}>등록된 그룹이 없습니다.</div>
+      ) : (
+        <div>{rootGroups.map(g => renderGroup(g))}</div>
+      )}
+
+      {activeMachines.length > 0 && !loading && (
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(245,158,11,0.1)' }}>
+          <div style={{ fontSize: 13, color: 'rgba(196,210,226,0.4)', marginBottom: 8 }}>
+            미배정 설비 ({unassigned.length}대)
           </div>
-        ))}
-      </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {unassigned.length === 0 ? (
+              <span style={{ fontSize: 13, color: 'rgba(163,230,53,0.7)' }}>모든 설비가 그룹에 배정되었습니다.</span>
+            ) : unassigned.map(m => (
+              <span key={m.machine_no} style={{
+                fontSize: 12, fontWeight: 600,
+                background: 'rgba(196,210,226,0.05)', border: '1px solid rgba(196,210,226,0.14)',
+                borderRadius: 5, padding: '2px 8px', color: 'rgba(196,210,226,0.45)',
+              }}>
+                {formatMachineLabel(m.machine_no)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <Modal title="그룹 추가" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} okText="추가">
-        <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
-          {groupFormFields}
-        </Form>
-      </Modal>
-
-      <Modal title="그룹 수정" open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="저장">
-        <Form form={editForm} layout="vertical" onFinish={handleEdit} style={{ marginTop: 16 }}>
-          {groupFormFields}
+      <Modal
+        title={editingGroup ? '그룹 수정' : '그룹 추가'}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={() => form.submit()}
+        okText={editingGroup ? '수정' : '추가'}
+        confirmLoading={saving}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
+          <Form.Item name="name" label="그룹명" rules={[{ required: true, message: '그룹명을 입력하세요.' }]}>
+            <Input placeholder="예: C4 1 SET" autoFocus />
+          </Form.Item>
+          <Form.Item name="description" label="설명 (선택)">
+            <Input placeholder="그룹 설명" />
+          </Form.Item>
+          <Form.Item name="parent_id" label="상위 그룹 (선택)">
+            <Select
+              options={[{ label: '없음 (최상위)', value: null }, ...parentOptions]}
+              placeholder="상위 그룹 선택"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+          <Form.Item name="machine_nos" label="포함 설비" style={{ marginBottom: 0 }}>
+            <Select
+              mode="multiple"
+              options={machineOptions}
+              placeholder="설비 선택"
+              showSearch
+              allowClear
+              optionFilterProp="label"
+            />
+          </Form.Item>
         </Form>
       </Modal>
     </>
@@ -941,11 +1113,13 @@ export default function MasterData() {
         tabBarStyle={tabBarStyle}
         items={[
           { key: 'machines', label: <span><AppstoreOutlined /> MOCVD 호기 관리</span>, children: <MachineTab /> },
+          { key: 'scr-machines', label: <span><AppstoreOutlined /> SCR 호기 관리</span>, children: <MachineTab labelFormatter={formatScrubberLabel} /> },
           { key: 'sources', label: <span><ExperimentOutlined /> 소스 종류 관리</span>, children: <SourceTab /> },
           { key: 'shift-types', label: <span><CalendarOutlined /> 근무 유형 관리</span>, children: <ShiftTypeTab /> },
-          { key: 'groups', label: <span><GroupOutlined /> 호기 그룹 관리</span>, children: <GroupTab /> },
+          { key: 'groups', label: <span><GroupOutlined /> 장비 그룹 관리</span>, children: <GroupTab /> },
         ]}
       />
     </div>
   )
 }
+

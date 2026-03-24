@@ -2,7 +2,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from auth import hash_password, require_admin
 from audit_log import write_audit_log
@@ -683,25 +683,43 @@ class MachineGroupCreate(BaseModel):
     name: str
     description: str = ""
     machine_nos: List[int] = []
+    parent_id: Optional[int] = None
+    level: int = 1
+    order_idx: int = 0
+
+
+class MachineGroupReorderItem(BaseModel):
+    id: int
+    order_idx: int
 
 
 @router.get("/machine-groups")
 def list_machine_groups(db: Session = Depends(get_db), _=Depends(require_admin)):
-    groups = db.query(MachineGroup).order_by(MachineGroup.id).all()
+    groups = db.query(MachineGroup).order_by(MachineGroup.order_idx, MachineGroup.id).all()
     members = db.query(MachineGroupMember).all()
     member_map = {}
     for m in members:
         member_map.setdefault(m.group_id, []).append(m.machine_no)
     return [
         {"id": g.id, "name": g.name, "description": g.description,
+         "parent_id": g.parent_id, "level": g.level if g.level else 1,
+         "order_idx": g.order_idx if g.order_idx is not None else 0,
          "machine_nos": sorted(member_map.get(g.id, []))}
         for g in groups
     ]
 
 
+@router.put("/machine-groups/reorder")
+def reorder_machine_groups(items: List[MachineGroupReorderItem], db: Session = Depends(get_db), _=Depends(require_admin)):
+    for item in items:
+        db.query(MachineGroup).filter(MachineGroup.id == item.id).update({"order_idx": item.order_idx})
+    db.commit()
+    return {"result": "ok"}
+
+
 @router.post("/machine-groups")
 def create_machine_group(body: MachineGroupCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
-    group = MachineGroup(name=body.name, description=body.description)
+    group = MachineGroup(name=body.name, description=body.description, parent_id=body.parent_id, level=body.level)
     db.add(group)
     db.flush()
     for no in body.machine_nos:
@@ -717,6 +735,8 @@ def update_machine_group(group_id: int, body: MachineGroupCreate, db: Session = 
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
     group.name = body.name
     group.description = body.description
+    group.parent_id = body.parent_id
+    group.level = body.level
     db.query(MachineGroupMember).filter(MachineGroupMember.group_id == group_id).delete()
     for no in body.machine_nos:
         db.add(MachineGroupMember(group_id=group_id, machine_no=no))
@@ -729,6 +749,13 @@ def delete_machine_group(group_id: int, db: Session = Depends(get_db), _=Depends
     group = db.query(MachineGroup).filter(MachineGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    def delete_recursive(gid):
+        children = db.query(MachineGroup).filter(MachineGroup.parent_id == gid).all()
+        for child in children:
+            delete_recursive(child.id)
+            db.query(MachineGroupMember).filter(MachineGroupMember.group_id == child.id).delete()
+            db.delete(child)
+    delete_recursive(group_id)
     db.query(MachineGroupMember).filter(MachineGroupMember.group_id == group_id).delete()
     db.delete(group)
     db.commit()

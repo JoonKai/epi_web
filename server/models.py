@@ -304,6 +304,9 @@ class MachineGroup(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     description = Column(String(200), default="")
+    parent_id = Column(Integer, nullable=True, comment="부모 그룹 ID (null=최상위)")
+    level = Column(Integer, default=1, comment="1=대그룹 2=중그룹 3=소그룹")
+    order_idx = Column(Integer, default=0, comment="같은 부모 내 표시 순서")
     created_at = Column(DateTime, default=func.now())
 
 

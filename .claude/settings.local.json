@@ -28,7 +28,8 @@
       "Bash(grep -rn \"fontSize: [0-9]\\\\{1,2\\\\}[^0-9]\" c:/epi_web/client/src --include=\"*.jsx\")",
       "Bash(grep -rn \"font-size: [0-9]\\\\{1,2\\\\}px\" c:/epi_web/client/src/index.css)",
       "Bash(grep -n \"font-size: [0-9]\\\\{1,2\\\\}px\" c:/epi_web/client/src/index.css)",
-      "Bash(.venv/Scripts/python -c \"from database import Base, engine; from models import MachineGroup, MachineGroupMember; Base.metadata.create_all\\(bind=engine, tables=[MachineGroup.__table__, MachineGroupMember.__table__]\\); print\\(''테이블 생성 완료''\\)\")"
+      "Bash(.venv/Scripts/python -c \"from database import Base, engine; from models import MachineGroup, MachineGroupMember; Base.metadata.create_all\\(bind=engine, tables=[MachineGroup.__table__, MachineGroupMember.__table__]\\); print\\(''테이블 생성 완료''\\)\")",
+      "Bash(.venv/Scripts/python -c \":*)"
     ]
   }
 }

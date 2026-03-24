@@ -3,6 +3,7 @@ import { Alert, Button, Card, Input, Space, Spin } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { getGroupColor } from './sourceColors'
 import { panelStyle } from '../../../theme/consoleTheme'
 
 const BORDER = '1px solid rgba(245,158,11,0.12)'
@@ -158,6 +159,18 @@ export default function SourceTableSheetTab() {
   const [cellData, setCellData] = useState({})
   const [pendingKeys, setPendingKeys] = useState(new Set())
   const [quickFilter, setQuickFilter] = useState('')
+  const [machineGroupMap, setMachineGroupMap] = useState({})
+
+  useEffect(() => {
+    authFetch('/api/admin/machine-groups')
+      .then(r => r.ok ? r.json() : [])
+      .then(groups => {
+        const map = {}
+        groups.forEach(g => g.machine_nos.forEach(no => { map[no] = g.name }))
+        setMachineGroupMap(map)
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchData = useCallback(() => {
     setLoading(true)
@@ -212,15 +225,6 @@ export default function SourceTableSheetTab() {
     setPendingKeys((prev) => new Set([...prev, key]))
   }
 
-  const handleToggleDisabled = (machineNo, sourceName) => {
-    const key = `${machineNo}:${sourceName}`
-    setCellData((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], is_disabled: !prev[key]?.is_disabled },
-    }))
-    setPendingKeys((prev) => new Set([...prev, key]))
-  }
-
   const handleSave = async () => {
     if (pendingKeys.size === 0) return
     setSaving(true)
@@ -238,7 +242,6 @@ export default function SourceTableSheetTab() {
           daily_usage: cell.daily_usage ?? 0,
           initial_amount: cell.initial_amount ?? 0,
           threshold_ratio: cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO,
-          is_disabled: Boolean(cell.is_disabled),
           unit: 'kg',
         }
       })
@@ -285,7 +288,7 @@ export default function SourceTableSheetTab() {
         )}
       >
         <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
-          `일사용량`, `잔량`은 잔량기입 데이터를 그대로 표시합니다. 이 화면에서는 `사용`, `초기량`만 수정합니다.
+          `일사용량`, `잔량`은 잔량기입 데이터를 그대로 표시합니다. 이 화면에서는 `초기량`, `교체기준(%)`만 수정합니다.
         </div>
         {loading ? (
           <div style={{ display: 'grid', placeItems: 'center', minHeight: 420 }}>
@@ -297,7 +300,6 @@ export default function SourceTableSheetTab() {
               <colgroup>
                 <col style={{ width: 108 }} />
                 {sourceNames.flatMap((sourceName) => [
-                  <col key={`${sourceName}:enabled`} style={{ width: 88 }} />,
                   <col key={`${sourceName}:initial`} style={{ width: 84 }} />,
                   <col key={`${sourceName}:daily`} style={{ width: 84 }} />,
                   <col key={`${sourceName}:remain`} style={{ width: 84 }} />,
@@ -310,15 +312,14 @@ export default function SourceTableSheetTab() {
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', top: 0, left: 0, zIndex: 4, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>MO</th>
                   {sourceNames.map((sourceName) => (
-                    <th key={`group:${sourceName}`} colSpan={7} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14 }}>
+                    <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14 }}>
                       {sourceName}
                     </th>
                   ))}
                 </tr>
                 <tr>
                   {sourceNames.flatMap((sourceName) => [
-                    <th key={`${sourceName}:head-enabled`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#fca5a5' }}>사용</th>,
-                    <th key={`${sourceName}:head-initial`} style={{ ...th2Base, color: '#38bdf8' }}>초기량</th>,
+                    <th key={`${sourceName}:head-initial`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#38bdf8' }}>초기량</th>,
                     <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24' }}>일사용량</th>,
                     <th key={`${sourceName}:head-remaining`} style={{ ...th2Base, color: '#86efac' }}>잔량</th>,
                     <th key={`${sourceName}:head-ratio`} style={{ ...th2Base, color: '#f59e0b' }}>교체기준(%)</th>,
@@ -328,10 +329,22 @@ export default function SourceTableSheetTab() {
                 </tr>
               </thead>
               <tbody>
-                {filteredMachines.map((machine, rowIndex) => (
-                  <tr key={`row:${machine.machine_no}`} style={{ background: rowIndex % 2 === 0 ? '#171b26' : '#131619' }}>
-                    <td style={{ ...tdLabelBase, left: 0, background: rowIndex % 2 === 0 ? '#171b26' : '#131619', color: '#fbbf24', borderRight: BORDER }}>
-                      {formatMachineLabel(machine.machine_no)}
+                {filteredMachines.map((machine, rowIndex) => {
+                  const grpName = machineGroupMap[machine.machine_no]
+                  const rowBg = rowIndex % 2 === 0 ? '#171b26' : '#131619'
+                  const gc = getGroupColor(grpName)
+                  const labelBg = gc ? gc.row : rowBg
+                  return (
+                  <tr key={`row:${machine.machine_no}`} style={{ background: rowBg }}>
+                    <td style={{ ...tdLabelBase, left: 0, background: labelBg, color: '#fbbf24', borderRight: BORDER, borderLeft: gc ? `2px solid ${gc.border}` : undefined }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span>{formatMachineLabel(machine.machine_no)}</span>
+                        {grpName && gc && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 3, padding: '0 5px', lineHeight: '15px' }}>
+                            {grpName}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {sourceNames.flatMap((sourceName) => {
                       const key = `${machine.machine_no}:${sourceName}`
@@ -339,10 +352,7 @@ export default function SourceTableSheetTab() {
                       const derived = buildDerivedCell(cell)
                       const disabled = Boolean(cell.is_disabled)
                       return [
-                        <td key={`${key}:enabled`} style={{ ...tdCellBase, borderLeft: GROUP_BORDER, background: disabled ? getHatchBackground('#1a1510') : '#1a1510', textAlign: 'center' }}>
-                          <ToggleBadge active={disabled} onClick={() => handleToggleDisabled(machine.machine_no, sourceName)} />
-                        </td>,
-                        <td key={`${key}:initial`} style={{ ...tdCellBase, background: '#0a1119' }}>
+                        <td key={`${key}:initial`} style={{ ...tdCellBase, borderLeft: GROUP_BORDER, background: '#0a1119' }}>
                           <EditField value={cell.initial_amount ?? 0} color="#38bdf8" bg="#0a1119" pending={pendingKeys.has(key)} disabled={disabled} onChange={(value) => handleChange(machine.machine_no, sourceName, 'initial_amount', value)} />
                         </td>,
                         <td key={`${key}:daily`} style={{ ...tdCellBase, background: '#100e00' }}>
@@ -363,7 +373,8 @@ export default function SourceTableSheetTab() {
                       ]
                     })}
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

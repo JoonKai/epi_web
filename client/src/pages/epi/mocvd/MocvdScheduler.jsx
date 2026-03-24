@@ -142,11 +142,11 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
   const [config, setConfig] = useState({
     includePmCritical: true,     includePmUrgent: false,
     includeFilterCritical: true, includeFilterUrgent: false,
-    includeSourceOverdue: false, includeSourceUrgent: false,
-    includeSat: true, includeSun: false, includeHoliday: false,
+    includeSourceOverdue: true,  includeSourceUrgent: false,
+    includeSat: false, includeSun: false, includeHoliday: false,
     maxPerDay: 2,
     pmPersonCount: 2,
-    filterPersonCount: 2,
+    filterPersonCount: 1,
     sourcePersonCount: 1,
   })
   const [preview, setPreview] = useState(null)
@@ -328,7 +328,7 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
                 <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-                <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일 포함
+                <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
               </label>
             </div>
           </div>

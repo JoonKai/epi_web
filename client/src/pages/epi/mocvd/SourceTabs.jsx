@@ -7,6 +7,7 @@ import SourceStatusBoard from './SourceStatusBoard'
 import SourceMachineBoard from './SourceMachineBoard'
 import SourceRemainingSheetTab from './SourceRemainingSheetTab'
 import SourceTableSheetTab from './SourceTableSheetTab'
+import SourceMachineConfigTab from './SourceMachineConfigTab'
 
 export default function SourceTabs() {
   const location = useLocation()
@@ -14,7 +15,7 @@ export default function SourceTabs() {
   const activeTab = useMemo(() => {
     const tab = new URLSearchParams(location.search).get('tab')
     if (tab === 'input') return 'remaining-sheet'
-    const allowed = ['status-board', 'machine-board', 'remaining-sheet', 'table-sheet', 'change-log']
+    const allowed = ['status-board', 'machine-board', 'remaining-sheet', 'table-sheet', 'machine-config', 'change-log']
     return allowed.includes(tab) ? tab : 'status-board'
   }, [location.search])
 
@@ -29,6 +30,7 @@ export default function SourceTabs() {
         { key: 'machine-board', label: <span><HeatMapOutlined /> 설비별 소스현황</span>, children: <SourceMachineBoard /> },
         { key: 'remaining-sheet', label: <span><EditOutlined /> 잔량기입</span>, children: <SourceRemainingSheetTab /> },
         { key: 'table-sheet', label: <span><TableOutlined /> 소스 계산</span>, children: <SourceTableSheetTab /> },
+        { key: 'machine-config', label: <span><TableOutlined /> 설비 구성</span>, children: <SourceMachineConfigTab /> },
         { key: 'change-log', label: <span><BookOutlined /> 소스교체 작업일지</span>, children: <SourceChangeLogTab /> },
       ]}
     />

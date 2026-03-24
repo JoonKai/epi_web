@@ -1,19 +1,24 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { getSourceColor, getGroupColor } from './sourceColors'
 import { panelStyle } from '../../../theme/consoleTheme'
 
-const BORDER = '1px solid rgba(245,158,11,0.12)'
-const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
+const BORDER = '1px solid rgba(180,196,210,0.32)'
+const GROUP_BORDER = '3px solid #2d7aaa'
 const DEFAULT_THRESHOLD_RATIO = 15
 const HEADER_TOP_1 = 0
-const HEADER_TOP_2 = 36
-const ROW_TOP_DISABLED = 62
-const ROW_TOP_DAILY = 92
-const ROW_TOP_REMAINING = 122
+const HEADER_TOP_2 = 52
+const ROW_TOP_DAILY = 78
+const ROW_TOP_REMAINING = 108
+
+const EDITABLE_ROWS = [
+  ['일사용량', 'daily_usage', '#fbbf24', '#100e00', ROW_TOP_DAILY],
+  ['잔량', 'remaining', '#86efac', '#060f06', ROW_TOP_REMAINING],
+]
 
 const th1Base = {
   position: 'sticky',
@@ -23,7 +28,7 @@ const th1Base = {
   padding: '0 4px',
   textAlign: 'center',
   whiteSpace: 'nowrap',
-  height: 36,
+  height: 52,
   zIndex: 4,
 }
 
@@ -80,6 +85,8 @@ function getHatchBackground(base) {
   return `repeating-linear-gradient(155deg, rgba(245,158,11,0.22) 0px, rgba(245,158,11,0.22) 1px, ${base} 1px, ${base} 18px)`
 }
 
+
+
 function ToggleBadge({ active, onClick }) {
   return (
     <button
@@ -102,12 +109,21 @@ function ToggleBadge({ active, onClick }) {
   )
 }
 
-function EditField({ value, color, bg, onChange, pending, disabled = false }) {
+function EditField({ value, color, bg, onChange, onPaste, pending, disabled = false }) {
   const [local, setLocal] = useState(value ?? '')
 
   useEffect(() => {
     setLocal(value ?? '')
   }, [value])
+
+  const handlePasteEvent = (e) => {
+    if (!onPaste) return
+    const text = e.clipboardData.getData('text')
+    if (text.includes('\t') || text.includes('\n')) {
+      e.preventDefault()
+      onPaste(text)
+    }
+  }
 
   return (
     <input
@@ -118,6 +134,7 @@ function EditField({ value, color, bg, onChange, pending, disabled = false }) {
         setLocal(next)
         onChange(next === '' ? 0 : Number(next))
       }}
+      onPaste={handlePasteEvent}
       style={{
         width: '100%',
         height: 30,
@@ -140,12 +157,26 @@ export default function SourceRemainingSheetTab() {
   const [error, setError] = useState(null)
   const [machines, setMachines] = useState([])
   const [sourceNames, setSourceNames] = useState([])
+  const [machineOrder, setMachineOrder] = useState([])
+  const [sourceOrder, setSourceOrder] = useState([])
   const [cellData, setCellData] = useState({})
   const [pendingKeys, setPendingKeys] = useState(new Set())
   const [quickFilter, setQuickFilter] = useState('')
   const [forecastDays, setForecastDays] = useState(15)
   const [statusSettings, setStatusSettings] = useState({ overdue_days: 0, urgent_days: 7 })
   const [settingsSaving, setSettingsSaving] = useState(false)
+  const [machineGroupMap, setMachineGroupMap] = useState({})
+
+  useEffect(() => {
+    authFetch('/api/admin/machine-groups')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((groups) => {
+        const map = {}
+        groups.forEach((g) => g.machine_nos.forEach((no) => { map[no] = g.name }))
+        setMachineGroupMap(map)
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchData = useCallback(() => {
     setLoading(true)
@@ -157,6 +188,17 @@ export default function SourceRemainingSheetTab() {
         const names = json.source_names ?? []
         setMachines(rows.map((row) => ({ ...row, machine_no: row.machine_no, description: row.description })))
         setSourceNames(names)
+        setMachineOrder((prev) => {
+          const newNos = rows.map((r) => r.machine_no)
+          const preserved = prev.filter((no) => newNos.includes(no))
+          const added = newNos.filter((no) => !prev.includes(no))
+          return [...preserved, ...added]
+        })
+        setSourceOrder((prev) => {
+          const preserved = prev.filter((n) => names.includes(n))
+          const added = names.filter((n) => !prev.includes(n))
+          return [...preserved, ...added]
+        })
 
         const nextCellData = {}
         rows.forEach((row) => {
@@ -184,16 +226,31 @@ export default function SourceRemainingSheetTab() {
     fetchData()
   }, [fetchData])
 
+  const orderedMachines = useMemo(
+    () => machineOrder.map((no) => machines.find((m) => m.machine_no === no)).filter(Boolean),
+    [machineOrder, machines],
+  )
+
   const filteredMachines = useMemo(() => {
     const keyword = quickFilter.trim().toLowerCase()
-    if (!keyword) return machines
-    return machines.filter(
+    if (!keyword) return orderedMachines
+    return orderedMachines.filter(
       (machine) =>
         String(machine.machine_no).includes(keyword) ||
         formatMachineLabel(machine.machine_no).toLowerCase().includes(keyword) ||
         String(machine.description ?? '').toLowerCase().includes(keyword),
     )
-  }, [machines, quickFilter])
+  }, [orderedMachines, quickFilter])
+
+  const machineEnabledSources = useMemo(() => {
+    const map = {}
+    filteredMachines.forEach((machine) => {
+      map[machine.machine_no] = sourceOrder.filter(
+        (src) => !cellData[`${machine.machine_no}:${src}`]?.is_disabled,
+      )
+    })
+    return map
+  }, [filteredMachines, sourceOrder, cellData])
 
   const dateRows = useMemo(
     () =>
@@ -217,6 +274,32 @@ export default function SourceRemainingSheetTab() {
       [key]: { ...prev[key], is_disabled: !prev[key]?.is_disabled },
     }))
     setPendingKeys((prev) => new Set([...prev, key]))
+  }
+
+  const columns = []
+  filteredMachines.forEach((machine) => {
+    ;(machineEnabledSources[machine.machine_no] ?? []).forEach((sourceName) => {
+      columns.push({ machineNo: machine.machine_no, sourceName })
+    })
+  })
+
+  const handlePaste = (rowIndex, colIndex, text) => {
+    const rows = text.replace(/\r/g, '').split('\n').filter((v) => v !== '')
+    rows.forEach((rowText, ri) => {
+      const targetRowIndex = rowIndex + ri
+      if (targetRowIndex >= EDITABLE_ROWS.length) return
+      const field = EDITABLE_ROWS[targetRowIndex][1]
+      rowText.split('\t').forEach((val, ci) => {
+        const targetColIndex = colIndex + ci
+        if (targetColIndex >= columns.length) return
+        const { machineNo, sourceName } = columns[targetColIndex]
+        if (cellData[`${machineNo}:${sourceName}`]?.is_disabled) return
+        const num = parseFloat(val.replace(/,/g, '').trim())
+        if (Number.isFinite(num)) {
+          handleChange(machineNo, sourceName, field, num)
+        }
+      })
+    })
   }
 
   const handleSave = async () => {
@@ -277,18 +360,13 @@ export default function SourceRemainingSheetTab() {
     }
   }
 
-  const editableRows = [
-    ['일사용량', 'daily_usage', '#fbbf24', '#100e00', ROW_TOP_DAILY],
-    ['잔량', 'remaining', '#86efac', '#060f06', ROW_TOP_REMAINING],
-  ]
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
       <div className="console-toolbar">
         <div>
           <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>잔량기입 시트</div>
           <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
-            특정 호기·특정 소스를 사용안함으로 둘 수 있고, 비활성 셀은 사선 처리됩니다.
+            비활성 소스(설비 구성에서 설정)는 사선 처리됩니다.
           </div>
         </div>
       </div>
@@ -312,6 +390,7 @@ export default function SourceRemainingSheetTab() {
 
       {error ? <Alert type="error" message={error} /> : null}
 
+
       <Card
         className="console-panel"
         style={{ ...panelStyle, minHeight: 0, overflow: 'hidden' }}
@@ -320,14 +399,17 @@ export default function SourceRemainingSheetTab() {
         extra={(
           <Space wrap>
             <Input value={quickFilter} onChange={(event) => setQuickFilter(event.target.value)} placeholder="호기 검색" style={{ width: 150 }} allowClear />
-            <Select value={forecastDays} onChange={setForecastDays} style={{ width: 100 }} options={[15, 30, 60, 90].map((value) => ({ value, label: `${value}일` }))} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13, whiteSpace: 'nowrap' }}>예상 교체일 기준</span>
+              <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[15, 30, 60, 90].map((value) => ({ value, label: `${value}일` }))} />
+            </div>
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
           </Space>
         )}
       >
         <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
-          사용안함을 켜면 해당 호기의 해당 소스는 계산과 현황판에서 제외됩니다.
+          비활성 소스는 사선 처리되며 계산과 현황판에서 제외됩니다. 활성화 설정은 설비 구성 탭에서 변경하세요.
         </div>
         {loading ? (
           <div style={{ display: 'grid', placeItems: 'center', minHeight: 420 }}>
@@ -339,22 +421,33 @@ export default function SourceRemainingSheetTab() {
               <colgroup>
                 <col style={{ width: 88 }} />
                 {filteredMachines.map((machine) =>
-                  sourceNames.map((sourceName) => <col key={`${machine.machine_no}:${sourceName}`} style={{ width: 82 }} />),
+                  (machineEnabledSources[machine.machine_no] ?? []).map((sourceName) => <col key={`${machine.machine_no}:${sourceName}`} style={{ width: 82 }} />),
                 )}
               </colgroup>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 5, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>구분</th>
-                  {filteredMachines.map((machine) => (
-                    <th key={machine.machine_no} colSpan={sourceNames.length} style={{ position: 'sticky', top: HEADER_TOP_1, background: '#242834', color: '#fbbf24', border: BORDER, borderLeft: GROUP_BORDER, height: 36, fontWeight: 700, zIndex: 4 }}>
-                      {formatMachineLabel(machine.machine_no)}
-                    </th>
-                  ))}
+                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 5, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 52 }}>구분</th>
+                  {filteredMachines.map((machine, mi) => {
+                    const enabled = machineEnabledSources[machine.machine_no] ?? []
+                    if (enabled.length === 0) return null
+                    return (
+                      <th key={machine.machine_no} colSpan={enabled.length} style={{ position: 'sticky', top: HEADER_TOP_1, background: '#242834', border: BORDER, borderLeft: mi === 0 ? BORDER : GROUP_BORDER, height: 52, fontWeight: 700, zIndex: 4 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <span style={{ color: '#fbbf24' }}>{formatMachineLabel(machine.machine_no)}</span>
+                          {(() => { const gc = getGroupColor(machineGroupMap[machine.machine_no]); return gc ? (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 3, padding: '0 5px', lineHeight: '14px' }}>
+                              {machineGroupMap[machine.machine_no]}
+                            </span>
+                          ) : null })()}
+                        </div>
+                      </th>
+                    )
+                  })}
                 </tr>
                 <tr>
-                  {filteredMachines.map((machine) =>
-                    sourceNames.map((sourceName, index) => (
-                      <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, borderLeft: index === 0 ? GROUP_BORDER : BORDER, color: 'rgba(180,196,210,0.7)' }}>
+                  {filteredMachines.map((machine, mi) =>
+                    (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, index) => (
+                      <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER, color: getSourceColor(sourceOrder.indexOf(sourceName)).main }}>
                         {sourceName}
                       </th>
                     )),
@@ -362,36 +455,22 @@ export default function SourceRemainingSheetTab() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td style={{ ...tdLabelBase, ...stickyDataRowStyle(ROW_TOP_DISABLED, '#1a1510', '#fbbf24', 6), borderRight: GROUP_BORDER }}>사용안함</td>
-                  {filteredMachines.map((machine) =>
-                    sourceNames.map((sourceName, index) => {
-                      const key = `${machine.machine_no}:${sourceName}`
-                      const disabled = Boolean(cellData[key]?.is_disabled)
-                      return (
-                        <td key={`${key}:disabled`} style={{ ...stickyDataRowStyle(ROW_TOP_DISABLED, disabled ? getHatchBackground('#1a1510') : '#1a1510', 'inherit', 6), border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, height: 30, textAlign: 'center' }}>
-                          <ToggleBadge active={disabled} onClick={() => handleToggleDisabled(machine.machine_no, sourceName)} />
-                        </td>
-                      )
-                    }),
-                  )}
-                </tr>
-                {editableRows.map(([label, field, color, bg, top]) => (
+                {EDITABLE_ROWS.map(([label, field, color, bg, top], rowIndex) => (
                   <tr key={field}>
-                    <td style={{ ...tdLabelBase, ...stickyDataRowStyle(top, bg, color, field === 'daily_usage' ? 5 : 4), borderRight: GROUP_BORDER }}>{label}</td>
-                    {filteredMachines.map((machine) =>
-                      sourceNames.map((sourceName, index) => {
+                    <td style={{ ...tdLabelBase, ...stickyDataRowStyle(top, bg, color, field === 'daily_usage' ? 5 : 4), borderRight: BORDER }}>{label}</td>
+                    {filteredMachines.map((machine, machineIndex) =>
+                      (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
                         const key = `${machine.machine_no}:${sourceName}`
-                        const disabled = Boolean(cellData[key]?.is_disabled)
+                        const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
                         return (
-                          <td key={`${key}:${field}`} style={{ ...stickyDataRowStyle(top, bg, 'inherit', field === 'daily_usage' ? 5 : 4), border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, height: 30 }}>
+                          <td key={`${key}:${field}`} style={{ ...stickyDataRowStyle(top, bg, 'inherit', field === 'daily_usage' ? 5 : 4), border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER, height: 30 }}>
                             <EditField
                               value={cellData[key]?.[field] ?? 0}
                               color={color}
                               bg={bg}
                               pending={pendingKeys.has(key)}
-                              disabled={disabled}
                               onChange={(value) => handleChange(machine.machine_no, sourceName, field, value)}
+                              onPaste={(text) => handlePaste(rowIndex, colIndex, text)}
                             />
                           </td>
                         )
@@ -401,32 +480,32 @@ export default function SourceRemainingSheetTab() {
                 ))}
                 {dateRows.map(({ label, daysAhead }, rowIndex) => (
                   <tr key={label} style={{ background: rowIndex % 2 === 0 ? '#171b26' : '#131619' }}>
-                    <td style={{ ...tdLabelBase, background: rowIndex % 2 === 0 ? '#171b26' : '#131619', color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)', borderRight: GROUP_BORDER }}>{label}</td>
-                    {filteredMachines.map((machine) =>
-                      sourceNames.map((sourceName, index) => {
+                    <td style={{ ...tdLabelBase, background: rowIndex % 2 === 0 ? '#171b26' : '#131619', color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)', borderRight: BORDER }}>{label}</td>
+                    {filteredMachines.map((machine, machineIndex) =>
+                      (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
                         const key = `${machine.machine_no}:${sourceName}`
-                        const disabled = Boolean(cellData[key]?.is_disabled)
                         const remaining = cellData[key]?.remaining ?? 0
                         const dailyUsage = cellData[key]?.daily_usage ?? 0
                         const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
                         const baseBg = rowIndex % 2 === 0 ? '#171b26' : '#131619'
+                        const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
                         if (daysAhead === 0) {
                           return (
-                            <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: baseBg, height: 30 }}>
+                            <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER, background: baseBg, height: 30 }}>
                               <EditField
                                 value={cellData[key]?.remaining ?? 0}
                                 color="rgba(196,210,226,0.8)"
                                 bg={baseBg}
                                 pending={pendingKeys.has(key)}
-                                disabled={disabled}
                                 onChange={(value) => handleChange(machine.machine_no, sourceName, 'remaining', value)}
+                                onPaste={(text) => handlePaste(1, colIndex, text)}
                               />
                             </td>
                           )
                         }
                         return (
-                          <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: disabled ? getHatchBackground(baseBg) : baseBg, color: disabled ? 'rgba(196,210,226,0.42)' : 'rgba(196,210,226,0.8)', textAlign: 'right', paddingRight: 6, height: 30 }}>
-                            {disabled || projected == null ? '-' : fmt(projected)}
+                          <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? GROUP_BORDER : BORDER, background: baseBg, color: 'rgba(196,210,226,0.8)', textAlign: 'right', paddingRight: 6, height: 30 }}>
+                            {projected == null ? '-' : fmt(projected)}
                           </td>
                         )
                       }),

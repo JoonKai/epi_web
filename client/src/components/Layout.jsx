@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { Layout as AntLayout, Menu, Button, Badge, Avatar, Dropdown, Tooltip } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -35,7 +35,7 @@ const { Header, Sider, Content } = AntLayout
 
 function buildMenuItems(isAdmin) {
   const items = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: 'EPI 현황판', className: 'menu-color-amber' },
+    { key: '/dashboard', icon: <DashboardOutlined />, label: '종합 현황판', className: 'menu-color-amber' },
     {
       key: 'equipment',
       icon: <ToolOutlined />,
@@ -51,8 +51,9 @@ function buildMenuItems(isAdmin) {
             { key: '/epi/mocvd/management', icon: <ControlOutlined />, label: 'MOCVD 관리' },
             { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스 관리' },
             { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM/BM 관리' },
-            { key: '/epi/mocvd/shift-schedule', icon: <UserOutlined />, label: '인원 관리' },
             { key: '/epi/mocvd/scheduler', icon: <ScheduleOutlined />, label: '스케줄러' },
+            { key: '/epi/mocvd/scrubber', icon: <ToolOutlined />, label: '스크러버 관리' },
+            { key: '/epi/mocvd/shift-schedule', icon: <UserOutlined />, label: '인원 관리' },
             { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 관리' },
           ],
         },
@@ -91,13 +92,13 @@ function buildMenuItems(isAdmin) {
       label: '비용',
       className: 'menu-color-green',
       children: [
-        { key: '/cost/purchase-request', icon: <ShoppingCartOutlined />, label: '구매요청' },
-        { key: '/cost/repair-status', icon: <ToolOutlined />, label: '수리현황' },
-        { key: '/cost/master-data', icon: <AppstoreAddOutlined />, label: '기준정보등록' },
+        { key: '/cost/purchase-request', icon: <ShoppingCartOutlined />, label: '구매 요청' },
+        { key: '/cost/repair-status', icon: <ToolOutlined />, label: '수리 현황' },
+        { key: '/cost/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 등록' },
       ],
     },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터', className: 'menu-color-orange' },
-    { key: '/grid', icon: <TableOutlined />, label: '보고서', className: 'menu-color-cyan' },
+    { key: '/grid', icon: <TableOutlined />, label: '레포트', className: 'menu-color-cyan' },
   ]
 
   if (isAdmin) {
@@ -135,6 +136,8 @@ const PAGE_COLOR = {
   '/epi/mocvd/overview': '#22c55e',
   '/epi/mocvd/source': '#14b8a6',
   '/epi/mocvd/pm-plan': '#06b6d4',
+  '/epi/mocvd/scheduler': '#38bdf8',
+  '/epi/mocvd/scrubber': '#f59e0b',
   '/epi/mocvd/shift-schedule': '#f59e0b',
   '/epi/mocvd/management': '#0ea5e9',
   '/epi/mocvd/work-log': '#f59e0b',
@@ -208,7 +211,7 @@ function Layout({ children, isDark, onThemeToggle }) {
   const pageColor = PAGE_COLOR[location.pathname] ?? '#6366f1'
 
   const userMenu = {
-    items: [{ key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', danger: true }],
+    items: [{ key: 'logout', icon: <LogoutOutlined />, label: '濡쒓렇?꾩썐', danger: true }],
     onClick: ({ key }) => {
       if (key === 'logout') logout()
     },
@@ -284,8 +287,7 @@ function Layout({ children, isDark, onThemeToggle }) {
                 EPI
               </div>
               <div style={{ color: 'rgba(253,230,138,0.5)', fontSize: 14, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
-                운영 시스템
-              </div>
+                ?댁쁺 ?쒖뒪??              </div>
             </div>
           )}
         </div>
@@ -384,7 +386,7 @@ function Layout({ children, isDark, onThemeToggle }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Tooltip title={isDark ? '라이트 모드' : '다크 모드'}>
+            <Tooltip title={isDark ? '?쇱씠??紐⑤뱶' : '?ㅽ겕 紐⑤뱶'}>
               <Button
                 type="text"
                 icon={isDark ? <BulbOutlined /> : <MoonOutlined />}
@@ -400,7 +402,7 @@ function Layout({ children, isDark, onThemeToggle }) {
               />
             </Tooltip>
 
-            <Tooltip title="알림">
+            <Tooltip title="?뚮┝">
               <Badge dot color="#f59e0b" offset={[-4, 4]}>
                 <Button
                   type="text"
@@ -452,3 +454,4 @@ function Layout({ children, isDark, onThemeToggle }) {
 }
 
 export default Layout
+

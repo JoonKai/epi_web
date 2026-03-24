@@ -8,7 +8,9 @@ import SourceChangeLogTab from './SourceChangeLogTab'
 import SourceStatusBoard from './SourceStatusBoard'
 import SourceMachineBoard from './SourceMachineBoard'
 import SourceTableSheetTab from './SourceTableSheetTab'
+import SourceMachineConfigTab from './SourceMachineConfigTab'
 import { formatMachineLabel } from './machineLabel'
+import { getSourceColor } from './sourceColors'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
 const LABEL_W = 72
@@ -25,8 +27,8 @@ const STICKY_TOP_THRESHOLD_AMOUNT = STICKY_TOP_REMAINING + ROW_H
 const STICKY_TOP_DAYS_LEFT = STICKY_TOP_THRESHOLD_AMOUNT + ROW_H
 const STICKY_TOP_REPLACEMENT_DATE = STICKY_TOP_DAYS_LEFT + ROW_H
 const BASE_BG = '#171b26'
-const BORDER = '1px solid rgba(245,158,11,0.12)'
-const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
+const BORDER = '1px solid rgba(180,196,210,0.32)'
+const GROUP_BORDER = '3px solid #2d7aaa'
 const DEFAULT_THRESHOLD_RATIO = 15
 const EDITABLE_FIELDS = ['initial_amount', 'threshold_ratio', 'daily_usage', 'remaining']
 
@@ -282,13 +284,13 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
             >
               援щ텇
             </th>
-            {machines.map((machine) => (
+            {machines.map((machine, mi) => (
               <th
                 key={machine.machine_no}
                 colSpan={sourceNames.length}
                 style={{
                   ...th1Base,
-                  borderLeft: GROUP_BORDER,
+                  borderLeft: mi === 0 ? BORDER : GROUP_BORDER,
                   color: '#fbbf24',
                   fontWeight: 700,
                   fontSize: 15,
@@ -300,14 +302,14 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
             ))}
           </tr>
           <tr>
-            {machines.map((machine) =>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => (
                 <th
                   key={`${machine.machine_no}:${sourceName}`}
                   style={{
                     ...th2Base,
-                    borderLeft: index === 0 ? GROUP_BORDER : BORDER,
-                    color: 'rgba(180,196,210,0.7)',
+                    borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
+                    color: getSourceColor(index).main,
                   }}
                 >
                   {sourceName}
@@ -319,12 +321,12 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
 
         <tbody>
           <tr>
-            <td style={{ ...tdLabelBase, background: '#0d1520', color: '#38bdf8', borderRight: GROUP_BORDER }}>???</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#0d1520', color: '#38bdf8', borderRight: BORDER }}>???</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_INITIAL, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#0a1119' }}>
+                  <td key={`${key}:initial_amount`} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_INITIAL, zIndex: 7, borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER, background: '#0a1119' }}>
                     <EditCell
                       cellId={`initial_amount:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -342,12 +344,12 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1a1400', color: '#f59e0b', borderRight: GROUP_BORDER }}>援먯껜湲곗?(%)</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#1a1400', color: '#f59e0b', borderRight: BORDER }}>援먯껜湲곗?(%)</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_THRESHOLD, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#110e00' }}>
+                  <td key={`${key}:threshold_ratio`} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_THRESHOLD, zIndex: 7, borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER, background: '#110e00' }}>
                     <EditCell
                       cellId={`threshold_ratio:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -365,12 +367,12 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#191500', color: '#fbbf24', borderRight: GROUP_BORDER }}>?쇱궗?⑸웾</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#191500', color: '#fbbf24', borderRight: BORDER }}>?쇱궗?⑸웾</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={key} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_DAILY, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#100e00' }}>
+                  <td key={key} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_DAILY, zIndex: 7, borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER, background: '#100e00' }}>
                     <EditCell
                       cellId={`daily_usage:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -388,12 +390,12 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#0a1a0a', color: '#86efac', borderRight: GROUP_BORDER }}>?붾웾</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#0a1a0a', color: '#86efac', borderRight: BORDER }}>?붾웾</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 return (
-                  <td key={key} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_REMAINING, zIndex: 7, borderLeft: index === 0 ? GROUP_BORDER : BORDER, background: '#060f06' }}>
+                  <td key={key} style={{ ...tdCellBase, position: 'sticky', top: STICKY_TOP_REMAINING, zIndex: 7, borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER, background: '#060f06' }}>
                     <EditCell
                       cellId={`remaining:${machine.machine_no}:${sourceName}`}
                       activeEditKey={activeEditKey}
@@ -411,8 +413,8 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#1a0d00', color: '#f97316', borderRight: GROUP_BORDER }}>?????</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#1a0d00', color: '#f97316', borderRight: BORDER }}>?????</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 const derived = buildDerivedCell(cellData[key] ?? {})
@@ -424,7 +426,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       position: 'sticky',
                       top: STICKY_TOP_THRESHOLD_AMOUNT,
                       zIndex: 7,
-                      borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                      borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
                       background: '#110a00',
                       color: '#f97316',
                       textAlign: 'right',
@@ -441,8 +443,8 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#161200', color: '#facc15', borderRight: GROUP_BORDER }}>?? ???</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#161200', color: '#facc15', borderRight: BORDER }}>?? ???</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 const derived = buildDerivedCell(cellData[key] ?? {})
@@ -454,7 +456,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       position: 'sticky',
                       top: STICKY_TOP_DAYS_LEFT,
                       zIndex: 7,
-                      borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                      borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
                       background: '#0f0d00',
                       color: derived.days_left != null && derived.days_left <= 7 ? '#f87171' : '#facc15',
                       textAlign: 'right',
@@ -471,8 +473,8 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
           </tr>
 
           <tr>
-            <td style={{ ...tdLabelBase, background: '#091420', color: '#60a5fa', borderRight: GROUP_BORDER }}>?? ???</td>
-            {machines.map((machine) =>
+            <td style={{ ...tdLabelBase, background: '#091420', color: '#60a5fa', borderRight: BORDER }}>?? ???</td>
+            {machines.map((machine, mi) =>
               sourceNames.map((sourceName, index) => {
                 const key = `${machine.machine_no}:${sourceName}`
                 const derived = buildDerivedCell(cellData[key] ?? {})
@@ -484,7 +486,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       position: 'sticky',
                       top: STICKY_TOP_REPLACEMENT_DATE,
                       zIndex: 7,
-                      borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                      borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
                       background: '#060f18',
                       color: '#60a5fa',
                       textAlign: 'right',
@@ -507,13 +509,13 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                   ...tdLabelBase,
                   background: rowIndex % 2 === 0 ? BASE_BG : '#131619',
                   color: rowIndex === 0 ? 'rgba(251,191,36,0.82)' : 'rgba(196,210,226,0.82)',
-                  borderRight: GROUP_BORDER,
+                  borderRight: BORDER,
                   fontWeight: rowIndex === 0 ? 800 : 700,
                 }}
               >
                 {label}
               </td>
-              {machines.map((machine) =>
+              {machines.map((machine, mi) =>
                 sourceNames.map((sourceName, index) => {
                   const key = `${machine.machine_no}:${sourceName}`
                   const remaining = cellData[key]?.remaining ?? 0
@@ -527,7 +529,7 @@ function ExcelTable({ machines, sourceNames, cellData, dateRows, pendingKeys, on
                       key={`${key}:${label}`}
                       style={{
                         ...tdCellBase,
-                        borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                        borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
                         background: isCritical ? 'rgba(239,68,68,0.12)' : isLow ? 'rgba(251,191,36,0.07)' : undefined,
                         color: isCritical ? '#f87171' : isLow ? '#fbbf24' : 'rgba(196,210,226,0.8)',
                         textAlign: 'right',
@@ -820,13 +822,13 @@ function SourceInputTab() {
                 >
                   援щ텇
                 </th>
-                {filteredMachines.map((machine) => (
+                {filteredMachines.map((machine, mi) => (
                   <th
                     key={`chart-head:${machine.machine_no}`}
                     colSpan={sourceNames.length}
                     style={{
                       ...th1Base,
-                      borderLeft: GROUP_BORDER,
+                      borderLeft: mi === 0 ? BORDER : GROUP_BORDER,
                       color: '#fbbf24',
                       fontWeight: 700,
                       fontSize: 15,
@@ -838,13 +840,13 @@ function SourceInputTab() {
                 ))}
               </tr>
               <tr>
-                {filteredMachines.map((machine) =>
+                {filteredMachines.map((machine, mi) =>
                   sourceNames.map((sourceName, index) => (
                     <th
                       key={`chart-sub:${machine.machine_no}:${sourceName}`}
                       style={{
                         ...th2Base,
-                        borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                        borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
                         color: 'rgba(180,196,210,0.7)',
                       }}
                     >
@@ -856,9 +858,9 @@ function SourceInputTab() {
             </thead>
             <tbody>
               <tr>
-                <td style={{ ...tdLabelBase, background: '#171b26', color: '#86efac', borderRight: GROUP_BORDER }}>
+                <td style={{ ...tdLabelBase, background: '#171b26', color: '#86efac', borderRight: BORDER }}>
                   ?붾웾 ?꾨떖??                </td>
-                {filteredMachines.map((machine) =>
+                {filteredMachines.map((machine, mi) =>
                   sourceNames.map((sourceName, index) => {
                     const key = `${machine.machine_no}:${sourceName}`
                     const cell = cellData[key]
@@ -873,7 +875,7 @@ function SourceInputTab() {
                         title={`${formatMachineLabel(machine.machine_no)} / ${sourceName} - ${rate.toFixed(1)}% (${remaining.toFixed(2)} / ${initialAmount.toFixed(2)})`}
                         style={{
                           ...tdCellBase,
-                          borderLeft: index === 0 ? GROUP_BORDER : BORDER,
+                          borderLeft: index === 0 && mi > 0 ? GROUP_BORDER : BORDER,
                           background: '#10151d',
                           padding: '8px 6px 6px',
                           height: 132,
@@ -913,7 +915,7 @@ export default function Source() {
   const navigate = useNavigate()
   const activeTab = useMemo(() => {
     const tab = new URLSearchParams(location.search).get('tab')
-    const allowed = ['status-board', 'machine-board', 'input', 'table-sheet', 'change-log']
+    const allowed = ['status-board', 'machine-board', 'input', 'table-sheet', 'machine-config', 'change-log']
     return allowed.includes(tab) ? tab : 'status-board'
   }, [location.search])
 
@@ -931,6 +933,7 @@ export default function Source() {
         { key: 'machine-board', label: <span><HeatMapOutlined />{"\uC124\uBE44\uBCC4 \uC18C\uC2A4\uD604\uD669"}</span>, children: <SourceMachineBoard /> },
         { key: 'input', label: <span><EditOutlined />{"\uC794\uB7C9\uAE30\uC785"}</span>, children: <SourceInputTab /> },
         { key: 'table-sheet', label: <span><TableOutlined />TABLE</span>, children: <SourceTableSheetTab /> },
+        { key: 'machine-config', label: <span><TableOutlined />{"설비 구성"}</span>, children: <SourceMachineConfigTab /> },
         { key: 'change-log', label: <span><BookOutlined />{"\uC18C\uC2A4\uAD50\uCCB4 \uC791\uC5C5\uC77C\uC9C0"}</span>, children: <SourceChangeLogTab /> },
       ]}
     />
