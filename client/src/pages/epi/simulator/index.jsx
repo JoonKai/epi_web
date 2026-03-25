@@ -68,13 +68,11 @@ export default function CostSimulator() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="console-toolbar">
-        <div>
-          <div style={sectionTitleStyle}>시뮬레이터</div>
-          <Title level={3} style={{ margin: '8px 0 4px', color: 'var(--console-text)' }}>
-            GaN EPI 원가 시뮬레이터
-          </Title>
-          <Text style={{ color: 'var(--console-text-soft)' }}>공정 원가, 생산량, 손익분기점을 한 흐름으로 분석하는 계산 화면</Text>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">시뮬레이터</span>
+          <div className="nowa-page-banner-title">GaN EPI 원가 시뮬레이터</div>
+          <div className="nowa-page-banner-desc">공정 원가, 생산량, 손익분기점을 한 흐름으로 분석하는 계산 화면</div>
         </div>
         <Space wrap>
           <Upload showUploadList={false} beforeUpload={importConfig} accept=".json">

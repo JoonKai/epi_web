@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { Button, Select, Upload, message } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import { PALETTES } from '../components/WaferMapRange'
+import PageBanner from '../components/PageBanner'
 
 // ── 상수 ────────────────────────────────────────────────────────
 const CELL_HALF_DIAG = Math.SQRT2 * 0.5
@@ -80,41 +80,35 @@ function valToColor(val, rangeStart, rangeEnd, colors) {
 
 // ── 미니 웨이퍼 맵 ─────────────────────────────────────────────
 function MiniWaferMap({ wafer, param, rangeStart, rangeEnd, colors, size }) {
-  const option = useMemo(() => ({
-    backgroundColor: 'transparent',
-    animation: false,
-    grid: { left: 0, right: 0, top: 0, bottom: 0 },
-    xAxis: { type: 'value', min: -12.5, max: 12.5, show: false },
-    yAxis: { type: 'value', min: -12.5, max: 12.5, show: false },
-    series: [
-      {
-        type: 'line',
-        data: WAFER_CIRCLE,
-        showSymbol: false,
-        lineStyle: { color: 'rgba(160,170,190,0.6)', width: 1 },
-        z: 3, silent: true,
-        encode: { x: 0, y: 1 },
-      },
-      {
-        type: 'custom',
-        renderItem: (_p, api) => {
-          const cx  = api.value(0)
-          const cy  = api.value(1)
-          const val = api.value(2)
-          const tl  = api.coord([cx - 0.5, cy + 0.5])
-          const br  = api.coord([cx + 0.5, cy - 0.5])
-          return {
-            type: 'rect',
-            shape: { x: tl[0], y: tl[1], width: Math.max(br[0] - tl[0], 1), height: Math.max(br[1] - tl[1], 1) },
-            style: { fill: valToColor(val, rangeStart, rangeEnd, colors), stroke: 'none' },
-          }
-        },
-        encode: { x: 0, y: 1, value: 2 },
-        data: wafer.points.map(p => [p.x, p.y, p[param] || 0]),
-        z: 2,
-      },
-    ],
-  }), [wafer, param, rangeStart, rangeEnd, colors])
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const W = size
+    const H = size
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, W, H)
+
+    const toCanvasX = (gx) => ((gx + 12.5) / 25) * W
+    const toCanvasY = (gy) => ((12.5 - gy) / 25) * H
+    const cellW = W / 25
+    const cellH = H / 25
+
+    wafer.points.forEach((p) => {
+      const val = p[param] || 0
+      ctx.fillStyle = valToColor(val, rangeStart, rangeEnd, colors)
+      ctx.fillRect(toCanvasX(p.x) - cellW / 2, toCanvasY(p.y) - cellH / 2, Math.max(cellW, 1), Math.max(cellH, 1))
+    })
+
+    ctx.beginPath()
+    ctx.arc(W / 2, H / 2, (W / 25) * WAFER_R, 0, 2 * Math.PI)
+    ctx.strokeStyle = 'rgba(160,170,190,0.6)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }, [wafer, param, rangeStart, rangeEnd, colors, size])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
@@ -125,11 +119,7 @@ function MiniWaferMap({ wafer, param, rangeStart, rangeEnd, colors, size }) {
         border: '1px solid rgba(99,102,241,0.15)',
         overflow: 'hidden',
       }}>
-        <ReactECharts
-          option={option}
-          style={{ width: size, height: size }}
-          opts={{ renderer: 'canvas' }}
-        />
+        <canvas ref={canvasRef} style={{ display: 'block', width: size, height: size }} />
       </div>
       <div style={{ fontSize: 14, color: '#b0c0d0', fontWeight: 600, letterSpacing: 0.3 }}>
         {wafer.id}
@@ -212,34 +202,26 @@ export default function RunComparison() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
 
-      {/* 헤더 */}
-      <div style={{
-        padding: '16px 20px', borderRadius: 18,
-        border: '1px solid var(--nowa-border)',
-        background: 'var(--nowa-hero-bg)',
-        boxShadow: 'var(--nowa-shadow-card)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
-      }}>
-        <div>
-          <div style={{ color: 'var(--nowa-text)', fontSize: 17, fontWeight: 800, marginBottom: 2 }}>런 비교</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>
-            {wafers.length}개 웨이퍼 · 공통 범위 [{rangeStart.toFixed(3)} – {rangeEnd.toFixed(3)}]
+      <PageBanner
+        kicker="분석"
+        title="런 비교"
+        desc={`${wafers.length}개 웨이퍼의 공통 범위를 기준으로 런별 맵 분포를 비교합니다.`}
+        extra={(
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Select value={param} onChange={setParam} size="small" style={{ width: 100 }}
+              options={PARAMS.map(p => ({ value: p.key, label: p.label }))} />
+            <Select value={colormapKey} onChange={k => setColors(PALETTES[k])} size="small" style={{ width: 120 }}
+              options={Object.keys(PALETTES).map(k => ({ value: k, label: k }))} />
+            <Select value={mapSize} onChange={setMapSize} size="small" style={{ width: 90 }}
+              options={[{ value: 100, label: '소형' }, { value: 160, label: '중형' }, { value: 220, label: '대형' }]} />
+            <Select value={perRow} onChange={setPerRow} size="small" style={{ width: 80 }}
+              options={Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: `${i + 1}개` }))} />
+            <Button size="small" icon={<DeleteOutlined />} onClick={() => setWafers(DEMO_WAFERS)}>
+              데모 초기화
+            </Button>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Select value={param} onChange={setParam} size="small" style={{ width: 100 }}
-            options={PARAMS.map(p => ({ value: p.key, label: p.label }))} />
-          <Select value={colormapKey} onChange={k => setColors(PALETTES[k])} size="small" style={{ width: 120 }}
-            options={Object.keys(PALETTES).map(k => ({ value: k, label: k }))} />
-          <Select value={mapSize} onChange={setMapSize} size="small" style={{ width: 90 }}
-            options={[{ value: 100, label: '소형' }, { value: 160, label: '중형' }, { value: 220, label: '대형' }]} />
-          <Select value={perRow} onChange={setPerRow} size="small" style={{ width: 80 }}
-            options={Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: `${i + 1}개` }))} />
-          <Button size="small" icon={<DeleteOutlined />} onClick={() => setWafers(DEMO_WAFERS)}>
-            데모 초기화
-          </Button>
-        </div>
-      </div>
+        )}
+      />
 
       {/* 컬러바 */}
       <div style={{

@@ -32,6 +32,7 @@ import {
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { useThemeMode } from '../../../theme/useThemeMode'
+import PageBanner from '../../../components/PageBanner'
 
 const STATUS_META = {
   overdue: { color: '#f87171', bg: 'rgba(248,113,113,0.12)', label: '긴급' },
@@ -537,32 +538,16 @@ function SourceStatusBoard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div
-        style={{
-          padding: 24,
-          borderRadius: 22,
-          border: '1px solid var(--nowa-border)',
-          background: light
-            ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.96) 100%)'
-            : 'linear-gradient(180deg, rgba(38,57,93,0.92) 0%, rgba(34,49,79,0.92) 100%)',
-          boxShadow: 'var(--nowa-shadow-card)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <div className="nowa-page-kicker">??? ??</div>
-            <div className="nowa-page-title" style={{ fontSize: 24, marginBottom: 0 }}>
-              MOCVD 소스교체 현황판
-            </div>
-            <div className="nowa-page-desc" style={{ marginTop: 8 }}>
-              소스 입력에서 저장한 기준값과 현재 잔량 기준으로 교체 일정을 자동 계산합니다.
-            </div>
-          </div>
+      <PageBanner
+        kicker="소스 관리"
+        title="MOCVD 소스교체 현황판"
+        desc="소스 입력에서 저장한 기준값과 현재 잔량 기준으로 교체 일정을 자동 계산합니다."
+        extra={(
           <Button className="nowa-btn" icon={<ReloadOutlined />} onClick={fetchStatus}>
             현황 새로고침
           </Button>
-        </div>
-      </div>
+        )}
+      />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} xl={6}>

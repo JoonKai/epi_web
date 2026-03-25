@@ -316,13 +316,11 @@ export default function DataGrid() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="console-toolbar">
-        <div>
-          <div style={{ color: 'rgba(245,158,11,0.72)', fontSize: 14, fontWeight: 700, letterSpacing: 1.2 }}>REPORT BUILDER</div>
-          <div style={{ color: 'var(--nowa-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>메뉴 기반 보고서 만들기</div>
-          <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>
-            메뉴 트리에서 필요한 화면을 체크하고 PDF 또는 PPTX 형태로 정리된 보고서를 생성합니다.
-          </div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">Report Builder</span>
+          <div className="nowa-page-banner-title">메뉴 기반 보고서 만들기</div>
+          <div className="nowa-page-banner-desc">메뉴 트리에서 필요한 화면을 체크하고 PDF 또는 PPTX 형태로 정리된 보고서를 생성합니다.</div>
         </div>
         <div className="console-toolbar-group">
           <Button onClick={handleSelectAll}>전체 선택</Button>

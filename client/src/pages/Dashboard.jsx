@@ -13,6 +13,7 @@ import {
 import { authFetch } from '../context/AuthContext'
 import { ConsoleChart, consoleColors, makeChartBase } from '../theme/consoleTheme'
 import { useThemeMode } from '../theme/useThemeMode'
+import PageBanner from '../components/PageBanner'
 
 function getThemeVar(name, fallback) {
   if (typeof window === 'undefined') return fallback
@@ -239,28 +240,22 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-            개요
+      <PageBanner
+        kicker="개요"
+        title="EPI 운영 대시보드"
+        desc="설비, 소스, 시스템 상태를 한 화면에서 모니터링합니다."
+        extra={(
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span className="nowa-pill">
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+              시스템 {healthScore}%
+            </span>
+            <span className="nowa-pill" style={{ background: 'var(--nowa-button-bg)', color: 'var(--nowa-text-muted)', borderColor: 'var(--nowa-border)' }}>
+              실시간 갱신
+            </span>
           </div>
-          <div style={{ color: 'var(--nowa-text)', fontSize: 26, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1 }}>
-            EPI 운영 대시보드
-          </div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 6 }}>
-            설비, 소스, 시스템 상태를 한 화면에서 모니터링합니다.
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <span className="nowa-pill">
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-            시스템 {healthScore}%
-          </span>
-          <span className="nowa-pill" style={{ background: 'var(--nowa-button-bg)', color: 'var(--nowa-text-muted)', borderColor: 'var(--nowa-border)' }}>
-            실시간 갱신
-          </span>
-        </div>
-      </div>
+        )}
+      />
 
       <div className="nowa-kpi-grid">
         <KpiCard

@@ -244,11 +244,11 @@ export default function PurchaseRequest() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="nowa-page-intro">
-        <div>
-          <div className="nowa-page-kicker">비용 관리</div>
-          <div className="nowa-page-title" style={{ fontSize: 24 }}>구매요청</div>
-          <div className="nowa-page-desc">DB에 저장된 구매 요청, 기안 진행, 입고 상태를 한 화면에서 관리합니다.</div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">비용 관리</span>
+          <div className="nowa-page-banner-title">구매요청</div>
+          <div className="nowa-page-banner-desc">DB에 저장된 구매 요청, 기안 진행, 입고 상태를 한 화면에서 관리합니다.</div>
         </div>
       </div>
 

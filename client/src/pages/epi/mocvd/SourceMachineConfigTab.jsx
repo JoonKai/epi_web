@@ -129,12 +129,11 @@ export default function SourceMachineConfigTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <div className="console-toolbar">
-        <div>
-          <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>설비 구성</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
-            셀을 클릭하여 설비별 소스 사용 여부를 설정합니다. 소스명을 클릭하면 전체 토글됩니다.
-          </div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">소스 관리</span>
+          <div className="nowa-page-banner-title">설비 구성</div>
+          <div className="nowa-page-banner-desc">셀을 클릭하여 설비별 소스 사용 여부를 설정합니다. 소스명을 클릭하면 전체 토글됩니다.</div>
         </div>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>

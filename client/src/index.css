@@ -3,11 +3,11 @@
   color-scheme: dark;
 
   /* Base */
-  --nowa-bg: #171b26;
-  --nowa-bg-raised: #1e222e;
-  --nowa-panel: #1e222e;
-  --nowa-panel-alt: #242834;
-  --nowa-panel-hover: #2a2d3b;
+  --nowa-bg: #252934;
+  --nowa-bg-raised: #2c303c;
+  --nowa-panel: #2c303c;
+  --nowa-panel-alt: #323642;
+  --nowa-panel-hover: #383b49;
 
   /* Border */
   --nowa-border: rgba(245, 158, 11, 0.15);
@@ -44,12 +44,12 @@
   --grad-green:  linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
 
   /* Card background alias */
-  --nowa-card-bg: #1e222e;
+  --nowa-card-bg: #2c303c;
 
   /* Layout */
-  --nowa-sider-bg: #131620;
-  --nowa-header-bg: rgba(20, 23, 34, 0.92);
-  --nowa-content-bg: #171b26;
+  --nowa-sider-bg: #21242e;
+  --nowa-header-bg: rgba(34, 37, 48, 0.92);
+  --nowa-content-bg: #252934;
   --nowa-shell-border: rgba(245, 158, 11, 0.14);
   --nowa-button-bg: rgba(255, 255, 255, 0.07);
 
@@ -302,6 +302,22 @@ a { color: inherit; }
   font-weight: 500;
   transition: all 0.18s ease;
   color: rgba(196, 210, 226, 0.78) !important;
+}
+
+.nowa-menu.ant-menu .ant-menu-sub .ant-menu-item,
+.nowa-menu.ant-menu .ant-menu-sub .ant-menu-submenu-title,
+.console-menu.ant-menu .ant-menu-sub .ant-menu-item,
+.console-menu.ant-menu .ant-menu-sub .ant-menu-submenu-title {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+.nowa-menu.ant-menu .ant-menu-sub .ant-menu-item .anticon,
+.nowa-menu.ant-menu .ant-menu-sub .ant-menu-submenu-title .anticon,
+.console-menu.ant-menu .ant-menu-sub .ant-menu-item .anticon,
+.console-menu.ant-menu .ant-menu-sub .ant-menu-submenu-title .anticon {
+  font-size: 16px;
 }
 
 /* 상위 폴더 메뉴 - amber warm tone */
@@ -581,6 +597,73 @@ a { color: inherit; }
   margin-top: 6px;
 }
 
+/* ── Page Banner (새 페이지 타이틀 스타일) ────────────────────────── */
+.nowa-page-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px 18px 28px;
+  border-radius: 14px;
+  border: 1px solid var(--nowa-border);
+  background: linear-gradient(135deg, rgba(245,158,11,0.05) 0%, transparent 70%);
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+
+.nowa-page-banner::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #f59e0b 0%, #f97316 100%);
+  border-radius: 14px 0 0 14px;
+}
+
+.nowa-page-banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nowa-page-banner-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f59e0b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.nowa-page-banner-kicker::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+}
+
+.nowa-page-banner-title {
+  color: var(--nowa-text);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.nowa-page-banner-desc {
+  color: var(--nowa-text-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
 .nowa-metric-card {
   position: relative;
   overflow: hidden;
@@ -674,6 +757,9 @@ a { color: inherit; }
 }
 
 /* ── Tabs ───────────────────────────────────────────────────────── */
+.ant-tabs-tab {
+  font-size: 16px !important;
+}
 .console-tabs.ant-tabs .ant-tabs-nav::before {
   border-bottom-color: var(--nowa-border);
 }

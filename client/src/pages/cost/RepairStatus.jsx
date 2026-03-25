@@ -209,11 +209,11 @@ export default function RepairStatus() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="nowa-page-intro">
-        <div>
-          <div className="nowa-page-kicker">비용 관리</div>
-          <div className="nowa-page-title" style={{ fontSize: 24 }}>수리현황</div>
-          <div className="nowa-page-desc">DB 수리이력을 엑셀 스프레드시트처럼 좌우로 넓게 펼쳐 확인합니다.</div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">비용 관리</span>
+          <div className="nowa-page-banner-title">수리현황</div>
+          <div className="nowa-page-banner-desc">DB 수리이력을 엑셀 스프레드시트처럼 좌우로 넓게 펼쳐 확인합니다.</div>
         </div>
       </div>
 

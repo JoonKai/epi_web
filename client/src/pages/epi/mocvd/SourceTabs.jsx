@@ -31,7 +31,7 @@ export default function SourceTabs() {
         { key: 'remaining-sheet', label: <span><EditOutlined /> 잔량기입</span>, children: <SourceRemainingSheetTab /> },
         { key: 'table-sheet', label: <span><TableOutlined /> 소스 계산</span>, children: <SourceTableSheetTab /> },
         { key: 'machine-config', label: <span><TableOutlined /> 설비 구성</span>, children: <SourceMachineConfigTab /> },
-        { key: 'change-log', label: <span><BookOutlined /> 소스교체 작업일지</span>, children: <SourceChangeLogTab /> },
+        { key: 'change-log', label: <span><BookOutlined /> 소스 관리 대장</span>, children: <SourceChangeLogTab /> },
       ]}
     />
   )

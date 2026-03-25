@@ -33,7 +33,6 @@ import {
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { authFetch, useAuth } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'

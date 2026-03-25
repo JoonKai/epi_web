@@ -263,12 +263,11 @@ export default function SourceTableSheetTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <div className="console-toolbar">
-        <div>
-          <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>소스 계산</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
-            설비별 행 기준으로 사용 여부, 초기량, 일사용량, 잔량, 교체기준(%), 교체 기준량, 교체예정일을 관리합니다.
-          </div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">소스 관리</span>
+          <div className="nowa-page-banner-title">소스 계산</div>
+          <div className="nowa-page-banner-desc">설비별 행 기준으로 사용 여부, 초기량, 일사용량, 잔량, 교체기준(%), 교체 기준량, 교체예정일을 관리합니다.</div>
         </div>
       </div>
 

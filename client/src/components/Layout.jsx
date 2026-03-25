@@ -160,6 +160,8 @@ function Layout({ children, isDark, onThemeToggle }) {
   const location = useLocation()
   const { user, logout } = useAuth()
   const isDashboardPage = location.pathname === '/dashboard'
+  const disableCompactScale =
+    isDashboardPage || location.pathname === '/epi/mocvd/shift-schedule'
 
   const isAdmin = user?.role === 'admin'
   const menuItems = useMemo(() => attachPopupClass(buildMenuItems(isAdmin)), [isAdmin])
@@ -211,7 +213,7 @@ function Layout({ children, isDark, onThemeToggle }) {
   const pageColor = PAGE_COLOR[location.pathname] ?? '#6366f1'
 
   const userMenu = {
-    items: [{ key: 'logout', icon: <LogoutOutlined />, label: '濡쒓렇?꾩썐', danger: true }],
+    items: [{ key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', danger: true }],
     onClick: ({ key }) => {
       if (key === 'logout') logout()
     },
@@ -226,7 +228,7 @@ function Layout({ children, isDark, onThemeToggle }) {
         trigger={null}
         style={{
           background: isDark
-            ? 'linear-gradient(180deg, #131620 0%, #151820 60%, #121520 100%)'
+            ? 'linear-gradient(180deg, #21242e 0%, #23262e 60%, #20232e 100%)'
             : 'linear-gradient(180deg, #1a1c24 0%, #171920 60%, #141618 100%)',
           borderRight: '1px solid rgba(245,158,11,0.15)',
           display: 'flex',
@@ -287,7 +289,7 @@ function Layout({ children, isDark, onThemeToggle }) {
                 EPI
               </div>
               <div style={{ color: 'rgba(253,230,138,0.5)', fontSize: 14, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
-                ?댁쁺 ?쒖뒪??              </div>
+                운영 시스템              </div>
             </div>
           )}
         </div>
@@ -386,7 +388,7 @@ function Layout({ children, isDark, onThemeToggle }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Tooltip title={isDark ? '?쇱씠??紐⑤뱶' : '?ㅽ겕 紐⑤뱶'}>
+            <Tooltip title={isDark ? '라이트 모드' : '다크 모드'}>
               <Button
                 type="text"
                 icon={isDark ? <BulbOutlined /> : <MoonOutlined />}
@@ -402,7 +404,7 @@ function Layout({ children, isDark, onThemeToggle }) {
               />
             </Tooltip>
 
-            <Tooltip title="?뚮┝">
+            <Tooltip title="알림">
               <Badge dot color="#f59e0b" offset={[-4, 4]}>
                 <Button
                   type="text"
@@ -446,7 +448,7 @@ function Layout({ children, isDark, onThemeToggle }) {
         </Header>
 
         <Content style={{ flex: 1, padding: 24, background: 'var(--nowa-bg)', minHeight: 0 }}>
-          <div className={isDashboardPage ? 'page-frame' : 'page-frame page-scale-compact'}>{children}</div>
+          <div className={disableCompactScale ? 'page-frame' : 'page-frame page-scale-compact'}>{children}</div>
         </Content>
       </AntLayout>
     </AntLayout>
@@ -454,4 +456,3 @@ function Layout({ children, isDark, onThemeToggle }) {
 }
 
 export default Layout
-

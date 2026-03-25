@@ -2,6 +2,7 @@ import { useRef, useState, useMemo } from 'react'
 import { Alert, Button, Card, Col, Empty, Row, Select, Tag, Tooltip, Upload, message } from 'antd'
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
+import PageBanner from '../components/PageBanner'
 
 // .map 파일 파라미터 정의
 const PARAMS = [
@@ -201,12 +202,11 @@ export default function PLTrend() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 헤더 */}
-      <div className="nowa-page-intro">
-        <div className="nowa-page-kicker">분석</div>
-        <div className="nowa-page-title" style={{ fontSize: 24 }}>PL 트렌드</div>
-        <div className="nowa-page-desc">.map 파일을 업로드하면 파라미터별 스캐터 차트와 통계를 분석합니다.</div>
-      </div>
+      <PageBanner
+        kicker="분석"
+        title="PL 트렌드"
+        desc=".map 파일을 업로드하면 파라미터별 스캐터 차트와 통계를 분석합니다."
+      />
 
       {/* 컨트롤 */}
       <Card className="nowa-card" styles={{ body: { padding: '14px 18px', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' } }}>

@@ -6,6 +6,7 @@ import { AppstoreOutlined, BarChartOutlined, CalendarOutlined, CheckCircleOutlin
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
+import PageBanner from '../../../components/PageBanner'
 
 
 const PM_ROW_H = 34
@@ -468,15 +469,14 @@ function PmStatusBoard({ refreshKey, thresholds = {} }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* 페이지 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(245,158,11,0.6)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>PM 주기 현황판</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--nowa-text)', letterSpacing: -0.5 }}>MOCVD PM 주기 현황</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 6 }}>PM 기준 횟수 대비 현재 사용 횟수를 기준으로 교체 필요 설비를 확인합니다.</div>
-        </div>
-        <Button icon={<ReloadOutlined />} onClick={fetchRows} loading={loading}>새로고침</Button>
-      </div>
+      <PageBanner
+        kicker="PM 주기 현황판"
+        title="MOCVD PM 주기 현황"
+        desc="PM 기준 횟수 대비 현재 사용 횟수를 기준으로 교체 필요 설비를 확인합니다."
+        extra={(
+          <Button icon={<ReloadOutlined />} onClick={fetchRows} loading={loading}>새로고침</Button>
+        )}
+      />
 
       {/* KPI 카드 */}
       <Row gutter={[14, 14]}>

@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Card, Select, Upload, Button, Space, Typography, theme, message, Tag, Divider, Switch } from 'antd'
 import { UploadOutlined, ReloadOutlined } from '@ant-design/icons'
-import ReactECharts from 'echarts-for-react'
 import WaferMapRange, { PALETTES } from '../components/WaferMapRange'
+import PageBanner from '../components/PageBanner'
 
 const { Text } = Typography
 
@@ -170,78 +170,63 @@ export default function WaferMapPage() {
     return m
   }, [data])
 
-  // ECharts 옵션 — visualMap 없이 renderItem에서 직접 컬러 계산
-  const chartOption = useMemo(() => {
-    return {
-      backgroundColor: 'transparent',
-      tooltip: { show: false },
-      grid: { left: 4, right: 4, top: 4, bottom: 4 },
-      xAxis: {
-        type: 'value', min: -12.5, max: 12.5,
-        axisLabel: { show: false },
-        splitLine: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: 'value', min: -12.5, max: 12.5,
-        axisLabel: { show: false },
-        splitLine: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-      },
-      series: [
-        // ① 웨이퍼 경계선
-        {
-          type: 'line',
-          data: WAFER_CIRCLE,
-          showSymbol: false,
-          lineStyle: { color: 'rgba(160,170,190,0.7)', width: 1.5 },
-          z: 3, silent: true,
-          encode: { x: 0, y: 1 },
-        },
-        // ② 데이터 셀 (사각형 — 수동 컬러)
-        {
-          type: 'custom',
-          renderItem: (_p, api) => {
-            const cx  = api.value(0)
-            const cy  = api.value(1)
-            const val = api.value(2)
-            const tl  = api.coord([cx - 0.5, cy + 0.5])
-            const br  = api.coord([cx + 0.5, cy - 0.5])
-            const fill = valToColor(val, rangeStart, rangeEnd, colors)
-            return {
-              type: 'rect',
-              shape: {
-                x: tl[0], y: tl[1],
-                width:  Math.max(br[0] - tl[0], 1),
-                height: Math.max(br[1] - tl[1], 1),
-              },
-              style: {
-                fill,
-                stroke: 'rgba(0,0,0,0.12)',
-                lineWidth: 0.5,
-              },
-            }
-          },
-          encode: { x: 0, y: 1, value: 2 },
-          data: data.points.map(p => [p.x, p.y, p[param] || 0]),
-          z: 2,
-        },
-      ],
-    }
-  }, [data, param, rangeStart, rangeEnd, colors, token])
+  // Canvas-based wafer map renderer
+  const canvasRef = useRef(null)
 
-  const onEvents = useMemo(() => ({
-    mousemove: (params) => {
-      if (params.seriesIndex === 1 && Array.isArray(params.data)) {
-        const [x, y] = params.data
-        const pt = pointMap[`${x},${y}`]
-        if (pt) setHovered(pt)
-      }
-    },
-    globalout: () => setHovered(null),
-  }), [pointMap])
+  const drawWafer = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const W = canvas.width
+    const H = canvas.height
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, W, H)
+
+    // coordinate transform: data [-12.5, 12.5] → canvas [0, W]
+    const toCanvasX = (gx) => ((gx + 12.5) / 25) * W
+    const toCanvasY = (gy) => ((12.5 - gy) / 25) * H
+    const cellW = W / 25
+    const cellH = H / 25
+
+    // draw cells
+    data.points.forEach((p) => {
+      const val = p[param] || 0
+      const fill = valToColor(val, rangeStart, rangeEnd, colors)
+      ctx.fillStyle = fill
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)'
+      ctx.lineWidth = 0.5
+      const cx = toCanvasX(p.x) - cellW / 2
+      const cy = toCanvasY(p.y) - cellH / 2
+      ctx.fillRect(cx, cy, Math.max(cellW, 1), Math.max(cellH, 1))
+      ctx.strokeRect(cx, cy, Math.max(cellW, 1), Math.max(cellH, 1))
+    })
+
+    // draw wafer circle
+    ctx.beginPath()
+    ctx.arc(W / 2, H / 2, (W / 25) * WAFER_R, 0, 2 * Math.PI)
+    ctx.strokeStyle = 'rgba(160,170,190,0.7)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+  }, [data, param, rangeStart, rangeEnd, colors])
+
+  useEffect(() => {
+    drawWafer()
+  }, [drawWafer])
+
+  const handleCanvasMouseMove = useCallback((e) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const px = e.clientX - rect.left
+    const py = e.clientY - rect.top
+    const W = canvas.offsetWidth
+    const H = canvas.offsetHeight
+    const gx = Math.round((px / W) * 25 - 12.5)
+    const gy = Math.round(12.5 - (py / H) * 25)
+    const pt = pointMap[`${gx},${gy}`]
+    setHovered(pt ?? null)
+  }, [pointMap])
+
+  const handleCanvasMouseLeave = useCallback(() => setHovered(null), [])
 
   // WaferMapRange 콜백
   const handleRangeChange = ({ start, end, auto, dist }) => {
@@ -272,6 +257,11 @@ export default function WaferMapPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
+      <PageBanner
+        kicker="분석"
+        title="웨이퍼맵"
+        desc="맵 파일을 불러와 웨이퍼 분포와 통계 값을 같은 화면에서 확인합니다."
+      />
 
       {/* ─── 본문 ─── */}
       <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
@@ -312,12 +302,14 @@ export default function WaferMapPage() {
           {/* 차트 + 컬러바 나란히 — 차트는 항상 1:1 정사각형 */}
           <div style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 8px 8px 0' }}>
             {/* 1:1 비율 정사각형 차트 */}
-            <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: 640, aspectRatio: '1 / 1' }}>
-              <ReactECharts
-                option={chartOption}
-                style={{ width: '100%', height: '100%' }}
-                onEvents={onEvents}
-                opts={{ renderer: 'canvas' }}
+            <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: 640, aspectRatio: '1 / 1', position: 'relative' }}>
+              <canvas
+                ref={canvasRef}
+                width={640}
+                height={640}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseLeave={handleCanvasMouseLeave}
+                style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }}
               />
             </div>
             {/* 커스텀 WaferMapRange 컬러바 — 차트 높이에 맞춤 */}

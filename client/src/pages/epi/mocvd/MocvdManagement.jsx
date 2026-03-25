@@ -23,6 +23,7 @@ import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { useThemeMode } from '../../../theme/useThemeMode'
 import WorkLog from './WorkLog'
+import PageBanner from '../../../components/PageBanner'
 
 function getMachineRiskStatus(sources, forcedDown) {
   if (forcedDown) return 'forced'
@@ -675,18 +676,16 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="nowa-page-intro">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, width: '100%' }}>
-          <div>
-            <div className="nowa-page-kicker">설비 관리</div>
-            <div className="nowa-page-title" style={{ fontSize: 24 }}>MOCVD 장비 현황판</div>
-            <div className="nowa-page-desc">현재 소스 사용 데이터와 강제 다운 지정 상태를 기준으로 장비 상태를 보여줍니다.</div>
-          </div>
+      <PageBanner
+        kicker="설비 관리"
+        title="MOCVD 장비 현황판"
+        desc="현재 소스 사용 데이터와 강제 다운 지정 상태를 기준으로 장비 상태를 보여줍니다."
+        extra={(
           <Button icon={<ReloadOutlined />} onClick={fetchAll} className="nowa-btn">
             현황 새로고침
           </Button>
-        </div>
-      </div>
+        )}
+      />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>

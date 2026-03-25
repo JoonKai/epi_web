@@ -9,7 +9,7 @@ import {
   ShopOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
-import ReactECharts from 'echarts-for-react'
+import SafeAgChart from '../../../components/SafeAgChart'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import PersonnelManagement, { VendorTab, MemberTab } from './PersonnelManagement'
@@ -31,6 +31,8 @@ const tabBarStyle = {
 const CELL_W = 46   // 날짜 셀 고정 너비
 const NAME_W = 100  // 이름 셀 너비
 const SUM_W  = 48   // 집계 셀 너비
+const CHART_AXIS_FONT_SIZE = 12
+const CHART_LEGEND_FONT_SIZE = 14
 
 // shiftTypes 배열 → 빠른 조회용 맵 생성
 function buildShiftMaps(shiftTypes) {
@@ -303,56 +305,72 @@ function ScheduleTab() {
   }, [members, dateList, displayScheduleMap, shiftCycle, activeSummaryRowKeys])
 
 
-  // ECharts - 앞 3개 근무 유형 표시
+  // ag-charts — 일별 근무 인원 현황 (날짜별 인원수 스택 막대)
   const chartOption = useMemo(() => {
-    const xData  = dateList.map((d) => d.format('M/D'))
-    const top3   = activeSummaryRowKeys.length > 0 ? activeSummaryRowKeys : shiftCycle
-    const allVals = top3.flatMap((k) => dateList.map((d) => daySummary[k]?.[d.format('YYYY-MM-DD')] || 0))
-    const maxVal  = Math.max(...allVals, 1)
+    const top3 = activeSummaryRowKeys.length > 0 ? activeSummaryRowKeys : shiftCycle
 
-    const gradBar = (color, name, data) => ({
-      name, type: 'bar', data,
-      barMaxWidth: 16, barGap: '8%',
-      itemStyle: {
-        borderRadius: [4, 4, 0, 0],
-        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [{ offset: 0, color: color }, { offset: 1, color: color + '0d' }] },
-      },
+    const data = dateList.map((d) => {
+      const dateKey = d.format('YYYY-MM-DD')
+      const entry = { date: d.format('M/D') }
+      top3.forEach((k) => {
+        const value = daySummary[k]?.[dateKey] || 0
+        entry[k] = value
+      })
+      return entry
     })
 
     return {
-      backgroundColor: 'transparent',
-      grid: { top: 28, right: 16, bottom: 32, left: 32, containLabel: true },
+      background: { fill: 'transparent' },
+      padding: { top: 18, right: 16, bottom: 24, left: 32 },
       legend: {
-        right: 12, top: 2,
-        textStyle: { color: 'rgba(214,222,232,0.65)', fontSize: 14},
-        itemWidth: 12, itemHeight: 8,
+        enabled: true,
+        position: 'top',
+        item: {
+          marker: {
+            size: 16,
+            strokeWidth: 1.5,
+          },
+          label: {
+            color: 'rgba(196,210,226,0.78)',
+            fontSize: CHART_LEGEND_FONT_SIZE,
+            fontWeight: 700,
+          },
+        },
       },
-      xAxis: {
-        type: 'category', data: xData,
-        axisLine: { lineStyle: { color: 'rgba(245,158,11,0.15)' } },
-        axisTick: { show: false },
-        axisLabel: { color: 'rgba(214,222,232,0.45)', fontSize: 14, interval: 1 },
-        splitLine: { show: false },
+      axes: {
+        x: {
+          type: 'category',
+          position: 'bottom',
+          label: {
+            color: 'rgba(196,210,226,0.72)',
+            fontSize: CHART_AXIS_FONT_SIZE,
+            fontWeight: 600,
+          },
+          tick: { enabled: false },
+        },
+        y: {
+          type: 'number',
+          position: 'left',
+          label: {
+            color: 'rgba(196,210,226,0.68)',
+            fontSize: CHART_AXIS_FONT_SIZE,
+            fontWeight: 600,
+          },
+          min: 0,
+          gridLine: { stroke: 'rgba(255,255,255,0.06)', lineDash: [3, 3] },
+        },
       },
-      yAxis: {
-        type: 'value', min: 0, max: maxVal + 1, interval: 1,
-        axisLine: { show: false }, axisTick: { show: false },
-        axisLabel: { color: 'rgba(214,222,232,0.4)', fontSize: 14},
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
-      },
-      series: top3.map((k) => {
-        const color = shiftLegend[k]?.color ?? '#b0c0d0'
-        const label = shiftLegend[k]?.label ?? k
-        const data  = dateList.map((d) => daySummary[k]?.[d.format('YYYY-MM-DD')] || 0)
-        return gradBar(color, label, data)
-      }),
-      tooltip: {
-        trigger: 'axis', axisPointer: { type: 'shadow' },
-        backgroundColor: '#242834',
-        borderColor: 'rgba(245,158,11,0.2)',
-        textStyle: { color: '#e2e8f0', fontSize: 14},
-      },
+      data,
+      series: top3.map((k) => ({
+        type: 'bar',
+        xKey: 'date',
+        yKey: k,
+        yName: shiftLegend[k]?.label ?? k,
+        stacked: true,
+        fill: shiftLegend[k]?.bg ?? shiftLegend[k]?.color ?? '#b0c0d0',
+        stroke: shiftLegend[k]?.border ?? shiftLegend[k]?.color ?? '#b0c0d0',
+        strokeWidth: 1,
+      })),
     }
   }, [dateList, daySummary, shiftCycle, shiftLegend, activeSummaryRowKeys])
 
@@ -389,7 +407,7 @@ function ScheduleTab() {
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ color: '#f59e0b', fontSize: 15 }}><CalendarOutlined /></span>
-          <span style={{ fontWeight: 800 }}>근무현황판</span>
+          <span style={{ fontWeight: 800 }}>근무표</span>
         </div>
       }
       extra={
@@ -733,7 +751,7 @@ function ScheduleTab() {
             }}>
               일별 근무 인원 현황
             </div>
-            <ReactECharts option={chartOption} style={{ height: 190 }} theme="dark" />
+            <SafeAgChart options={chartOption} style={{ height: 260 }} />
           </div>
         </>
       )}
@@ -1061,6 +1079,71 @@ function PmPersonnelTab({ vendors, members }) {
   )
 }
 
+// ── 인원 현황판 ────────────────────────────────────────────────────
+function PersonnelDashboard({ vendors, members }) {
+  const activeMembers = members.filter((m) => m.is_active !== false)
+  const inactiveMembers = members.filter((m) => m.is_active === false)
+
+  const byVendor = vendors.map((v) => ({
+    ...v,
+    count: members.filter((m) => m.vendor_id === v.id).length,
+    active: members.filter((m) => m.vendor_id === v.id && m.is_active !== false).length,
+  }))
+
+  const kpiStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '20px 24px', borderRadius: 14, border: '1px solid var(--nowa-border)', background: 'var(--nowa-panel)', flex: 1, minWidth: 120 }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={kpiStyle}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', letterSpacing: 1.2, textTransform: 'uppercase' }}>전체 인원</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--nowa-text)', lineHeight: 1 }}>{members.length}</div>
+          <div style={{ fontSize: 13, color: 'var(--nowa-text-muted)' }}>명</div>
+        </div>
+        <div style={kpiStyle}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', letterSpacing: 1.2, textTransform: 'uppercase' }}>재직 중</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#22c55e', lineHeight: 1 }}>{activeMembers.length}</div>
+          <div style={{ fontSize: 13, color: 'var(--nowa-text-muted)' }}>명</div>
+        </div>
+        <div style={kpiStyle}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 1.2, textTransform: 'uppercase' }}>퇴직/비활성</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#94a3b8', lineHeight: 1 }}>{inactiveMembers.length}</div>
+          <div style={{ fontSize: 13, color: 'var(--nowa-text-muted)' }}>명</div>
+        </div>
+        <div style={kpiStyle}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', letterSpacing: 1.2, textTransform: 'uppercase' }}>업체 수</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{vendors.length}</div>
+          <div style={{ fontSize: 13, color: 'var(--nowa-text-muted)' }}>개사</div>
+        </div>
+      </div>
+
+      <Card className="nowa-card" title={<span style={{ fontWeight: 700 }}>업체별 인원 현황</span>} styles={{ body: { padding: 0 } }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'rgba(245,158,11,0.06)', borderBottom: '1px solid var(--nowa-border)' }}>
+              {['업체명', '전체', '재직 중', '비활성'].map((h) => (
+                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: 'rgba(251,191,36,0.75)', letterSpacing: 1 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {byVendor.length === 0 ? (
+              <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: 'var(--nowa-text-muted)' }}>등록된 업체가 없습니다.</td></tr>
+            ) : byVendor.map((v, i) => (
+              <tr key={v.id} style={{ borderBottom: '1px solid var(--nowa-border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.016)' }}>
+                <td style={{ padding: '10px 16px', color: 'var(--nowa-text)', fontWeight: 600 }}>{v.name}</td>
+                <td style={{ padding: '10px 16px', color: 'var(--nowa-text-soft)' }}>{v.count}명</td>
+                <td style={{ padding: '10px 16px', color: '#22c55e', fontWeight: 700 }}>{v.active}명</td>
+                <td style={{ padding: '10px 16px', color: '#94a3b8' }}>{v.count - v.active}명</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  )
+}
+
 // ── 업체/인원 데이터 공유 래퍼 ─────────────────────────────────────
 function PersonnelDataPanel({ tabKey, vendors, members, refreshAll }) {
   const props = { vendors, members, refreshAll }
@@ -1108,8 +1191,13 @@ function ShiftSchedule() {
 
   const tabs = [
     {
+      key: 'dashboard',
+      label: <span><UserOutlined style={{ marginRight: 5 }} />인원 현황판</span>,
+      children: tabWrap(<PersonnelDashboard vendors={vendors} members={members} />),
+    },
+    {
       key: 'schedule',
-      label: <span><CalendarOutlined style={{ marginRight: 5 }} />근무현황판</span>,
+      label: <span><CalendarOutlined style={{ marginRight: 5 }} />근무표</span>,
       children: tabWrap(<ScheduleTab />),
     },
     {

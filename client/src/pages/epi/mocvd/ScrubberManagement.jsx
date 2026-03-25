@@ -19,20 +19,13 @@ const scrubberCards = [
 export default function ScrubberManagement() {
   return (
     <div style={{ display: 'grid', gap: 20 }}>
-      <Card
-        style={panelStyle}
-        styles={{ body: { padding: 28 } }}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 28 }}>
-            <ToolOutlined style={{ color: '#f59e0b' }} />
-            <span>스크러버 관리</span>
-          </div>
-        }
-      >
-        <Typography.Text style={{ color: 'rgba(196,210,226,0.72)', fontSize: 16 }}>
-          스크러버 설비 상태, 점검 계획, 교체 이력 화면을 이 메뉴에서 관리하도록 확장할 수 있습니다.
-        </Typography.Text>
-      </Card>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">설비 관리</span>
+          <div className="nowa-page-banner-title">스크러버 관리</div>
+          <div className="nowa-page-banner-desc">스크러버 설비 상태, 점검 계획, 교체 이력 화면을 이 메뉴에서 관리하도록 확장할 수 있습니다.</div>
+        </div>
+      </div>
 
       <Row gutter={[20, 20]}>
         {scrubberCards.map((card) => (

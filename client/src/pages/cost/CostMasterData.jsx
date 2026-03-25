@@ -94,11 +94,11 @@ function ItemMasterTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 8 }}>
-      <div className="nowa-page-intro">
-        <div>
-          <div className="nowa-page-kicker">비용 관리</div>
-          <div className="nowa-page-title" style={{ fontSize: 24 }}>품목 기준정보</div>
-          <div className="nowa-page-desc">구매요청에서 사용하는 품목 기준정보를 DB 기준으로 관리합니다.</div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">비용 관리</span>
+          <div className="nowa-page-banner-title">품목 기준정보</div>
+          <div className="nowa-page-banner-desc">구매요청에서 사용하는 품목 기준정보를 DB 기준으로 관리합니다.</div>
         </div>
       </div>
 
@@ -239,11 +239,11 @@ function VendorMasterTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 8 }}>
-      <div className="nowa-page-intro">
-        <div>
-          <div className="nowa-page-kicker">비용 관리</div>
-          <div className="nowa-page-title" style={{ fontSize: 24 }}>업체등록</div>
-          <div className="nowa-page-desc">구매요청과 발주에 사용할 공급업체 기준정보를 DB 기준으로 관리합니다.</div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">비용 관리</span>
+          <div className="nowa-page-banner-title">업체등록</div>
+          <div className="nowa-page-banner-desc">구매요청과 발주에 사용할 공급업체 기준정보를 DB 기준으로 관리합니다.</div>
         </div>
       </div>
 

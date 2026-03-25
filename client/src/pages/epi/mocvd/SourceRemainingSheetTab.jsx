@@ -7,7 +7,6 @@ import { formatMachineLabel } from './machineLabel'
 import { getSourceColor, getGroupColor } from './sourceColors'
 import { panelStyle } from '../../../theme/consoleTheme'
 import { useThemeMode } from '../../../theme/useThemeMode'
-import SourceRidgelineChart from './SourceRidgelineChart'
 
 const BORDER = '1px solid var(--nowa-border)'
 const DEFAULT_THRESHOLD_RATIO = 15
@@ -430,12 +429,11 @@ export default function SourceRemainingSheetTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <div className="console-toolbar">
-        <div>
-          <div style={{ color: 'var(--console-text)', fontSize: 18, fontWeight: 800, marginTop: 4 }}>잔량기입 시트</div>
-          <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
-            비활성 소스(설비 구성에서 설정)는 사선 처리됩니다.
-          </div>
+      <div className="nowa-page-banner">
+        <div className="nowa-page-banner-left">
+          <span className="nowa-page-banner-kicker">소스 관리</span>
+          <div className="nowa-page-banner-title">잔량기입 시트</div>
+          <div className="nowa-page-banner-desc">비활성 소스(설비 구성에서 설정)는 사선 처리됩니다.</div>
         </div>
       </div>
 
@@ -457,23 +455,6 @@ export default function SourceRemainingSheetTab() {
       </Card>
 
       {error ? <Alert type="error" message={error} /> : null}
-
-      {!loading && orderedMachines.length > 0 && sourceOrder.length > 0 && (
-        <Card
-          className="console-panel"
-          style={{ ...panelStyle, minHeight: 0, overflow: 'hidden' }}
-          styles={{ body: { padding: '10px 14px 0' } }}
-          title="소스별 잔량 예측 추이"
-        >
-          <SourceRidgelineChart
-            sourceOrder={sourceOrder}
-            cellData={cellData}
-            machines={orderedMachines}
-            forecastDays={forecastDays}
-            historyData={historyData}
-          />
-        </Card>
-      )}
 
       <Card
         className="console-panel"
