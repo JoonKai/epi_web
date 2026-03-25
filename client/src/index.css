@@ -774,6 +774,18 @@ a { color: inherit; }
   background: var(--nowa-primary);
 }
 
+.source-tabs.ant-tabs .ant-tabs-tab {
+  border-radius: 0 !important;
+}
+
+.source-tabs.ant-tabs .ant-tabs-tab-btn {
+  border-radius: 0 !important;
+}
+
+.source-tabs.ant-tabs .ant-tabs-nav::before {
+  border-bottom-color: var(--nowa-border);
+}
+
 /* ── Table ──────────────────────────────────────────────────────── */
 .console-table.ant-table-wrapper .ant-table {
   background: transparent;

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Card, Input, Space, Spin } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { getGroupColor } from './sourceColors'
-import { panelStyle } from '../../../theme/consoleTheme'
 
 const BORDER = '1px solid rgba(245,158,11,0.12)'
 const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
@@ -110,7 +109,7 @@ function ToggleBadge({ active, onClick }) {
         cursor: 'pointer',
       }}
     >
-      {active ? '안함' : '사용'}
+      {active ? '?덊븿' : '?ъ슜'}
     </button>
   )
 }
@@ -263,30 +262,19 @@ export default function SourceTableSheetTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <div className="nowa-page-banner">
-        <div className="nowa-page-banner-left">
-          <span className="nowa-page-banner-kicker">소스 관리</span>
-          <div className="nowa-page-banner-title">소스 계산</div>
-          <div className="nowa-page-banner-desc">설비별 행 기준으로 사용 여부, 초기량, 일사용량, 잔량, 교체기준(%), 교체 기준량, 교체예정일을 관리합니다.</div>
-        </div>
-      </div>
-
       {error ? <Alert type="error" message={error} /> : null}
 
       <Card
-        className="console-panel"
-        style={{ ...panelStyle, minHeight: 0, overflow: 'hidden' }}
-        styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
-        title="소스 계산"
-        extra={(
-          <Space wrap>
-            <Input value={quickFilter} onChange={(event) => setQuickFilter(event.target.value)} placeholder="호기 검색" style={{ width: 150 }} allowClear />
-            <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
-            <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
-          </Space>
-        )}
+        className="nowa-card"
+        styles={{ body: { padding: 16 } }}
       >
-        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 8, flexWrap: 'wrap', paddingBottom: 12, marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.14)' }}>
+          <Input value={quickFilter} onChange={(event) => setQuickFilter(event.target.value)} placeholder="호기 검색" style={{ width: 150 }} allowClear />
+          <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
+          <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
+        </div>
+
+        <div style={{ padding: '0 2px 12px', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
           `일사용량`, `잔량`은 잔량기입 데이터를 그대로 표시합니다. 이 화면에서는 `초기량`, `교체기준(%)`만 수정합니다.
         </div>
         {loading ? (
@@ -294,7 +282,7 @@ export default function SourceTableSheetTab() {
             <Spin tip="소스 계산 데이터를 불러오는 중입니다." />
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 320px)' }}>
+          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 320px)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.14)' }}>
             <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
               <colgroup>
                 <col style={{ width: 108 }} />
@@ -382,3 +370,4 @@ export default function SourceTableSheetTab() {
     </div>
   )
 }
+

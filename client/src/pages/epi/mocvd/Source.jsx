@@ -933,7 +933,7 @@ export default function Source() {
         { key: 'machine-board', label: <span><HeatMapOutlined />{"\uC124\uBE44\uBCC4 \uC18C\uC2A4\uD604\uD669"}</span>, children: <SourceMachineBoard /> },
         { key: 'input', label: <span><EditOutlined />{"\uC794\uB7C9\uAE30\uC785"}</span>, children: <SourceInputTab /> },
         { key: 'table-sheet', label: <span><TableOutlined />TABLE</span>, children: <SourceTableSheetTab /> },
-        { key: 'machine-config', label: <span><TableOutlined />{"설비 구성"}</span>, children: <SourceMachineConfigTab /> },
+        { key: 'machine-config', label: <span><TableOutlined />{"설비 / 소스 구성"}</span>, children: <SourceMachineConfigTab /> },
         { key: 'change-log', label: <span><BookOutlined />{"\uC18C\uC2A4\uAD50\uCCB4 \uC791\uC5C5\uC77C\uC9C0"}</span>, children: <SourceChangeLogTab /> },
       ]}
     />

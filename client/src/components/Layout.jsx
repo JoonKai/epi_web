@@ -161,7 +161,9 @@ function Layout({ children, isDark, onThemeToggle }) {
   const { user, logout } = useAuth()
   const isDashboardPage = location.pathname === '/dashboard'
   const disableCompactScale =
-    isDashboardPage || location.pathname === '/epi/mocvd/shift-schedule'
+    isDashboardPage ||
+    location.pathname === '/epi/mocvd/shift-schedule' ||
+    location.pathname === '/epi/mocvd/source'
 
   const isAdmin = user?.role === 'admin'
   const menuItems = useMemo(() => attachPopupClass(buildMenuItems(isAdmin)), [isAdmin])

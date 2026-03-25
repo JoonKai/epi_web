@@ -21,6 +21,7 @@ export default function SourceTabs() {
 
   return (
     <Tabs
+      className="source-tabs"
       activeKey={activeTab}
       destroyInactiveTabPane
       onChange={(key) => navigate(`/epi/mocvd/source?tab=${key}`)}
@@ -30,7 +31,7 @@ export default function SourceTabs() {
         { key: 'machine-board', label: <span><HeatMapOutlined /> 설비별 소스현황</span>, children: <SourceMachineBoard /> },
         { key: 'remaining-sheet', label: <span><EditOutlined /> 잔량기입</span>, children: <SourceRemainingSheetTab /> },
         { key: 'table-sheet', label: <span><TableOutlined /> 소스 계산</span>, children: <SourceTableSheetTab /> },
-        { key: 'machine-config', label: <span><TableOutlined /> 설비 구성</span>, children: <SourceMachineConfigTab /> },
+        { key: 'machine-config', label: <span><TableOutlined /> 설비 / 소스 구성</span>, children: <SourceMachineConfigTab /> },
         { key: 'change-log', label: <span><BookOutlined /> 소스 관리 대장</span>, children: <SourceChangeLogTab /> },
       ]}
     />

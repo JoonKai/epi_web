@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Button,
@@ -17,10 +17,9 @@ import {
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
-import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 
-const WORK_TYPE_OPTIONS = ['장착', '탈착', '교체', '보충', '점검']
-const ZONE_OPTIONS = ['A동', 'B동', 'C동', 'D동']
+const WORK_TYPE_OPTIONS = ['투입', '회수', '교체', '보충', '폐기']
+const ZONE_OPTIONS = ['A존', 'B존', 'C존', 'D존']
 
 function num(value, digits = 0) {
   const next = Number(value ?? 0)
@@ -91,7 +90,7 @@ export default function SourceChangeLogSourceTab() {
       machine_no: machineOptions[0]?.value,
       source_name: sourceOptions[0]?.value,
       work_type: '교체',
-      zone: 'B동',
+      zone: 'B존',
       line_name: '',
       production_group: '양산',
       source_slot: '',
@@ -191,10 +190,10 @@ export default function SourceChangeLogSourceTab() {
   }
 
   const columns = [
-    { title: '장착 날짜', dataIndex: 'install_date', width: 110, fixed: 'left' },
-    { title: '탈착 날짜', dataIndex: 'removal_date', width: 110, render: (value) => value || '-' },
+    { title: '투입 날짜', dataIndex: 'install_date', width: 110, fixed: 'left' },
+    { title: '회수 날짜', dataIndex: 'removal_date', width: 110, render: (value) => value || '-' },
     {
-      title: '교체 구분',
+      title: '작업 구분',
       dataIndex: 'work_type',
       width: 90,
       render: (value) => <Tag color="purple">{value}</Tag>,
@@ -207,7 +206,7 @@ export default function SourceChangeLogSourceTab() {
     },
     { title: '설비그룹', dataIndex: 'line_name', width: 90, render: (value) => value || '-' },
     {
-      title: '양산 개별',
+      title: '생산 단계',
       dataIndex: 'production_group',
       width: 90,
       render: (value) => <span style={{ color: '#1d4ed8', fontWeight: 700 }}>{value || '-'}</span>,
@@ -234,7 +233,7 @@ export default function SourceChangeLogSourceTab() {
     { title: 'After', dataIndex: 'after_value', width: 80, render: (value) => num(value) },
     { title: 'Used', dataIndex: 'used_amount', width: 80, render: (value) => <span style={{ background: '#dcfce7', color: '#14532d', padding: '1px 6px', borderRadius: 4 }}>{num(value)}</span> },
     { title: 'Used(%)', dataIndex: 'used_percent', width: 80, render: (value) => <span style={{ color: '#dc2626', fontWeight: 800 }}>{num(value)}%</span> },
-    { title: '실잔량', dataIndex: 'runtime_hours', width: 80, render: (value) => value || '-' },
+    { title: '가동시간', dataIndex: 'runtime_hours', width: 80, render: (value) => value || '-' },
     { title: 'SQL', dataIndex: 'sql_value', width: 70, render: (value) => value || '-' },
     { title: 'CTC', dataIndex: 'ctc_value', width: 70, render: (value) => value || '-' },
     { title: 'worker', dataIndex: 'worker_name', width: 130, render: (value) => value || '-' },
@@ -247,7 +246,7 @@ export default function SourceChangeLogSourceTab() {
       render: (_, row) => (
         <Space size={6}>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)} />
-          <Popconfirm title="이 작업 일지를 삭제할까요?" onConfirm={() => handleDelete(row.id)}>
+          <Popconfirm title="???묒뾽 ?쇱?瑜???젣?좉퉴??" onConfirm={() => handleDelete(row.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -257,22 +256,25 @@ export default function SourceChangeLogSourceTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <div className="nowa-page-banner">
-        <div className="nowa-page-banner-left">
-          <span className="nowa-page-banner-kicker">소스 관리 대장</span>
-          <div className="nowa-page-banner-title">MOCVD 소스 관리 대장</div>
-          <div className="nowa-page-banner-desc">엑셀 작업표 느낌으로 장착/탈착/교체 이력을 넓은 표에서 관리합니다.</div>
-        </div>
-      </div>
-
       {error ? <Alert type="error" message={error} showIcon /> : null}
 
       <Card
-        className="console-panel"
-        style={{ ...panelStyle }}
-        styles={{ body: { padding: 0 } }}
-        title="소스교체 작업표"
-        extra={(
+        className="nowa-card"
+        styles={{ body: { padding: 16 } }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            paddingBottom: 14,
+            marginBottom: 14,
+            borderBottom: '1px solid var(--nowa-border)',
+          }}
+        >
+          <div style={{ color: 'var(--nowa-text)', fontSize: 18, fontWeight: 800 }}>소스교체 작업 일지</div>
           <Space>
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
               새로고침
@@ -281,19 +283,21 @@ export default function SourceChangeLogSourceTab() {
               작업 추가
             </Button>
           </Space>
-        )}
-      >
-        <Table
-          className="console-table"
-          rowKey="id"
-          size="small"
-          bordered
-          loading={loading}
-          columns={columns}
-          dataSource={logs}
-          pagination={{ pageSize: 12, showSizeChanger: false }}
-          scroll={{ x: 2550 }}
-        />
+        </div>
+
+        <div style={{ border: '1px solid var(--nowa-border)', overflow: 'hidden' }}>
+          <Table
+            className="console-table"
+            rowKey="id"
+            size="small"
+            bordered
+            loading={loading}
+            columns={columns}
+            dataSource={logs}
+            pagination={{ pageSize: 12, showSizeChanger: false }}
+            scroll={{ x: 2550 }}
+          />
+        </div>
       </Card>
 
       <Modal
@@ -307,13 +311,13 @@ export default function SourceChangeLogSourceTab() {
       >
         <Form form={form} layout="vertical" className="console-form">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
-            <Form.Item name="install_date" label="장착 날짜" rules={[{ required: true, message: '장착 날짜를 선택하세요.' }]}>
+            <Form.Item name="install_date" label="투입 날짜" rules={[{ required: true, message: '투입 날짜를 선택하세요.' }]}>
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="removal_date" label="탈착 날짜">
+            <Form.Item name="removal_date" label="회수 날짜">
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="work_type" label="교체 구분" rules={[{ required: true, message: '교체 구분을 선택하세요.' }]}>
+            <Form.Item name="work_type" label="작업 구분" rules={[{ required: true, message: '작업 구분을 선택하세요.' }]}>
               <Select options={WORK_TYPE_OPTIONS.map((value) => ({ value, label: value }))} />
             </Form.Item>
             <Form.Item name="zone" label="zone">
@@ -323,7 +327,7 @@ export default function SourceChangeLogSourceTab() {
             <Form.Item name="line_name" label="설비그룹">
               <Input />
             </Form.Item>
-            <Form.Item name="production_group" label="양산 개별">
+            <Form.Item name="production_group" label="생산 단계">
               <Input />
             </Form.Item>
             <Form.Item name="machine_no" label="호기" rules={[{ required: true, message: '호기를 선택하세요.' }]}>
@@ -365,7 +369,7 @@ export default function SourceChangeLogSourceTab() {
             <Form.Item name="used_percent" label="Used(%)">
               <InputNumber style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="runtime_hours" label="실잔량">
+            <Form.Item name="runtime_hours" label="가동시간">
               <InputNumber style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item name="sql_value" label="SQL">
@@ -388,3 +392,4 @@ export default function SourceChangeLogSourceTab() {
     </div>
   )
 }
+

@@ -1,0 +1,282 @@
+.sih4-jspreadsheet-shell {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #4a5a8a;
+  border-radius: 10px;
+  overflow: visible;
+}
+
+.sih4-jspreadsheet-shell .jss_spreadsheet,
+.sih4-jspreadsheet-shell .jss_container,
+.sih4-jspreadsheet-shell .jss_content {
+  background: transparent !important;
+}
+
+.sih4-jspreadsheet-shell .jss_container {
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-right: 0 !important;
+  outline: 0 !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet {
+  border-collapse: collapse;
+  background: #171b26 !important;
+  border-right: 1px solid rgba(65, 85, 125, 0.52) !important;
+  border-bottom: 1px solid rgba(65, 85, 125, 0.52) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > thead > tr > td {
+  background: linear-gradient(180deg, #223253 0%, #1b2945 100%) !important;
+  color: rgba(214, 223, 238, 0.95) !important;
+  border-color: rgba(83, 107, 156, 0.72) !important;
+  font-weight: 700 !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td {
+  background: #171b26 !important;
+  color: rgba(196, 210, 226, 0.88) !important;
+  border-color: rgba(65, 85, 125, 0.52) !important;
+  font-size: 14px;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr:nth-child(even) > td {
+  background: #1b2030 !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr:hover > td {
+  background: #202637 !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td:first-child,
+.sih4-jspreadsheet-shell .jss_corner {
+  background: linear-gradient(180deg, #232838 0%, #1d2230 100%) !important;
+  color: rgba(148, 163, 184, 0.88) !important;
+  border-color: rgba(65, 85, 125, 0.46) !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr.selected > td:first-child {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.16) 0%, rgba(37, 99, 235, 0.12) 100%) !important;
+  color: rgba(196, 210, 226, 0.96) !important;
+  box-shadow: inset 2px 0 0 rgba(96, 165, 250, 0.9) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet .highlight,
+.sih4-jspreadsheet-shell .jss_worksheet .highlight-selected,
+.sih4-jspreadsheet-shell .jss_worksheet .selection {
+  background: rgba(125, 156, 214, 0.12) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet .highlight-top,
+.sih4-jspreadsheet-shell .jss_worksheet .highlight-right,
+.sih4-jspreadsheet-shell .jss_worksheet .highlight-bottom,
+.sih4-jspreadsheet-shell .jss_worksheet .highlight-left {
+  border-color: rgba(65, 85, 125, 0.52) !important;
+  border-width: 1px !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet .selection-top,
+.sih4-jspreadsheet-shell .jss_worksheet .selection-right,
+.sih4-jspreadsheet-shell .jss_worksheet .selection-bottom,
+.sih4-jspreadsheet-shell .jss_worksheet .selection-left {
+  border-color: rgba(114, 168, 255, 0.82) !important;
+  border-width: 1px !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet .selection-top,
+.sih4-jspreadsheet-shell .jss_worksheet .selection-right,
+.sih4-jspreadsheet-shell .jss_worksheet .selection-bottom,
+.sih4-jspreadsheet-shell .jss_worksheet .selection-left {
+  box-shadow: none !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td.selected,
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td.highlight-selected {
+  background: rgba(125, 156, 214, 0.1) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td > input,
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td > textarea,
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td > select,
+.sih4-jspreadsheet-shell .jss_worksheet .editor,
+.sih4-jspreadsheet-shell .jss_worksheet .editor > input {
+  background: #111827 !important;
+  color: rgba(226, 232, 240, 0.95) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.32) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td > select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 18px !important;
+  background-repeat: no-repeat !important;
+  background-position: right 4px center !important;
+  background-size: 14px 14px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='none' d='M0 0h24v24H0V0z'/%3E%3Cpath d='M7 10l5 5 5-5H7z' fill='%23f59e0b'/%3E%3C/svg%3E") !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td.jss_dropdown {
+  background-image: none !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td.readonly {
+  color: rgba(148, 163, 184, 0.55) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_content {
+  scrollbar-color: rgba(245, 158, 11, 0.45) rgba(255, 255, 255, 0.04);
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.sih4-jspreadsheet-shell .jss_spreadsheet,
+.sih4-jspreadsheet-shell .jss_spreadsheet:focus,
+.sih4-jspreadsheet-shell .jss_container:focus,
+.sih4-jspreadsheet-shell .jss_content:focus {
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.sih4-jspreadsheet-shell .jss_content::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.sih4-jspreadsheet-shell .jss_content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sih4-jspreadsheet-shell .jss_content::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.45);
+  border-radius: 999px;
+}
+
+.sih4-jspreadsheet-shell .jss_contextmenu {
+  position: fixed !important;
+  z-index: 3200 !important;
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid rgba(74, 90, 138, 0.9) !important;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1b2130 0%, #161b27 100%) !important;
+  color: rgba(214, 223, 238, 0.92) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(14px);
+}
+
+.sih4-jspreadsheet-shell .jss_contextmenu > div {
+  border-radius: 8px;
+}
+
+.sih4-jspreadsheet-shell .jss_contextmenu > div a {
+  color: rgba(214, 223, 238, 0.92) !important;
+  font-size: 14px;
+}
+
+.sih4-jspreadsheet-shell .jss_contextmenu > div.contextmenu-line {
+  margin: 6px 2px;
+  border-top-color: rgba(74, 90, 138, 0.55) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_contextmenu > div:not(.contextmenu-line):hover {
+  background: rgba(96, 165, 250, 0.12) !important;
+}
+
+.sih4-jspreadsheet-shell .jss_contextmenu > div:not(.contextmenu-line):hover a {
+  color: rgba(226, 232, 240, 0.98) !important;
+}
+
+.jcalendar {
+  background: rgba(8, 10, 16, 0.35) !important;
+  z-index: 3000 !important;
+}
+
+.jcalendar .jcalendar-backdrop {
+  background: transparent !important;
+}
+
+.jcalendar .jcalendar-container,
+.jcalendar .jcalendar-content {
+  background: #171b26 !important;
+  color: rgba(214, 223, 238, 0.94) !important;
+  border: 1px solid rgba(245, 158, 11, 0.18) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55) !important;
+}
+
+.jcalendar-header {
+  background: linear-gradient(180deg, #223253 0%, #1b2945 100%) !important;
+  color: rgba(226, 232, 240, 0.96) !important;
+}
+
+.jcalendar-header span,
+.jcalendar-prev,
+.jcalendar-next,
+.jcalendar-month,
+.jcalendar-year {
+  color: rgba(226, 232, 240, 0.96) !important;
+}
+
+.jcalendar-weekday,
+.jcalendar-table thead td {
+  color: rgba(148, 163, 184, 0.88) !important;
+  background: #1b2030 !important;
+}
+
+.jcalendar-table > table > tbody td,
+.jcalendar-months td,
+.jcalendar-years td {
+  color: rgba(214, 223, 238, 0.9) !important;
+  background: #171b26 !important;
+}
+
+.jcalendar-selected,
+.jcalendar-table > table > tbody td:hover,
+.jcalendar-months td:hover,
+.jcalendar-years td:hover {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+}
+
+.jcalendar-disabled {
+  color: rgba(100, 116, 139, 0.5) !important;
+}
+
+.jcalendar-controls {
+  background: #111827 !important;
+  border-top: 1px solid rgba(245, 158, 11, 0.14) !important;
+}
+
+.jcalendar-reset,
+.jcalendar-confirm,
+.jcalendar-update {
+  color: #f59e0b !important;
+}
+
+.jcalendar-controls div {
+  color: rgba(226, 232, 240, 0.94) !important;
+}
+
+.jcalendar-update {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(249, 115, 22, 0.12) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.26) !important;
+  color: #fbbf24 !important;
+  box-shadow: none !important;
+}
+
+.jcalendar-input {
+  background: #111827 !important;
+  color: rgba(226, 232, 240, 0.95) !important;
+  border: 1px solid rgba(245, 158, 11, 0.22) !important;
+}

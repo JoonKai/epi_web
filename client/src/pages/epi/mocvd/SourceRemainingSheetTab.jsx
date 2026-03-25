@@ -5,7 +5,6 @@ import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { getSourceColor, getGroupColor } from './sourceColors'
-import { panelStyle } from '../../../theme/consoleTheme'
 import { useThemeMode } from '../../../theme/useThemeMode'
 
 const BORDER = '1px solid var(--nowa-border)'
@@ -299,6 +298,7 @@ export default function SourceRemainingSheetTab() {
       .reverse()
   }, [historyData])
 
+
   const handleChange = (machineNo, sourceName, field, value) => {
     const key = `${machineNo}:${sourceName}`
     setCellData((prev) => ({ ...prev, [key]: { ...prev[key], [field]: Number(value ?? 0) } }))
@@ -429,14 +429,6 @@ export default function SourceRemainingSheetTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <div className="nowa-page-banner">
-        <div className="nowa-page-banner-left">
-          <span className="nowa-page-banner-kicker">소스 관리</span>
-          <div className="nowa-page-banner-title">잔량기입 시트</div>
-          <div className="nowa-page-banner-desc">비활성 소스(설비 구성에서 설정)는 사선 처리됩니다.</div>
-        </div>
-      </div>
-
       <Card className="nowa-card" styles={{ body: { padding: 16 } }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Space wrap size={16}>
@@ -457,11 +449,11 @@ export default function SourceRemainingSheetTab() {
       {error ? <Alert type="error" message={error} /> : null}
 
       <Card
-        className="console-panel"
-        style={{ ...panelStyle, minHeight: 0, overflow: 'hidden' }}
-        styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
-        title="전체 설비 소스 입력"
-        extra={(
+        className="nowa-card"
+        styles={{ body: { padding: 16 } }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center', paddingBottom: 12, marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.14)' }}>
+          <div style={{ color: 'var(--nowa-text-soft)', fontSize: 14, fontWeight: 700 }}>전체 설비 소스 입력</div>
           <Space wrap>
             <Button onClick={scrollToToday}>오늘</Button>
             <Space size={6}>
@@ -476,9 +468,8 @@ export default function SourceRemainingSheetTab() {
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
           </Space>
-        )}
-      >
-        <div style={{ padding: '6px 14px 6px', borderBottom: '1px solid var(--nowa-border)', color: 'var(--nowa-text-muted)', fontSize: 13 }}>
+        </div>
+        <div style={{ padding: '0 2px 12px', color: 'var(--nowa-text-muted)', fontSize: 13 }}>
           비활성 소스는 사선 처리되며 계산과 현황판에서 제외됩니다. 활성화 설정은 설비 구성 탭에서 변경하세요.
         </div>
         {loading ? (
@@ -486,7 +477,7 @@ export default function SourceRemainingSheetTab() {
             <Spin tip="잔량기입 데이터를 불러오는 중입니다." />
           </div>
         ) : (
-          <div ref={scrollWrapRef} onScroll={handleSheetScroll} style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+          <div ref={scrollWrapRef} onScroll={handleSheetScroll} style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.14)' }}>
             <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
               <colgroup>
                 <col style={{ width: 88 }} />
