@@ -37,8 +37,10 @@ import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { authFetch, useAuth } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { useThemeMode } from '../../../theme/useThemeMode'
 
 function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) {
+  const { isLight } = useThemeMode()
   return (
     <button
       type="button"
@@ -58,9 +60,13 @@ function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) 
           minHeight: 124,
           padding: '16px 18px',
           borderRadius: 18,
-          background: `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
-          border: `1px solid ${accent}30`,
-          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)`,
+          background: isLight
+            ? `linear-gradient(135deg, ${accent}18 0%, ${accent}08 60%, rgba(248,249,255,0.95) 100%)`
+            : `linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,27,0.98) 100%), ${gradient}`,
+          border: `1px solid ${accent}${isLight ? '40' : '30'}`,
+          boxShadow: isLight
+            ? `0 4px 20px ${accent}18, 0 1px 0 rgba(255,255,255,0.9) inset`
+            : `inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 24px rgba(0,0,0,0.22)`,
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -106,9 +112,9 @@ function SummaryTile({ title, value, suffix, icon, accent, gradient, onClick }) 
             {icon}
           </div>
         </div>
-        <div style={{ marginTop: 10, color: 'var(--nowa-text)', fontSize: 30, fontWeight: 800, lineHeight: 1, position: 'relative', zIndex: 1 }}>
+        <div style={{ marginTop: 10, color: isLight ? '#1e1b4b' : 'var(--nowa-text)', fontSize: 30, fontWeight: 800, lineHeight: 1, position: 'relative', zIndex: 1 }}>
           {value}
-          {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: '#d6dcea', fontWeight: 700 }}>{suffix}</span> : null}
+          {suffix ? <span style={{ fontSize: 14, marginLeft: 4, color: isLight ? accent : '#d6dcea', fontWeight: 700 }}>{suffix}</span> : null}
         </div>
         <div style={{ marginTop: 10, color: accent, fontSize: 14, fontWeight: 700, position: 'relative', zIndex: 1 }}>관련 화면으로 이동</div>
       </div>
@@ -122,7 +128,7 @@ function SectionCard({ title, icon, extra, children }) {
       className="nowa-card"
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {icon && <span style={{ color: '#f59e0b', fontSize: 15 }}>{icon}</span>}
+          {icon && <span style={{ color: 'var(--nowa-primary)', fontSize: 15 }}>{icon}</span>}
           <span style={{ fontWeight: 800 }}>{title}</span>
         </div>
       }
@@ -386,7 +392,7 @@ function NoticeBoard() {
                         color: noticeColor,
                         fontWeight: 700,
                         fontSize: 14,
-                        background: 'rgba(0,0,0,0.3)',
+                        background: 'var(--nowa-soft-fill-strong)',
                         padding: '2px 10px',
                         borderRadius: 8,
                       }}>
@@ -581,7 +587,7 @@ function AttendanceCard() {
       {/* 요일 헤더 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
         {DOW_LABELS.map((lbl, i) => (
-          <div key={lbl} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, paddingBottom: 6, color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.72)' }}>{lbl}</div>
+          <div key={lbl} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, paddingBottom: 6, color: i === 0 ? '#f87171' : i === 6 ? '#3b82f6' : 'var(--nowa-text-muted)' }}>{lbl}</div>
         ))}
       </div>
       {/* 날짜 셀 그리드 */}
@@ -599,7 +605,7 @@ function AttendanceCard() {
           const holiday = holidays[dateStr]
           const dayData = dayCounts[dateStr] || {}
           const isHoliday = !!holiday || isSun
-          const dateColor = isT ? '#f59e0b' : isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,226,0.75)'
+          const dateColor = isT ? '#f59e0b' : isHoliday ? '#f87171' : isSat ? '#3b82f6' : 'var(--nowa-text)'
           return (
             <div
               key={day}
@@ -849,7 +855,7 @@ function SchedulerMiniCalCard() {
           {/* 요일 헤더 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
             {WEEK_DAYS_KO.map((d, i) => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.72)', paddingBottom: 6 }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: i === 0 ? '#f87171' : i === 6 ? '#3b82f6' : 'var(--nowa-text-muted)', paddingBottom: 6 }}>{d}</div>
             ))}
           </div>
           {/* 날짜 그리드 */}
@@ -877,7 +883,7 @@ function SchedulerMiniCalCard() {
                 >
                   <div style={{
                     fontSize: 14, fontWeight: 700, marginBottom: 2,
-                    color: isToday ? '#f59e0b' : isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.75)',
+                    color: isToday ? '#f59e0b' : isRed ? '#f87171' : dow === 6 ? '#3b82f6' : 'var(--nowa-text)',
                   }}>{date.date()}</div>
                   {holidayName && cur && (
                     <div style={{ fontSize: 14, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{holidayName}</div>
@@ -891,7 +897,7 @@ function SchedulerMiniCalCard() {
                         </div>
                       )
                     })}
-                    {dayEvts.length > 3 && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', paddingLeft: 2 }}>+{dayEvts.length - 3}건</div>}
+                    {dayEvts.length > 3 && <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', paddingLeft: 2 }}>+{dayEvts.length - 3}건</div>}
                   </div>
                 </div>
               )
@@ -911,7 +917,7 @@ function SchedulerMiniCalCard() {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
                 <span style={{ fontSize: 22, fontWeight: 900, color: dateColor, lineHeight: 1 }}>{selected.format('M월 D일')}</span>
                 <span style={{ fontSize: 22, fontWeight: 600, color: dateColor }}>{selected.format('(ddd)')}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(196,210,226,0.72)' }}>{selectedEvents.length}건</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text-muted)' }}>{selectedEvents.length}건</span>
               </div>
             )
           })()}
@@ -932,10 +938,10 @@ function SchedulerMiniCalCard() {
                   <div key={ev.id} style={{ padding: '10px 12px', borderRadius: 10, background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `3px solid ${cfg.color}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 6px', color: cfg.color, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-                      {ev.machine_no && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)', fontWeight: 600 }}>{formatMachineLabel(ev.machine_no)}</span>}
+                      {ev.machine_no && <span style={{ fontSize: 14, color: 'var(--nowa-text-muted)', fontWeight: 600 }}>{formatMachineLabel(ev.machine_no)}</span>}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--nowa-text)' }}>{ev.title || '-'}</div>
-                    {ev.actor && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', marginTop: 4 }}>담당: {ev.actor}</div>}
+                    {ev.actor && <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginTop: 4 }}>담당: {ev.actor}</div>}
                   </div>
                 )
               })}
@@ -1179,7 +1185,7 @@ function HandoverBoard() {
                       <div style={{ color: 'var(--nowa-text)', fontWeight: 800, fontSize: 14 }}>{note.title || '인수인계'}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, marginTop: 3 }}>
                         <span style={{ color: '#f59e0b', fontWeight: 700 }}>{note.author || '-'}</span>
-                        <span style={{ color: 'rgba(196,210,226,0.62)' }}>·</span>
+                        <span style={{ color: 'var(--nowa-text-muted)' }}>·</span>
                         <span style={{ color: 'rgba(148,163,184,0.7)' }}>
                           {note.handover_date}{note.updated_at || note.created_at ? ` ${dayjs(note.updated_at || note.created_at).format('HH:mm')}` : ''}
                         </span>
@@ -1275,7 +1281,7 @@ function HandoverBoard() {
                         gap: 10,
                         padding: '8px 0',
                         border: 'none',
-                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid rgba(196,210,226,0.06)',
+                        borderBottom: index === timelineNotes.length - 1 ? 'none' : '1px solid var(--nowa-border)',
                         background: 'transparent',
                         textAlign: 'left',
                         cursor: 'pointer',
@@ -1312,7 +1318,7 @@ function HandoverBoard() {
                               bottom: -10,
                               width: 2,
                               borderRadius: 999,
-                              background: 'rgba(196,210,226,0.22)',
+                              background: 'var(--nowa-soft-fill-strong)',
                             }}
                           />
                         ) : null}
