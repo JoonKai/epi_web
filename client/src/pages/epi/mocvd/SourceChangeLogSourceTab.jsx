@@ -307,7 +307,7 @@ export default function SourceChangeLogSourceTab() {
         onOk={handleSubmit}
         confirmLoading={saving}
         width={980}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" className="console-form">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
@@ -392,4 +392,3 @@ export default function SourceChangeLogSourceTab() {
     </div>
   )
 }
-

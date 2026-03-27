@@ -166,7 +166,7 @@ export default function MachineGroupTab() {
             <span
               onClick={() => hasChildren && toggleCollapse(group.id)}
               style={{
-                fontSize: 10, color: st.color, minWidth: 14, textAlign: 'center',
+                fontSize: 14, color: st.color, minWidth: 14, textAlign: 'center',
                 cursor: hasChildren ? 'pointer' : 'default',
                 opacity: hasChildren ? 0.8 : 0,
                 transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)',
@@ -183,13 +183,13 @@ export default function MachineGroupTab() {
               {group.name}
             </span>
             {group.description && (
-              <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.45)' }}>{group.description}</span>
+              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.45)' }}>{group.description}</span>
             )}
             {group.machine_nos.length > 0 && (
-              <span style={{ fontSize: 13, color: `${st.color}88` }}>{group.machine_nos.length}대</span>
+              <span style={{ fontSize: 14, color: `${st.color}88` }}>{group.machine_nos.length}대</span>
             )}
             {hasChildren && (
-              <span style={{ fontSize: 12, color: `${st.color}66`, background: `${st.color}14`, border: `1px solid ${st.border}`, borderRadius: 4, padding: '1px 6px' }}>
+              <span style={{ fontSize: 14, color: `${st.color}66`, background: `${st.color}14`, border: `1px solid ${st.border}`, borderRadius: 4, padding: '1px 6px' }}>
                 {isCollapsed ? `+${children.length}` : `하위 ${children.length}개`}
               </span>
             )}
@@ -206,7 +206,7 @@ export default function MachineGroupTab() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
               {group.machine_nos.map(no => (
                 <span key={no} style={{
-                  fontSize: 12, fontWeight: 700,
+                  fontSize: 14, fontWeight: 700,
                   background: `${st.color}18`, border: `1px solid ${st.border}`,
                   borderRadius: 5, padding: '1px 8px', color: st.color,
                 }}>
@@ -250,15 +250,15 @@ export default function MachineGroupTab() {
 
       {activeMachines.length > 0 && !loading && (
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(245,158,11,0.1)' }}>
-          <div style={{ fontSize: 13, color: 'rgba(196,210,226,0.4)', marginBottom: 8 }}>
+          <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.4)', marginBottom: 8 }}>
             미배정 설비 ({unassigned.length}대)
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
             {unassigned.length === 0 ? (
-              <span style={{ fontSize: 13, color: 'rgba(163,230,53,0.7)' }}>모든 설비가 그룹에 배정되었습니다.</span>
+              <span style={{ fontSize: 14, color: 'rgba(163,230,53,0.7)' }}>모든 설비가 그룹에 배정되었습니다.</span>
             ) : unassigned.map(m => (
               <span key={m.machine_no} style={{
-                fontSize: 12, fontWeight: 600,
+                fontSize: 14, fontWeight: 600,
                 background: 'rgba(196,210,226,0.05)', border: '1px solid rgba(196,210,226,0.14)',
                 borderRadius: 5, padding: '2px 8px', color: 'rgba(196,210,226,0.45)',
               }}>
@@ -276,7 +276,7 @@ export default function MachineGroupTab() {
         onOk={() => form.submit()}
         okText={editingGroup ? '수정' : '추가'}
         confirmLoading={saving}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
           <Form.Item name="name" label="그룹명" rules={[{ required: true, message: '그룹명을 입력하세요.' }]}>

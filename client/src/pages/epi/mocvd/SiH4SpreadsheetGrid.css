@@ -1,6 +1,6 @@
 .sih4-jspreadsheet-shell {
-  display: inline-block;
-  max-width: 100%;
+  display: block;
+  width: 100%;
   padding: 0;
   background: transparent;
   border: 1px solid #4a5a8a;
@@ -23,40 +23,116 @@
 
 .sih4-jspreadsheet-shell .jss_worksheet {
   border-collapse: collapse;
-  background: #171b26 !important;
-  border-right: 1px solid rgba(65, 85, 125, 0.52) !important;
-  border-bottom: 1px solid rgba(65, 85, 125, 0.52) !important;
+  background: #222a3e !important;
+  border-right: 1px solid rgba(100, 130, 190, 0.75) !important;
+  border-bottom: 1px solid rgba(100, 130, 190, 0.75) !important;
 }
 
 .sih4-jspreadsheet-shell .jss_worksheet > thead > tr > td {
-  background: linear-gradient(180deg, #223253 0%, #1b2945 100%) !important;
-  color: rgba(214, 223, 238, 0.95) !important;
-  border-color: rgba(83, 107, 156, 0.72) !important;
+  background: linear-gradient(180deg, #2e4070 0%, #253562 100%) !important;
+  color: rgba(225, 235, 250, 0.98) !important;
+  border-color: rgba(100, 135, 195, 0.85) !important;
   font-weight: 700 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  border-bottom: 1px solid rgba(132, 165, 220, 0.95) !important;
+  box-shadow: inset 0 -1px 0 rgba(132, 165, 220, 0.9), 0 8px 16px rgba(8, 13, 24, 0.35) !important;
+  position: sticky !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > thead > tr.sih4-hidden-filter-row {
+  height: 0 !important;
+  transform: translateY(-100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > thead > tr.sih4-hidden-filter-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+  overflow: visible !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet .jss_column_filter {
+  color: rgba(186, 204, 236, 0.78) !important;
+  opacity: 1 !important;
+  margin-left: 6px !important;
+}
+
+.sih4-jspreadsheet-shell .jss_worksheet > thead > tr > td.selected {
+  background: linear-gradient(180deg, #35528d 0%, #2b4276 100%) !important;
+  color: rgba(226, 232, 240, 0.98) !important;
+  border-top: 2px solid rgba(96, 165, 250, 0.9) !important;
 }
 
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td {
-  background: #171b26 !important;
-  color: rgba(196, 210, 226, 0.88) !important;
-  border-color: rgba(65, 85, 125, 0.52) !important;
+  background-color: #222a3e !important;
+  color: rgba(215, 228, 245, 0.95) !important;
+  border-color: rgba(100, 130, 190, 0.6) !important;
   font-size: 14px;
 }
 
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr:nth-child(even) > td {
-  background: #1b2030 !important;
+  background-color: #263044 !important;
 }
 
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr:hover > td {
-  background: #202637 !important;
+  background-color: #2d3a55 !important;
 }
 
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td:first-child,
 .sih4-jspreadsheet-shell .jss_corner {
-  background: linear-gradient(180deg, #232838 0%, #1d2230 100%) !important;
-  color: rgba(148, 163, 184, 0.88) !important;
-  border-color: rgba(65, 85, 125, 0.46) !important;
+  background: linear-gradient(180deg, #2a3248 0%, #232c42 100%) !important;
+  color: rgba(170, 185, 215, 0.92) !important;
+  border-color: rgba(100, 130, 190, 0.65) !important;
   font-weight: 600 !important;
   font-variant-numeric: tabular-nums;
+}
+
+/* Dropdown arrow */
+.sih4-jspreadsheet-shell .jss_worksheet .jdropdown-header {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='none' d='M0 0h24v24H0V0z'/%3E%3Cpath d='M7 10l5 5 5-5H7z' fill='%2396aed4'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: top 50% right 5px !important;
+  padding-right: 28px !important;
+}
+
+/* Dropdown popup */
+.sih4-jspreadsheet-shell .jdropdown-default .jdropdown-container {
+  background-color: #1b2130 !important;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+.sih4-jspreadsheet-shell .jdropdown-default .jdropdown-content {
+  background-color: #1b2130 !important;
+  border: 1px solid rgba(74, 90, 138, 0.8) !important;
+  border-radius: 8px;
+  max-height: 220px;
+}
+
+.sih4-jspreadsheet-shell .jdropdown-default .jdropdown-item {
+  color: rgba(196, 210, 226, 0.9) !important;
+  padding: 7px 36px 7px 12px !important;
+  font-size: 14px;
+}
+
+.sih4-jspreadsheet-shell .jdropdown-default .jdropdown-item:hover {
+  background-color: rgba(96, 165, 250, 0.14) !important;
+  color: rgba(226, 232, 240, 0.98) !important;
+}
+
+.sih4-jspreadsheet-shell .jdropdown-default .jdropdown-selected {
+  background-color: rgba(59, 107, 200, 0.35) !important;
+  color: rgba(148, 196, 255, 0.95) !important;
+}
+
+.sih4-jspreadsheet-shell .jdropdown-default .jdropdown-cursor {
+  background-color: rgba(96, 165, 250, 0.18) !important;
 }
 
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr.selected > td:first-child {
@@ -79,20 +155,6 @@
   border-width: 1px !important;
 }
 
-.sih4-jspreadsheet-shell .jss_worksheet .selection-top,
-.sih4-jspreadsheet-shell .jss_worksheet .selection-right,
-.sih4-jspreadsheet-shell .jss_worksheet .selection-bottom,
-.sih4-jspreadsheet-shell .jss_worksheet .selection-left {
-  border-color: rgba(114, 168, 255, 0.82) !important;
-  border-width: 1px !important;
-}
-
-.sih4-jspreadsheet-shell .jss_worksheet .selection-top,
-.sih4-jspreadsheet-shell .jss_worksheet .selection-right,
-.sih4-jspreadsheet-shell .jss_worksheet .selection-bottom,
-.sih4-jspreadsheet-shell .jss_worksheet .selection-left {
-  box-shadow: none !important;
-}
 
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td.selected,
 .sih4-jspreadsheet-shell .jss_worksheet > tbody > tr > td.highlight-selected {
@@ -162,7 +224,7 @@
   border-radius: 999px;
 }
 
-.sih4-jspreadsheet-shell .jss_contextmenu {
+.jss_contextmenu {
   position: fixed !important;
   z-index: 3200 !important;
   min-width: 220px;
@@ -175,27 +237,30 @@
   backdrop-filter: blur(14px);
 }
 
-.sih4-jspreadsheet-shell .jss_contextmenu > div {
+.jss_contextmenu > div {
   border-radius: 8px;
 }
 
-.sih4-jspreadsheet-shell .jss_contextmenu > div a {
+.jss_contextmenu > div a {
   color: rgba(214, 223, 238, 0.92) !important;
   font-size: 14px;
 }
 
-.sih4-jspreadsheet-shell .jss_contextmenu > div.contextmenu-line {
+.jss_contextmenu > div.contextmenu-line {
   margin: 6px 2px;
   border-top-color: rgba(74, 90, 138, 0.55) !important;
 }
 
-.sih4-jspreadsheet-shell .jss_contextmenu > div:not(.contextmenu-line):hover {
+.jss_contextmenu > div:not(.contextmenu-line):hover {
   background: rgba(96, 165, 250, 0.12) !important;
 }
 
-.sih4-jspreadsheet-shell .jss_contextmenu > div:not(.contextmenu-line):hover a {
+.jss_contextmenu > div:not(.contextmenu-line):hover a {
   color: rgba(226, 232, 240, 0.98) !important;
 }
+
+
+
 
 .jcalendar {
   background: rgba(8, 10, 16, 0.35) !important;
@@ -233,20 +298,42 @@
   background: #1b2030 !important;
 }
 
+/* jsuites sets table background-color:#fff — override to dark */
+.jcalendar-table > table {
+  background-color: #171b26 !important;
+}
+
 .jcalendar-table > table > tbody td,
 .jcalendar-months td,
 .jcalendar-years td {
   color: rgba(214, 223, 238, 0.9) !important;
-  background: #171b26 !important;
+  background-color: #171b26 !important;
 }
 
-.jcalendar-selected,
+.jcalendar-selected {
+  background-color: rgba(96, 165, 250, 0.28) !important;
+  color: rgba(226, 232, 240, 0.98) !important;
+}
+
+/* Hover — opaque so it doesn't bleed through */
 .jcalendar-table > table > tbody td:hover,
 .jcalendar-months td:hover,
 .jcalendar-years td:hover {
-  background: rgba(245, 158, 11, 0.18) !important;
-  color: #1f2937 !important;
-  font-weight: 700 !important;
+  background-color: #2a3350 !important;
+  color: rgba(226, 232, 240, 0.98) !important;
+}
+
+/* Today's date — jsuites sets inline style="font-weight: bold", no class */
+.jcalendar-table > table > tbody td[style*="font-weight"] {
+  outline: 2px solid #ef4444 !important;
+  outline-offset: -2px;
+  border-radius: 3px;
+  color: rgba(252, 165, 165, 0.95) !important;
+}
+
+.jcalendar-table > table > tbody td[style*="font-weight"]:hover {
+  background-color: #3a2020 !important;
+  color: rgba(252, 165, 165, 0.98) !important;
 }
 
 .jcalendar-disabled {

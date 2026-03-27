@@ -12,6 +12,7 @@ import SourceMachineConfigTab from './SourceMachineConfigTab'
 export default function SourceTabs() {
   const location = useLocation()
   const navigate = useNavigate()
+
   const activeTab = useMemo(() => {
     const tab = new URLSearchParams(location.search).get('tab')
     if (tab === 'input') return 'remaining-sheet'
@@ -23,16 +24,16 @@ export default function SourceTabs() {
     <Tabs
       className="source-tabs"
       activeKey={activeTab}
-      destroyInactiveTabPane
+      destroyOnHidden
       onChange={(key) => navigate(`/epi/mocvd/source?tab=${key}`)}
       tabBarStyle={{ borderBottom: '1px solid rgba(245,158,11,0.18)', marginBottom: 20, paddingBottom: 0 }}
       items={[
         { key: 'status-board', label: <span><BarChartOutlined /> 소스교체 현황판</span>, children: <SourceStatusBoard /> },
-        { key: 'machine-board', label: <span><HeatMapOutlined /> 설비별 소스현황</span>, children: <SourceMachineBoard /> },
+        { key: 'machine-board', label: <span><HeatMapOutlined /> 장비별 소스 현황</span>, children: <SourceMachineBoard /> },
         { key: 'remaining-sheet', label: <span><EditOutlined /> 잔량기입</span>, children: <SourceRemainingSheetTab /> },
         { key: 'table-sheet', label: <span><TableOutlined /> 소스 계산</span>, children: <SourceTableSheetTab /> },
-        { key: 'machine-config', label: <span><TableOutlined /> 설비 / 소스 구성</span>, children: <SourceMachineConfigTab /> },
-        { key: 'change-log', label: <span><BookOutlined /> 소스 관리 대장</span>, children: <SourceChangeLogTab /> },
+        { key: 'machine-config', label: <span><TableOutlined /> 장비 / 소스 구성</span>, children: <SourceMachineConfigTab /> },
+        { key: 'change-log', label: <span><BookOutlined /> 소스 / 가스 관리 대장</span>, children: <SourceChangeLogTab /> },
       ]}
     />
   )

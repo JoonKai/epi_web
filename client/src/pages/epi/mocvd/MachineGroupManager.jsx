@@ -20,16 +20,16 @@ function MachineChip({ machine, labelFormatter, onEdit, onDelete }) {
         width: 20, height: 20, borderRadius: 4, flexShrink: 0,
         background: machine.is_active ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.05)',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 10, fontWeight: 800, color: machine.is_active ? '#fbbf24' : '#64748b',
+        fontSize: 14, fontWeight: 800, color: machine.is_active ? '#fbbf24' : '#64748b',
       }}>
         {machine.machine_no}
       </span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: machine.is_active ? 'rgba(226,232,240,0.85)' : '#475569', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: machine.is_active ? 'rgba(226,232,240,0.85)' : '#475569', whiteSpace: 'nowrap' }}>
         {labelFormatter(machine.machine_no)}
       </span>
-      <EditOutlined onClick={() => onEdit(machine)} style={{ fontSize: 10, color: 'rgba(196,210,226,0.3)', cursor: 'pointer', marginLeft: 2 }} />
+      <EditOutlined onClick={() => onEdit(machine)} style={{ fontSize: 14, color: 'rgba(196,210,226,0.3)', cursor: 'pointer', marginLeft: 2 }} />
       <Popconfirm title={`${labelFormatter(machine.machine_no)} 삭제?`} onConfirm={() => onDelete(machine)} okText="삭제" cancelText="취소">
-        <DeleteOutlined style={{ fontSize: 10, color: 'rgba(248,113,113,0.3)', cursor: 'pointer' }} />
+        <DeleteOutlined style={{ fontSize: 14, color: 'rgba(248,113,113,0.3)', cursor: 'pointer' }} />
       </Popconfirm>
     </div>
   )
@@ -94,10 +94,10 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
           {group.name}
         </span>
         {group.description && (
-          <span style={{ fontSize: 11, color: 'rgba(196,210,226,0.3)' }}>{group.description}</span>
+          <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.3)' }}>{group.description}</span>
         )}
         <span style={{
-          fontSize: 11, color: `${lc}99`, background: `${lc}18`,
+          fontSize: 14, color: `${lc}99`, background: `${lc}18`,
           border: `1px solid ${lc}28`, borderRadius: 4, padding: '1px 7px', fontWeight: 600,
         }}>
           {totalCount}대
@@ -315,7 +315,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
           style={{ background: 'rgba(56,189,248,0.07)', border: '1px dashed rgba(56,189,248,0.3)', color: '#38bdf8', fontWeight: 600 }}>
           그룹 추가
         </Button>
-        <span style={{ color: 'rgba(196,210,226,0.3)', fontSize: 12 }}>전체 {machines.length}대 · {groups.length}개 그룹</span>
+        <span style={{ color: 'rgba(196,210,226,0.3)', fontSize: 14 }}>전체 {machines.length}대 · {groups.length}개 그룹</span>
       </div>
 
       {/* 그룹 카드 */}
@@ -341,7 +341,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       {/* 미배정 */}
       {unassigned.length > 0 && (
         <div style={{ background: 'rgba(100,116,139,0.04)', border: '1px solid rgba(100,116,139,0.1)', borderRadius: 8, padding: '8px 12px', marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: 'rgba(148,163,184,0.5)', marginBottom: 6 }}>미배정 {unassigned.length}대</div>
+          <div style={{ fontSize: 14, color: 'rgba(148,163,184,0.5)', marginBottom: 6 }}>미배정 {unassigned.length}대</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {unassigned.map(m => <MachineChip key={m.machine_no} machine={m} labelFormatter={labelFormatter} onEdit={openEditMachine} onDelete={handleDeleteMachine} />)}
           </div>
@@ -351,7 +351,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       {/* 비활성 */}
       {inactive.length > 0 && (
         <div style={{ background: 'rgba(71,85,105,0.03)', border: '1px solid rgba(71,85,105,0.08)', borderRadius: 8, padding: '8px 12px', marginTop: 6 }}>
-          <div style={{ fontSize: 12, color: 'rgba(100,116,139,0.4)', marginBottom: 6 }}>비활성 {inactive.length}대</div>
+          <div style={{ fontSize: 14, color: 'rgba(100,116,139,0.4)', marginBottom: 6 }}>비활성 {inactive.length}대</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {inactive.map(m => <MachineChip key={m.machine_no} machine={m} labelFormatter={labelFormatter} onEdit={openEditMachine} onDelete={handleDeleteMachine} />)}
           </div>
@@ -361,7 +361,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       {/* 호기 모달 */}
       <Modal title={editingMachine ? '호기 수정' : '호기 추가'} open={machineModal}
         onCancel={() => setMachineModal(false)} onOk={() => machineForm.submit()}
-        okText={editingMachine ? '수정' : '추가'} confirmLoading={saving} destroyOnClose>
+        okText={editingMachine ? '수정' : '추가'} confirmLoading={saving} destroyOnHidden>
         <Form form={machineForm} layout="vertical" onFinish={handleSaveMachine} style={{ marginTop: 16 }}>
           <Form.Item name="machine_no" label="호기 번호" rules={[{ required: true, message: '호기 번호를 입력하세요.' }]}>
             <InputNumber min={1} style={{ width: '100%' }} disabled={!!editingMachine} />
@@ -382,7 +382,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       {/* 그룹 모달 */}
       <Modal title={editingGroup ? '그룹 수정' : '그룹 추가'} open={groupModal}
         onCancel={() => setGroupModal(false)} onOk={() => groupForm.submit()}
-        okText={editingGroup ? '수정' : '추가'} confirmLoading={saving} destroyOnClose>
+        okText={editingGroup ? '수정' : '추가'} confirmLoading={saving} destroyOnHidden>
         <Form form={groupForm} layout="vertical" onFinish={handleSaveGroup} style={{ marginTop: 16 }}>
           <Form.Item name="name" label="그룹명" rules={[{ required: true, message: '그룹명을 입력하세요.' }]}>
             <Input placeholder="예: C4 1 SET" autoFocus />

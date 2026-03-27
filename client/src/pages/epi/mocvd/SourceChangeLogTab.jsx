@@ -8,8 +8,8 @@ export default function SourceChangeLogTab() {
       defaultActiveKey="source"
       type="card"
       items={[
-        { key: 'source', label: '소스', children: <SourceChangeLogSourceTab /> },
-        { key: 'sih4', label: 'SiH4', children: <SourceChangeLogSiH4Tab /> },
+        { key: 'source', label: '소스 관리 대장', children: <SourceChangeLogSourceTab /> },
+        { key: 'sih4', label: '가스 관리 대장', children: <SourceChangeLogSiH4Tab /> },
       ]}
     />
   )

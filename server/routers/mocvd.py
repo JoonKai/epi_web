@@ -68,6 +68,21 @@ class SourceChangeLogUpdate(SourceChangeLogCreate):
     pass
 
 
+class SiH4ChangeLogCreate(BaseModel):
+    install_date: str = ""
+    removal_date: str = ""
+    cabinet_no: str = ""
+    gas_name: str = ""
+    slot: str = ""
+    cylinder_no: str = ""
+    worker_name: str = ""
+    note: str = ""
+
+
+class SiH4ChangeLogUpdate(SiH4ChangeLogCreate):
+    pass
+
+
 class SourceStatusSettingsUpdate(BaseModel):
     overdue_days: int = DEFAULT_OVERDUE_DAYS
     urgent_days: int = DEFAULT_URGENT_DAYS
@@ -728,6 +743,93 @@ def update_source_change_log(log_id: int, body: SourceChangeLogUpdate, db: Sessi
     return {"result": "ok"}
 
 
+def _serialize_sih4_change_log(row: SourceChangeLog):
+    return {
+        "id": row.id,
+        "install_date": row.install_date or "",
+        "removal_date": row.removal_date or "",
+        "cabinet_no": "" if row.machine_no in (None, 0) else str(row.machine_no),
+        "gas_name": row.source_name or "",
+        "slot": row.source_slot or "",
+        "cylinder_no": row.cylinder_no or "",
+        "worker_name": row.worker_name or "",
+        "note": row.note or "",
+    }
+
+
+def _parse_sih4_machine_no(value: str | None) -> int:
+    text = (value or "").strip()
+    if text == "":
+        return 0
+    return int(text)
+
+
+@router.get("/sih4-change-logs")
+def list_sih4_change_logs(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    rows = (
+        db.query(SourceChangeLog)
+        .filter(SourceChangeLog.work_type == "SiH4 Grid")
+        .order_by(SourceChangeLog.install_date.desc(), SourceChangeLog.id.desc())
+        .all()
+    )
+    return [_serialize_sih4_change_log(row) for row in rows]
+
+
+@router.post("/sih4-change-logs")
+def create_sih4_change_log(body: SiH4ChangeLogCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = SourceChangeLog(
+        install_date=body.install_date or "",
+        removal_date=body.removal_date or "",
+        machine_no=_parse_sih4_machine_no(body.cabinet_no),
+        source_name=body.gas_name or "",
+        work_type="SiH4 Grid",
+        source_slot=body.slot or "",
+        cylinder_no=body.cylinder_no or "",
+        worker_name=body.worker_name or "",
+        note=body.note or "",
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _serialize_sih4_change_log(row)
+
+
+@router.put("/sih4-change-logs/{log_id}")
+def update_sih4_change_log(log_id: int, body: SiH4ChangeLogUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = (
+        db.query(SourceChangeLog)
+        .filter(SourceChangeLog.id == log_id, SourceChangeLog.work_type == "SiH4 Grid")
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="SiH4 작업 일지를 찾을 수 없습니다.")
+    row.install_date = body.install_date or ""
+    row.removal_date = body.removal_date or ""
+    row.machine_no = _parse_sih4_machine_no(body.cabinet_no)
+    row.source_name = body.gas_name or ""
+    row.source_slot = body.slot or ""
+    row.cylinder_no = body.cylinder_no or ""
+    row.worker_name = body.worker_name or ""
+    row.note = body.note or ""
+    db.commit()
+    db.refresh(row)
+    return _serialize_sih4_change_log(row)
+
+
+@router.delete("/sih4-change-logs/{log_id}")
+def delete_sih4_change_log(log_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = (
+        db.query(SourceChangeLog)
+        .filter(SourceChangeLog.id == log_id, SourceChangeLog.work_type == "SiH4 Grid")
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="SiH4 작업 일지를 찾을 수 없습니다.")
+    db.delete(row)
+    db.commit()
+    return {"result": "ok"}
+
+
 @router.delete("/source-change-logs/{log_id}")
 def delete_source_change_log(log_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
     row = db.query(SourceChangeLog).filter(SourceChangeLog.id == log_id).first()
@@ -844,4 +946,3 @@ def delete_equipment_history(history_id: int, db: Session = Depends(get_db), _=D
     db.delete(row)
     db.commit()
     return {"result": "ok"}
-
