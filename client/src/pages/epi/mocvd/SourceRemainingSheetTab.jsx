@@ -73,12 +73,12 @@ function fmt(v) {
   if (v == null || Number.isNaN(v)) return '-'
   if (v >= 10000) return `${(v / 1000).toFixed(1)}k`
   if (v >= 1000) return v.toFixed(0)
-  if (v >= 100) return v.toFixed(1)
-  return v.toFixed(2)
+  if (v >= 100) return String(parseFloat(v.toFixed(1)))
+  return String(parseFloat(v.toFixed(2)))
 }
 
 function getHatchBackground(base) {
-  return `repeating-linear-gradient(155deg, rgba(245,158,11,0.22) 0px, rgba(245,158,11,0.22) 1px, ${base} 1px, ${base} 18px)`
+  return `repeating-linear-gradient(155deg, rgba(245,158,11,0.65) 0px, rgba(245,158,11,0.65) 1px, ${base} 1px, ${base} 12px)`
 }
 
 function navigateCell(row, col, dRow, dCol) {
@@ -536,7 +536,7 @@ export default function SourceRemainingSheetTab() {
                             style={{
                               position: 'sticky',
                               top,
-                              background: bg,
+                              background: disabledKeys.has(key) ? getHatchBackground(bg) : bg,
                               border: BORDER,
                               height: 30,
                               zIndex: 3,
@@ -547,6 +547,7 @@ export default function SourceRemainingSheetTab() {
                             }}
                           >
                             {sourceIndex === 0 && machineIndex > 0 && <GroupDivider />}
+
                             {readOnly ? (
                               fmt(cellData[key]?.[field] ?? 0)
                             ) : (
@@ -602,6 +603,7 @@ export default function SourceRemainingSheetTab() {
                             return (
                               <td key={`${key}:${label}`} style={{ border: BORDER, position: 'relative', background: rowBg, height: 30, padding: 0 }}>
                                 {sourceIndex === 0 && machineIndex > 0 && <GroupDivider />}
+    
                                 <EditField
                                   value={remaining}
                                   color={TODAY_COLOR}
@@ -639,6 +641,7 @@ export default function SourceRemainingSheetTab() {
                               style={{ border: BORDER, position: 'relative', background: projectionBg, color: projectionColor, textAlign: 'right', paddingRight: 6, height: 30, outline: 'none' }}
                             >
                               {sourceIndex === 0 && machineIndex > 0 && <GroupDivider />}
+  
                               {projected == null ? '-' : fmt(projected)}
                             </td>
                           )
@@ -652,6 +655,7 @@ export default function SourceRemainingSheetTab() {
           </div>
         )}
       </Card>
+
     </div>
   )
 }

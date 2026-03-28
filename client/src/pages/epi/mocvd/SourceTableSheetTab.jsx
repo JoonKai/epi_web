@@ -1,12 +1,12 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, Input, Space, Spin } from 'antd'
+import { Alert, Button, Card, Input, Modal, Space, Spin } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { getGroupColor } from './sourceColors'
 
-const BORDER = '1px solid rgba(245,158,11,0.12)'
-const GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
+const BORDER = '1px solid rgba(245,158,11,0.28)'
+const GROUP_BORDER = '2px solid rgba(245,158,11,0.5)'
 const DEFAULT_THRESHOLD_RATIO = 15
 
 const th1Base = {
@@ -63,12 +63,24 @@ function fmt(v) {
   if (v == null || Number.isNaN(v)) return '-'
   if (v >= 10000) return `${(v / 1000).toFixed(1)}k`
   if (v >= 1000) return v.toFixed(0)
-  if (v >= 100) return v.toFixed(1)
-  return v.toFixed(2)
+  if (v >= 100) return String(parseFloat(v.toFixed(1)))
+  return String(parseFloat(v.toFixed(2)))
+}
+
+function fmtOrBlank(v) {
+  if (!v) return ''
+  return fmt(v)
 }
 
 function getHatchBackground(base) {
-  return `repeating-linear-gradient(155deg, rgba(245,158,11,0.22) 0px, rgba(245,158,11,0.22) 1px, ${base} 1px, ${base} 18px)`
+  return `repeating-linear-gradient(155deg, rgba(245,158,11,0.65) 0px, rgba(245,158,11,0.65) 1px, ${base} 1px, ${base} 12px)`
+}
+
+function navigateCell(row, col, dRow, dCol) {
+  const el = document.querySelector(`[data-grid-row="${row + dRow}"][data-grid-col="${col + dCol}"]`)
+  if (!el) return
+  el.focus()
+  if (el.tagName === 'INPUT') el.select()
 }
 
 function buildDerivedCell(cell) {
@@ -114,31 +126,57 @@ function ToggleBadge({ active, onClick }) {
   )
 }
 
-function EditField({ value, color, bg, onChange, pending, disabled = false, readOnly = false }) {
+function EditField({ value, color, bg, onChange, pending, disabled = false, readOnly = false, gridRow, gridCol }) {
   const [local, setLocal] = useState(value ?? '')
+  const [focused, setFocused] = useState(false)
 
   useEffect(() => {
     setLocal(value ?? '')
   }, [value])
+
+  const handleKeyDown = (e) => {
+    const row = gridRow ?? NaN
+    const col = gridCol ?? NaN
+    if (isNaN(row) || isNaN(col)) return
+    if (e.key === 'ArrowUp') { e.preventDefault(); navigateCell(row, col, -1, 0); return }
+    if (e.key === 'ArrowDown') { e.preventDefault(); navigateCell(row, col, 1, 0); return }
+    if (e.key === 'Enter') { e.preventDefault(); navigateCell(row, col, 0, 1); return }
+    if (e.key === 'ArrowLeft' && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
+      e.preventDefault(); navigateCell(row, col, 0, -1); return
+    }
+    if (e.key === 'ArrowRight') {
+      const len = (e.currentTarget.value ?? '').length
+      if (e.currentTarget.selectionStart === len && e.currentTarget.selectionEnd === len) {
+        e.preventDefault(); navigateCell(row, col, 0, 1); return
+      }
+    }
+  }
 
   return (
     <input
       value={local === 0 ? '' : local}
       disabled={disabled}
       readOnly={readOnly}
+      data-grid-row={gridRow}
+      data-grid-col={gridCol}
       onChange={(event) => {
         setLocal(event.target.value)
       }}
+      onKeyDown={handleKeyDown}
+      onFocus={(e) => { setFocused(true); e.target.select() }}
       onBlur={(event) => {
+        setFocused(false)
         const next = event.target.value
         onChange(next === '' ? 0 : Number(next))
       }}
       style={{
+        display: 'block',
         width: '100%',
         height: 30,
-        background: disabled ? getHatchBackground(bg) : pending ? 'rgba(245,158,11,0.08)' : bg,
+        background: disabled ? getHatchBackground(bg) : bg,
         border: 'none',
         outline: 'none',
+        caretColor: 'transparent',
         color: disabled || readOnly ? 'rgba(196,210,226,0.72)' : color,
         textAlign: 'right',
         padding: '0 6px',
@@ -159,6 +197,10 @@ export default function SourceTableSheetTab() {
   const [pendingKeys, setPendingKeys] = useState(new Set())
   const [quickFilter, setQuickFilter] = useState('')
   const [machineGroupMap, setMachineGroupMap] = useState({})
+  const [cellMemos, setCellMemos] = useState({})
+  const [contextMenu, setContextMenu] = useState(null)
+  const [memoEdit, setMemoEdit] = useState(null)
+  const [memoText, setMemoText] = useState('')
 
   useEffect(() => {
     authFetch('/api/admin/machine-groups')
@@ -260,8 +302,43 @@ export default function SourceTableSheetTab() {
     }
   }
 
+  const handleContextMenu = useCallback((e, key) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const x = Math.min(e.clientX, window.innerWidth - 200)
+    const y = Math.min(e.clientY, window.innerHeight - 100)
+    setContextMenu({ x, y, key })
+  }, [])
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [contextMenu])
+
+  const handleMemoSave = useCallback(() => {
+    setCellMemos((prev) => {
+      const next = { ...prev }
+      if (memoText.trim()) next[memoEdit] = memoText.trim()
+      else delete next[memoEdit]
+      return next
+    })
+    setMemoEdit(null)
+  }, [memoEdit, memoText])
+
+  const handleCellKeyDown = useCallback((e) => {
+    const row = Number(e.currentTarget.dataset.gridRow)
+    const col = Number(e.currentTarget.dataset.gridCol)
+    if (e.key === 'ArrowUp')                             { e.preventDefault(); navigateCell(row, col, -1,  0) }
+    else if (e.key === 'ArrowDown' || e.key === 'Enter') { e.preventDefault(); navigateCell(row, col,  1,  0) }
+    else if (e.key === 'ArrowLeft')                      { e.preventDefault(); navigateCell(row, col,  0, -1) }
+    else if (e.key === 'ArrowRight')                     { e.preventDefault(); navigateCell(row, col,  0,  1) }
+  }, [])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
+      <style>{`td[data-grid-row]:focus{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;} .input-cell:focus-within{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;} .ctx-item:hover{background:rgba(245,158,11,0.08)}`}</style>
       {error ? <Alert type="error" message={error} /> : null}
 
       <Card
@@ -318,7 +395,7 @@ export default function SourceTableSheetTab() {
               <tbody>
                 {filteredMachines.map((machine, rowIndex) => {
                   const grpName = machineGroupMap[machine.machine_no]
-                  const rowBg = rowIndex % 2 === 0 ? '#171b26' : '#131619'
+                  const rowBg = rowIndex % 2 === 0 ? '#1e2235' : '#191d28'
                   const gc = getGroupColor(grpName)
                   const labelBg = gc ? gc.row : rowBg
                   return (
@@ -333,29 +410,37 @@ export default function SourceTableSheetTab() {
                         )}
                       </div>
                     </td>
-                    {sourceNames.flatMap((sourceName) => {
+                    {sourceNames.flatMap((sourceName, sourceIndex) => {
                       const key = `${machine.machine_no}:${sourceName}`
                       const cell = cellData[key] ?? {}
                       const derived = buildDerivedCell(cell)
                       const disabled = Boolean(cell.is_disabled)
+                      const col = sourceIndex * 6
+                      const mk = (field) => `${key}:${field}`
+                      const dot = (field) => cellMemos[mk(field)]
+                        ? <span style={{ position: 'absolute', top: 2, right: 3, color: '#fbbf24', fontSize: 8, lineHeight: 1, pointerEvents: 'none' }}>●</span>
+                        : null
                       return [
-                        <td key={`${key}:initial`} style={{ ...tdCellBase, borderLeft: GROUP_BORDER, background: '#0a1119' }}>
-                          <EditField value={cell.initial_amount ?? 0} color="#38bdf8" bg="#0a1119" pending={pendingKeys.has(key)} disabled={disabled} onChange={(value) => handleChange(machine.machine_no, sourceName, 'initial_amount', value)} />
+                        <td key={`${key}:initial`} className={disabled ? undefined : 'input-cell'} onContextMenu={(e) => handleContextMenu(e, mk('initial'))} title={cellMemos[mk('initial')] || undefined} style={{ ...tdCellBase, borderLeft: GROUP_BORDER, background: disabled ? getHatchBackground('#1a2535') : '#1a2535', outline: 'none', position: 'relative' }}
+                          tabIndex={disabled ? 0 : undefined} data-grid-row={disabled ? rowIndex : undefined} data-grid-col={disabled ? col + 0 : undefined} onKeyDown={disabled ? handleCellKeyDown : undefined}>
+                          {dot('initial')}
+                          {!disabled && <EditField value={cell.initial_amount ?? 0} color="#38bdf8" bg="#1a2535" pending={pendingKeys.has(key)} disabled={false} gridRow={rowIndex} gridCol={col + 0} onChange={(value) => handleChange(machine.machine_no, sourceName, 'initial_amount', value)} />}
                         </td>,
-                        <td key={`${key}:daily`} style={{ ...tdCellBase, background: '#100e00' }}>
-                          <EditField value={cell.daily_usage ?? 0} color="#fbbf24" bg="#100e00" pending={pendingKeys.has(key)} readOnly />
+                        <td key={`${key}:daily`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 1} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('daily'))} title={cellMemos[mk('daily')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201c08') : '#201c08', color: disabled ? 'rgba(196,210,226,0.5)' : '#fbbf24', textAlign: 'right', paddingRight: 6, outline: 'none', position: 'relative' }}>
+                          {dot('daily')}{disabled ? '' : fmtOrBlank(cell.daily_usage ?? 0)}
                         </td>,
-                        <td key={`${key}:remaining`} style={{ ...tdCellBase, background: '#060f06' }}>
-                          <EditField value={cell.remaining ?? 0} color="#86efac" bg="#060f06" pending={pendingKeys.has(key)} readOnly />
+                        <td key={`${key}:remaining`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 2} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('remaining'))} title={cellMemos[mk('remaining')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#0f200f') : '#0f200f', color: disabled ? 'rgba(196,210,226,0.5)' : '#86efac', textAlign: 'right', paddingRight: 6, outline: 'none', position: 'relative' }}>
+                          {dot('remaining')}{disabled ? '' : fmtOrBlank(cell.remaining ?? 0)}
                         </td>,
-                        <td key={`${key}:ratio`} style={{ ...tdCellBase, background: '#110e00' }}>
-                          <EditField value={cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO} color="#f59e0b" bg="#110e00" pending={pendingKeys.has(key)} disabled={disabled} onChange={(value) => handleChange(machine.machine_no, sourceName, 'threshold_ratio', value)} />
+                        <td key={`${key}:ratio`} className={disabled ? undefined : 'input-cell'} onContextMenu={(e) => handleContextMenu(e, mk('ratio'))} title={cellMemos[mk('ratio')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201c08') : '#201c08', color: disabled ? 'rgba(196,210,226,0.5)' : undefined, textAlign: disabled ? 'right' : undefined, paddingRight: disabled ? 6 : undefined, outline: 'none', position: 'relative' }}
+                          tabIndex={disabled ? 0 : undefined} data-grid-row={disabled ? rowIndex : undefined} data-grid-col={disabled ? col + 3 : undefined} onKeyDown={disabled ? handleCellKeyDown : undefined}>
+                          {dot('ratio')}{disabled ? '-' : <EditField value={cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO} color="#f59e0b" bg="#201c08" pending={pendingKeys.has(key)} disabled={false} gridRow={rowIndex} gridCol={col + 3} onChange={(value) => handleChange(machine.machine_no, sourceName, 'threshold_ratio', value)} />}
                         </td>,
-                        <td key={`${key}:threshold`} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#110a00') : '#110a00', color: disabled ? 'rgba(196,210,226,0.5)' : '#f97316', textAlign: 'right', paddingRight: 6, fontWeight: 700 }}>
-                          {disabled ? '-' : fmt(derived.thresholdAmount)}
+                        <td key={`${key}:threshold`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 4} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('threshold'))} title={cellMemos[mk('threshold')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201408') : '#201408', color: disabled ? 'rgba(196,210,226,0.5)' : '#f97316', textAlign: 'right', paddingRight: 6, fontWeight: 700, outline: 'none', position: 'relative' }}>
+                          {dot('threshold')}{disabled ? '-' : fmt(derived.thresholdAmount)}
                         </td>,
-                        <td key={`${key}:date`} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#060f18') : '#060f18', color: disabled ? 'rgba(196,210,226,0.5)' : '#60a5fa', textAlign: 'center', fontWeight: 700 }}>
-                          {disabled ? '-' : derived.replacementDate}
+                        <td key={`${key}:date`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 5} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('date'))} title={cellMemos[mk('date')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#0f1e2e') : '#0f1e2e', color: disabled ? 'rgba(196,210,226,0.5)' : '#60a5fa', textAlign: 'center', fontWeight: 700, outline: 'none', position: 'relative' }}>
+                          {dot('date')}{disabled ? '-' : derived.replacementDate}
                         </td>,
                       ]
                     })}
@@ -367,6 +452,23 @@ export default function SourceTableSheetTab() {
           </div>
         )}
       </Card>
+
+      {contextMenu && (
+        <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 9999, background: '#1a2035', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', minWidth: 180, overflow: 'hidden' }}>
+          <div className="ctx-item" onClick={() => { setMemoText(cellMemos[contextMenu.key] ?? ''); setMemoEdit(contextMenu.key); setContextMenu(null) }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 8 }}>
+            ✎ {cellMemos[contextMenu.key] ? '메모 편집' : '메모 삽입'}
+          </div>
+          {cellMemos[contextMenu.key] && (
+            <div className="ctx-item" onClick={() => { setCellMemos((p) => { const n = { ...p }; delete n[contextMenu.key]; return n }); setContextMenu(null) }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: 'var(--nowa-text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              ✕ 메모 삭제
+            </div>
+          )}
+        </div>
+      )}
+
+      <Modal open={!!memoEdit} title="메모" onOk={handleMemoSave} onCancel={() => setMemoEdit(null)} okText="저장" cancelText="취소">
+        <Input.TextArea value={memoText} onChange={(e) => setMemoText(e.target.value)} rows={4} placeholder="메모를 입력하세요" autoFocus />
+      </Modal>
     </div>
   )
 }
