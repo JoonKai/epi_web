@@ -188,6 +188,7 @@ export default function SourceRemainingSheetTab() {
   const [todayPinned, setTodayPinned] = useState(false)
   const scrollWrapRef = useRef(null)
   const todayRowRef = useRef(null)
+  const [focusedCell, setFocusedCell] = useState(null)
 
   useEffect(() => {
     authFetch('/api/admin/machine-groups')
@@ -472,7 +473,15 @@ export default function SourceRemainingSheetTab() {
           </div>
         ) : (
           <div ref={scrollWrapRef} onScroll={handleSheetScroll} style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.14)' }}>
-            <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14, background: BG_DEEPER }}>
+            <table
+              style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14, background: BG_DEEPER }}
+              onFocus={(e) => {
+                const el = e.target.closest('[data-grid-row]') ?? (e.target.dataset?.gridRow != null ? e.target : null)
+                const row = el?.dataset.gridRow; const col = el?.dataset.gridCol
+                if (row != null && col != null) setFocusedCell({ row: Number(row), col: Number(col) })
+              }}
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocusedCell(null) }}
+            >
               <colgroup>
                 <col style={{ width: 80 }} />
                 {columns.map(({ machineNo, sourceName }) => (
@@ -486,8 +495,11 @@ export default function SourceRemainingSheetTab() {
                     const enabled = machineEnabledSources[machine.machine_no] ?? []
                     if (enabled.length === 0) return null
                     const gc = getGroupColor(machineGroupMap[machine.machine_no])
+                    const colStart = colIndexMap[`${machine.machine_no}:${enabled[0]}`] ?? -1
+                    const colEnd = colStart + enabled.length - 1
+                    const activeInMachine = focusedCell != null && focusedCell.col >= colStart && focusedCell.col <= colEnd
                     return (
-                      <th key={machine.machine_no} colSpan={enabled.length} style={{ ...th1Base }}>
+                      <th key={machine.machine_no} colSpan={enabled.length} style={{ ...th1Base, background: activeInMachine ? 'rgba(34,211,238,0.12)' : th1Base.background }}>
                         {mi > 0 && <GroupDivider />}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                           <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>{formatMachineLabel(machine.machine_no)}</span>
@@ -505,8 +517,10 @@ export default function SourceRemainingSheetTab() {
                   {filteredMachines.map((machine, mi) =>
                     (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, index) => {
                       const palette = getSourceColor(sourceOrder.indexOf(sourceName))
+                      const colIndex = colIndexMap[`${machine.machine_no}:${sourceName}`] ?? -1
+                      const isColFocused = focusedCell?.col === colIndex
                       return (
-                        <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, color: palette.main, fontWeight: 700 }}>
+                        <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, color: isColFocused ? '#22d3ee' : palette.main, background: isColFocused ? 'rgba(34,211,238,0.18)' : th2Base.background, fontWeight: 700 }}>
                           {index === 0 && mi > 0 && <GroupDivider />}
                           {sourceName}
                         </th>
@@ -517,9 +531,11 @@ export default function SourceRemainingSheetTab() {
               </thead>
               <tbody>
                 {/* 일사용량 / 잔량 sticky 행 */}
-                {EDITABLE_ROWS.map(([label, field, color, bg, top, readOnly], rowIndex) => (
+                {EDITABLE_ROWS.map(([label, field, color, bg, top, readOnly], rowIndex) => {
+                  const isRowFocused = focusedCell?.row === rowIndex
+                  return (
                   <tr key={field}>
-                    <td style={{ ...tdLabelBase, position: 'sticky', top, left: 0, zIndex: 4, background: bg, color, borderRight: BORDER }}>
+                    <td style={{ ...tdLabelBase, position: 'sticky', top, left: 0, zIndex: 4, background: isRowFocused ? '#1a3a42' : bg, color: isRowFocused ? '#22d3ee' : color, borderRight: BORDER }}>
                       {label}
                     </td>
                     {filteredMachines.map((machine, machineIndex) =>
@@ -569,19 +585,21 @@ export default function SourceRemainingSheetTab() {
                       }),
                     )}
                   </tr>
-                ))}
+                )})}
 
                 {/* 날짜 행 */}
                 {dateRows.map(({ label, daysAhead }, rowIndex) => {
                   const isToday = daysAhead === 0
                   const rowBg = isToday ? TODAY_BG : (rowIndex % 2 === 0 ? BG_DEEP : BG_DEEPER)
+                  const gridRow = EDITABLE_ROWS.length + rowIndex
+                  const isRowFocused = focusedCell?.row === gridRow
                   return (
                     <tr key={label} ref={isToday ? todayRowRef : null} style={{ background: rowBg }}>
                       <td
                         style={{
                           ...tdLabelBase,
-                          background: rowBg,
-                          color: isToday ? TODAY_COLOR : 'var(--nowa-text-muted)',
+                          background: isRowFocused ? '#1a3a42' : rowBg,
+                          color: isRowFocused ? '#22d3ee' : isToday ? TODAY_COLOR : 'var(--nowa-text-muted)',
                           borderRight: BORDER,
                           fontWeight: isToday ? 700 : 600,
                         }}

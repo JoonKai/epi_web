@@ -1,4 +1,5 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+﻿import json
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -35,6 +36,7 @@ class BulkSourceUpdate(BaseModel):
     daily_usage: float = 0.0
     is_disabled: bool = False
     unit: str = "kg"
+    memo: dict = {}
 
 
 class SourceChangeLogCreate(BaseModel):
@@ -360,6 +362,7 @@ def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_
             row.daily_usage = item.daily_usage
             row.is_disabled = item.is_disabled
             row.unit = item.unit
+            row.memo = json.dumps(item.memo, ensure_ascii=False)
         else:
             db.add(
                 MocvdSource(
@@ -371,6 +374,7 @@ def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_
                     daily_usage=item.daily_usage,
                     is_disabled=item.is_disabled,
                     unit=item.unit,
+                    memo=json.dumps(item.memo, ensure_ascii=False),
                 )
             )
     db.commit()
@@ -443,6 +447,7 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
             "daily_usage": row.daily_usage if row.daily_usage is not None else 0.0,
             "is_disabled": bool(row.is_disabled),
             "unit": row.unit,
+            "memo": json.loads(row.memo or '{}'),
             "updated_at": row.updated_at,
         }
 
@@ -457,6 +462,7 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
             row[f"{source_name}_threshold_ratio"] = entry["threshold_ratio"] if entry else DEFAULT_THRESHOLD_RATIO
             row[f"{source_name}_daily_usage"] = entry["daily_usage"] if entry else 0.0
             row[f"{source_name}_is_disabled"] = entry["is_disabled"] if entry else False
+            row[f"{source_name}_memo"] = entry["memo"] if entry else {}
             row[f"{source_name}_unit"] = entry["unit"] if entry and entry["unit"] else "kg"
             if entry and entry["updated_at"] and (latest_at is None or entry["updated_at"] > latest_at):
                 latest_at = entry["updated_at"]

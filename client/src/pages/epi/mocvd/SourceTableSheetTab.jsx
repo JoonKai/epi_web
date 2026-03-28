@@ -198,6 +198,7 @@ export default function SourceTableSheetTab() {
   const [quickFilter, setQuickFilter] = useState('')
   const [machineGroupMap, setMachineGroupMap] = useState({})
   const [cellMemos, setCellMemos] = useState({})
+  const [focusedCell, setFocusedCell] = useState(null)
   const [contextMenu, setContextMenu] = useState(null)
   const [memoEdit, setMemoEdit] = useState(null)
   const [memoText, setMemoText] = useState('')
@@ -225,6 +226,7 @@ export default function SourceTableSheetTab() {
         setSourceNames(names)
 
         const nextCellData = {}
+        const nextMemos = {}
         rows.forEach((row) => {
           names.forEach((name) => {
             const key = `${row.machine_no}:${name}`
@@ -235,10 +237,15 @@ export default function SourceTableSheetTab() {
               threshold_ratio: row[`${name}_threshold_ratio`] ?? DEFAULT_THRESHOLD_RATIO,
               is_disabled: Boolean(row[`${name}_is_disabled`] ?? false),
             }
+            const memoObj = row[`${name}_memo`] ?? {}
+            Object.entries(memoObj).forEach(([field, text]) => {
+              if (text) nextMemos[`${key}:${field}`] = text
+            })
           })
         })
 
         setCellData(nextCellData)
+        setCellMemos(nextMemos)
         setPendingKeys(new Set())
       })
       .catch((err) => setError(typeof err === 'string' ? err : '소스 계산 데이터를 불러오지 못했습니다.'))
@@ -276,6 +283,14 @@ export default function SourceTableSheetTab() {
         const machine_no = Number(key.slice(0, colonIndex))
         const source_name = key.slice(colonIndex + 1)
         const cell = cellData[key] ?? {}
+        // cellMemos에서 이 key에 해당하는 필드 메모 수집
+        const memo = {}
+        Object.entries(cellMemos).forEach(([memoKey, text]) => {
+          if (memoKey.startsWith(`${key}:`)) {
+            const field = memoKey.slice(key.length + 1)
+            memo[field] = text
+          }
+        })
         return {
           machine_no,
           source_name,
@@ -284,6 +299,7 @@ export default function SourceTableSheetTab() {
           initial_amount: cell.initial_amount ?? 0,
           threshold_ratio: cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO,
           unit: 'kg',
+          memo,
         }
       })
 
@@ -317,6 +333,35 @@ export default function SourceTableSheetTab() {
     return () => document.removeEventListener('mousedown', close)
   }, [contextMenu])
 
+  const handleApplyToColumn = useCallback(() => {
+    const { key } = contextMenu
+    const lastColon = key.lastIndexOf(':')
+    const cellKey = key.slice(0, lastColon)        // machineNo:sourceName
+    const field = key.slice(lastColon + 1)         // 'initial' | 'ratio'
+    const dataField = field === 'initial' ? 'initial_amount' : 'threshold_ratio'
+    const colonIdx = cellKey.indexOf(':')
+    const sourceName = cellKey.slice(colonIdx + 1)
+    const value = cellData[cellKey]?.[dataField] ?? 0
+
+    setCellData((prev) => {
+      const next = { ...prev }
+      filteredMachines.forEach((machine) => {
+        const k = `${machine.machine_no}:${sourceName}`
+        if (next[k] && !next[k].is_disabled) next[k] = { ...next[k], [dataField]: value }
+      })
+      return next
+    })
+    setPendingKeys((prev) => {
+      const next = new Set(prev)
+      filteredMachines.forEach((machine) => {
+        const k = `${machine.machine_no}:${sourceName}`
+        if (cellData[k] && !cellData[k].is_disabled) next.add(k)
+      })
+      return next
+    })
+    setContextMenu(null)
+  }, [contextMenu, cellData, filteredMachines])
+
   const handleMemoSave = useCallback(() => {
     setCellMemos((prev) => {
       const next = { ...prev }
@@ -324,6 +369,9 @@ export default function SourceTableSheetTab() {
       else delete next[memoEdit]
       return next
     })
+    // 메모가 속한 machineNo:sourceName 키를 pendingKeys에 추가
+    const cellKey = memoEdit.split(':').slice(0, 2).join(':')
+    setPendingKeys((prev) => new Set([...prev, cellKey]))
     setMemoEdit(null)
   }, [memoEdit, memoText])
 
@@ -360,7 +408,18 @@ export default function SourceTableSheetTab() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 320px)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.14)' }}>
-            <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
+            <table
+              style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}
+              onFocus={(e) => {
+                const el = e.target.closest('[data-grid-row]') ?? (e.target.dataset.gridRow != null ? e.target : null)
+                const row = el?.dataset.gridRow
+                const col = el?.dataset.gridCol
+                if (row != null && col != null) setFocusedCell({ row: Number(row), col: Number(col) })
+              }}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) setFocusedCell(null)
+              }}
+            >
               <colgroup>
                 <col style={{ width: 108 }} />
                 {sourceNames.flatMap((sourceName) => [
@@ -375,21 +434,28 @@ export default function SourceTableSheetTab() {
               <thead>
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', top: 0, left: 0, zIndex: 4, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>MO</th>
-                  {sourceNames.map((sourceName) => (
-                    <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14 }}>
-                      {sourceName}
-                    </th>
-                  ))}
+                  {sourceNames.map((sourceName, si) => {
+                    const activeInGroup = focusedCell != null && Math.floor(focusedCell.col / 6) === si
+                    return (
+                      <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14, background: activeInGroup ? 'rgba(34,211,238,0.15)' : th1Base.background }}>
+                        {sourceName}
+                      </th>
+                    )
+                  })}
                 </tr>
                 <tr>
-                  {sourceNames.flatMap((sourceName) => [
-                    <th key={`${sourceName}:head-initial`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#38bdf8' }}>초기량</th>,
-                    <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24' }}>일사용량</th>,
-                    <th key={`${sourceName}:head-remaining`} style={{ ...th2Base, color: '#86efac' }}>잔량</th>,
-                    <th key={`${sourceName}:head-ratio`} style={{ ...th2Base, color: '#f59e0b' }}>교체기준(%)</th>,
-                    <th key={`${sourceName}:head-threshold`} style={{ ...th2Base, color: '#f97316' }}>교체 기준량</th>,
-                    <th key={`${sourceName}:head-date`} style={{ ...th2Base, color: '#60a5fa' }}>예상 교체일</th>,
-                  ])}
+                  {sourceNames.flatMap((sourceName, si) => {
+                    const baseCol = si * 6
+                    const hl = (fi) => focusedCell?.col === baseCol + fi ? { background: 'rgba(34,211,238,0.25)', color: '#22d3ee' } : {}
+                    return [
+                      <th key={`${sourceName}:head-initial`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#38bdf8', ...hl(0) }}>초기량</th>,
+                      <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24', ...hl(1) }}>일사용량</th>,
+                      <th key={`${sourceName}:head-remaining`} style={{ ...th2Base, color: '#86efac', ...hl(2) }}>잔량</th>,
+                      <th key={`${sourceName}:head-ratio`} style={{ ...th2Base, color: '#f59e0b', ...hl(3) }}>교체기준(%)</th>,
+                      <th key={`${sourceName}:head-threshold`} style={{ ...th2Base, color: '#f97316', ...hl(4) }}>교체 기준량</th>,
+                      <th key={`${sourceName}:head-date`} style={{ ...th2Base, color: '#60a5fa', ...hl(5) }}>예상 교체일</th>,
+                    ]
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -397,10 +463,10 @@ export default function SourceTableSheetTab() {
                   const grpName = machineGroupMap[machine.machine_no]
                   const rowBg = rowIndex % 2 === 0 ? '#1e2235' : '#191d28'
                   const gc = getGroupColor(grpName)
-                  const labelBg = gc ? gc.row : rowBg
+                  const labelBg = gc ? `linear-gradient(${gc.row}, ${gc.row}), ${rowBg}` : rowBg
                   return (
                   <tr key={`row:${machine.machine_no}`} style={{ background: rowBg }}>
-                    <td style={{ ...tdLabelBase, left: 0, background: labelBg, color: '#fbbf24', borderRight: BORDER, borderLeft: gc ? `2px solid ${gc.border}` : undefined }}>
+                    <td style={{ ...tdLabelBase, left: 0, background: focusedCell?.row === rowIndex ? '#1a3a42' : labelBg, color: focusedCell?.row === rowIndex ? '#22d3ee' : '#fbbf24', borderRight: BORDER, borderLeft: gc ? `2px solid ${gc.border}` : undefined }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                         <span>{formatMachineLabel(machine.machine_no)}</span>
                         {grpName && gc && (
@@ -453,18 +519,46 @@ export default function SourceTableSheetTab() {
         )}
       </Card>
 
-      {contextMenu && (
-        <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 9999, background: '#1a2035', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', minWidth: 180, overflow: 'hidden' }}>
-          <div className="ctx-item" onClick={() => { setMemoText(cellMemos[contextMenu.key] ?? ''); setMemoEdit(contextMenu.key); setContextMenu(null) }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 8 }}>
-            ✎ {cellMemos[contextMenu.key] ? '메모 편집' : '메모 삽입'}
-          </div>
-          {cellMemos[contextMenu.key] && (
-            <div className="ctx-item" onClick={() => { setCellMemos((p) => { const n = { ...p }; delete n[contextMenu.key]; return n }); setContextMenu(null) }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: 'var(--nowa-text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              ✕ 메모 삭제
+      {contextMenu && (() => {
+        const field = contextMenu.key.slice(contextMenu.key.lastIndexOf(':') + 1)
+        const isEditable = field === 'initial' || field === 'ratio'
+        return (
+          <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 9999, background: '#1a2035', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', minWidth: 200, overflow: 'hidden' }}>
+            {isEditable && (
+              <div className="ctx-item" onClick={handleApplyToColumn} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: '#22d3ee', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                ⬇ 같은 열 전체에 동일 값 적용
+              </div>
+            )}
+            <div className="ctx-item" onClick={() => { setMemoText(cellMemos[contextMenu.key] ?? ''); setMemoEdit(contextMenu.key); setContextMenu(null) }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 8 }}>
+              ✎ {cellMemos[contextMenu.key] ? '메모 편집' : '메모 삽입'}
             </div>
-          )}
-        </div>
-      )}
+            {cellMemos[contextMenu.key] && (
+              <div className="ctx-item" onClick={() => {
+                const cellKey = contextMenu.key.split(':').slice(0, 2).join(':')
+                setCellMemos((p) => { const n = { ...p }; delete n[contextMenu.key]; return n })
+                setPendingKeys((prev) => new Set([...prev, cellKey]))
+                setContextMenu(null)
+              }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: 'var(--nowa-text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                ✕ 메모 삭제
+              </div>
+            )}
+            {Object.keys(cellMemos).length > 0 && (
+              <div className="ctx-item" onClick={() => {
+                // 모든 메모 키의 cellKey를 pendingKeys에 추가
+                setPendingKeys((prev) => {
+                  const next = new Set(prev)
+                  Object.keys(cellMemos).forEach((k) => next.add(k.split(':').slice(0, 2).join(':')))
+                  return next
+                })
+                setCellMemos({})
+                setContextMenu(null)
+              }} style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: '#fda4af', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                ✕ 메모 전체 삭제
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       <Modal open={!!memoEdit} title="메모" onOk={handleMemoSave} onCancel={() => setMemoEdit(null)} okText="저장" cancelText="취소">
         <Input.TextArea value={memoText} onChange={(e) => setMemoText(e.target.value)} rows={4} placeholder="메모를 입력하세요" autoFocus />

@@ -120,6 +120,7 @@ class MocvdSource(Base):
     daily_usage = Column(Float, default=0.0)
     is_disabled = Column(Boolean, default=False)
     unit = Column(String(10), default="kg")
+    memo = Column(Text, default='{}')
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
