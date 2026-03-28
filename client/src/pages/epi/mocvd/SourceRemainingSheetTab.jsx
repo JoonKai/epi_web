@@ -1,54 +1,29 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Switch } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
 import { getSourceColor, getGroupColor } from './sourceColors'
-import { useThemeMode } from '../../../theme/useThemeMode'
 
+/* ── 모듈 레벨 상수 (컴포넌트 외부 → 렌더마다 재생성 없음) ── */
 const BORDER = '1px solid var(--nowa-border)'
-const DEFAULT_THRESHOLD_RATIO = 15
 const HEADER_TOP_1 = 0
-const HEADER_TOP_2 = 52
-const ROW_TOP_DAILY = 78
-const ROW_TOP_REMAINING = 108
+const HEADER_TOP_2 = 72
+const ROW_TOP_DAILY = HEADER_TOP_2 + 50       // 122
+const ROW_TOP_REMAINING = ROW_TOP_DAILY + 30  // 152
 const STICKY_CONTENT_HEIGHT = ROW_TOP_REMAINING + 30
 
-function makeTheme(isLight) {
-  const bg        = isLight ? '#f8f9ff' : '#1e222e'
-  const bgAlt     = isLight ? '#eaedff' : '#242834'
-  const bgDeep    = isLight ? '#eef2f8' : '#171b26'
-  const bgDeeper  = isLight ? '#e8ecf5' : '#131619'
-  const groupBorder = isLight ? '3px solid rgba(99,102,241,0.45)' : '3px solid #2d7aaa'
+const BG_DEEP   = '#171b26'
+const BG_DEEPER = '#131619'
+const BG_ALT    = '#242834'
+const TODAY_BG    = '#130a00'
+const TODAY_COLOR = '#f97316'
 
-  return {
-    bg, bgAlt, bgDeep, bgDeeper, groupBorder,
-    editableRows: [
-      ['일사용량', 'daily_usage',
-        isLight ? '#b45309' : '#fbbf24',
-        isLight ? '#fffbeb' : '#100e00',
-        ROW_TOP_DAILY],
-      ['잔량', 'remaining',
-        isLight ? '#15803d' : '#86efac',
-        isLight ? '#f0fdf4' : '#060f06',
-        ROW_TOP_REMAINING],
-    ],
-    th1Base: {
-      position: 'sticky', top: HEADER_TOP_1,
-      background: bgAlt, border: BORDER,
-      padding: '0 4px', textAlign: 'center',
-      whiteSpace: 'nowrap', height: 52, zIndex: 4,
-    },
-    th2Base: {
-      position: 'sticky', top: HEADER_TOP_2,
-      background: bg, border: BORDER,
-      padding: '0 3px', textAlign: 'center',
-      fontSize: 14, whiteSpace: 'nowrap',
-      height: 26, zIndex: 4,
-    },
-  }
-}
+const EDITABLE_ROWS = [
+  ['일사용량', 'daily_usage', '#fbbf24', '#100e00', ROW_TOP_DAILY,     false],
+  ['잔량',     'remaining',  '#86efac', '#060f06', ROW_TOP_REMAINING, true],
+]
 
 const tdLabelBase = {
   position: 'sticky',
@@ -58,25 +33,41 @@ const tdLabelBase = {
   padding: '0 8px',
   whiteSpace: 'nowrap',
   height: 30,
-  fontWeight: 600,
+  fontWeight: 700,
   fontSize: 14,
   textAlign: 'center',
 }
 
-function stickyDataRowStyle(top, bg, color = 'inherit', zIndex = 3) {
-  return {
-    position: 'sticky',
-    top,
-    background: bg,
-    color,
-    zIndex,
-  }
+const th1Base = {
+  position: 'sticky',
+  top: HEADER_TOP_1,
+  background: BG_ALT,
+  border: BORDER,
+  padding: '0 4px',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
+  height: 72,
+  zIndex: 6,
 }
 
-function toNumber(value, fallback = 0) {
-  const next = Number(value)
-  return Number.isFinite(next) ? next : fallback
+const th2Base = {
+  position: 'sticky',
+  top: HEADER_TOP_2,
+  background: BG_DEEP,
+  border: BORDER,
+  padding: '0 3px',
+  textAlign: 'center',
+  fontSize: 14,
+  whiteSpace: 'nowrap',
+  height: 50,
+  zIndex: 5,
 }
+
+/* GroupDivider를 모듈 레벨에 정의 → React가 같은 컴포넌트 타입으로 인식, remount 없음 */
+function GroupDivider() {
+  return <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: 'rgba(99,179,237,0.75)', pointerEvents: 'none', zIndex: 10 }} />
+}
+
 
 function fmt(v) {
   if (v == null || Number.isNaN(v)) return '-'
@@ -90,32 +81,16 @@ function getHatchBackground(base) {
   return `repeating-linear-gradient(155deg, rgba(245,158,11,0.22) 0px, rgba(245,158,11,0.22) 1px, ${base} 1px, ${base} 18px)`
 }
 
-
-
-function ToggleBadge({ active, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        border: '1px solid rgba(245,158,11,0.24)',
-        background: active ? 'rgba(239,68,68,0.18)' : 'rgba(15,23,42,0.4)',
-        color: active ? '#fca5a5' : 'rgba(196,210,226,0.74)',
-        borderRadius: 999,
-        minWidth: 56,
-        height: 22,
-        fontSize: 14,
-        fontWeight: 700,
-        cursor: 'pointer',
-      }}
-    >
-      {active ? '사용안함' : '사용중'}
-    </button>
-  )
+function navigateCell(row, col, dRow, dCol) {
+  const el = document.querySelector(`[data-grid-row="${row + dRow}"][data-grid-col="${col + dCol}"]`)
+  if (!el) return
+  el.focus()
+  if (el.tagName === 'INPUT') el.select()
 }
 
-function EditField({ value, color, bg, onChange, onPaste, pending, disabled = false }) {
+function EditField({ value, color, bg, onChange, onPaste, disabled = false, numericOnly = false, gridRow, gridCol }) {
   const [local, setLocal] = useState(value ?? '')
+  const [focused, setFocused] = useState(false)
 
   useEffect(() => {
     setLocal(value ?? '')
@@ -130,51 +105,86 @@ function EditField({ value, color, bg, onChange, onPaste, pending, disabled = fa
     }
   }
 
+  const handleKeyDown = (e) => {
+    const row = gridRow ?? NaN
+    const col = gridCol ?? NaN
+    const hasCoords = !isNaN(row) && !isNaN(col)
+    if (hasCoords) {
+      if (e.key === 'ArrowUp') { e.preventDefault(); navigateCell(row, col, -1, 0); return }
+      if (e.key === 'ArrowDown') { e.preventDefault(); navigateCell(row, col, 1, 0); return }
+      if (e.key === 'Enter') { e.preventDefault(); navigateCell(row, col, 0, 1); return }
+      if (e.key === 'ArrowLeft' && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
+        e.preventDefault(); navigateCell(row, col, 0, -1); return
+      }
+      if (e.key === 'ArrowRight') {
+        const len = (e.currentTarget.value ?? '').length
+        if (e.currentTarget.selectionStart === len && e.currentTarget.selectionEnd === len) {
+          e.preventDefault(); navigateCell(row, col, 0, 1); return
+        }
+      }
+    }
+    if (!numericOnly) return
+    const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End']
+    if (allowed.includes(e.key)) return
+    if (e.ctrlKey || e.metaKey) return
+    if (/^[0-9.]$/.test(e.key)) return
+    e.preventDefault()
+  }
+
   return (
     <input
       value={local === 0 ? '' : local}
       disabled={disabled}
+      data-grid-row={gridRow}
+      data-grid-col={gridCol}
       onChange={(event) => {
+        const v = event.target.value
+        if (numericOnly && v !== '' && !/^[0-9]*\.?[0-9]*$/.test(v)) return
+        setLocal(v)
+      }}
+      onKeyDown={handleKeyDown}
+      onFocus={(e) => { setFocused(true); e.target.select() }}
+      onBlur={(event) => {
+        setFocused(false)
         const next = event.target.value
-        setLocal(next)
         onChange(next === '' ? 0 : Number(next))
       }}
       onPaste={handlePasteEvent}
       style={{
         width: '100%',
         height: 30,
-        background: disabled ? getHatchBackground(bg) : pending ? 'rgba(245,158,11,0.08)' : bg,
+        background: disabled ? getHatchBackground(bg) : bg,
         border: 'none',
-        outline: 'none',
+        outline: focused ? '2px solid rgba(59,130,246,0.85)' : 'none',
+        outlineOffset: '-1px',
+        caretColor: 'transparent',
         color: disabled ? 'rgba(196,210,226,0.42)' : color,
         textAlign: 'right',
         padding: '0 6px',
         boxSizing: 'border-box',
         cursor: disabled ? 'not-allowed' : 'text',
+        fontSize: 14,
       }}
     />
   )
 }
 
 export default function SourceRemainingSheetTab() {
-  const { isLight } = useThemeMode()
-  const T = makeTheme(isLight)
-
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [machines, setMachines] = useState([])
-  const [sourceNames, setSourceNames] = useState([])
   const [machineOrder, setMachineOrder] = useState([])
   const [sourceOrder, setSourceOrder] = useState([])
   const [cellData, setCellData] = useState({})
+  const [disabledKeys, setDisabledKeys] = useState(new Set())
   const [pendingKeys, setPendingKeys] = useState(new Set())
+  const deferredCellData = useDeferredValue(cellData)
   const [quickFilter, setQuickFilter] = useState('')
-  const [forecastDays, setForecastDays] = useState(15)
+  const [forecastDays, setForecastDays] = useState(30)
   const [statusSettings, setStatusSettings] = useState({ overdue_days: 0, urgent_days: 7 })
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [machineGroupMap, setMachineGroupMap] = useState({})
-  const [historyData, setHistoryData] = useState([])
   const [todayPinned, setTodayPinned] = useState(false)
   const scrollWrapRef = useRef(null)
   const todayRowRef = useRef(null)
@@ -190,13 +200,6 @@ export default function SourceRemainingSheetTab() {
       .catch(() => {})
   }, [])
 
-  const fetchHistory = useCallback(() => {
-    authFetch('/api/mocvd/sources/history?days=180')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setHistoryData(data))
-      .catch(() => {})
-  }, [])
-
   const fetchData = useCallback(() => {
     setLoading(true)
     setError(null)
@@ -205,8 +208,7 @@ export default function SourceRemainingSheetTab() {
       .then((json) => {
         const rows = json.rows ?? []
         const names = json.source_names ?? []
-        setMachines(rows.map((row) => ({ ...row, machine_no: row.machine_no, description: row.description })))
-        setSourceNames(names)
+        setMachines(rows.map((row) => ({ machine_no: row.machine_no, description: row.description })))
         setMachineOrder((prev) => {
           const newNos = rows.map((r) => r.machine_no)
           const preserved = prev.filter((no) => newNos.includes(no))
@@ -220,20 +222,20 @@ export default function SourceRemainingSheetTab() {
         })
 
         const nextCellData = {}
+        const nextDisabledKeys = new Set()
         rows.forEach((row) => {
           names.forEach((name) => {
             const key = `${row.machine_no}:${name}`
             nextCellData[key] = {
               remaining: row[name] ?? 0,
               daily_usage: row[`${name}_daily_usage`] ?? 0,
-              initial_amount: row[`${name}_initial_amount`] ?? 0,
-              threshold_ratio: row[`${name}_threshold_ratio`] ?? DEFAULT_THRESHOLD_RATIO,
-              is_disabled: Boolean(row[`${name}_is_disabled`] ?? false),
             }
+            if (row[`${name}_is_disabled`]) nextDisabledKeys.add(key)
           })
         })
 
         setCellData(nextCellData)
+        setDisabledKeys(nextDisabledKeys)
         setPendingKeys(new Set())
         setStatusSettings(json.status_settings ?? { overdue_days: 0, urgent_days: 7 })
       })
@@ -243,8 +245,7 @@ export default function SourceRemainingSheetTab() {
 
   useEffect(() => {
     fetchData()
-    fetchHistory()
-  }, [fetchData, fetchHistory])
+  }, [fetchData])
 
   const orderedMachines = useMemo(
     () => machineOrder.map((no) => machines.find((m) => m.machine_no === no)).filter(Boolean),
@@ -262,15 +263,36 @@ export default function SourceRemainingSheetTab() {
     )
   }, [orderedMachines, quickFilter])
 
+  // disabledKeys에만 의존 → 셀 편집 시 cellData 변경에도 재계산 안 함
   const machineEnabledSources = useMemo(() => {
     const map = {}
     filteredMachines.forEach((machine) => {
       map[machine.machine_no] = sourceOrder.filter(
-        (src) => !cellData[`${machine.machine_no}:${src}`]?.is_disabled,
+        (src) => !disabledKeys.has(`${machine.machine_no}:${src}`),
       )
     })
     return map
-  }, [filteredMachines, sourceOrder, cellData])
+  }, [filteredMachines, sourceOrder, disabledKeys])
+
+  /* columns를 memoize → 렌더마다 재생성 방지 */
+  const columns = useMemo(() => {
+    const result = []
+    filteredMachines.forEach((machine) => {
+      ;(machineEnabledSources[machine.machine_no] ?? []).forEach((sourceName) => {
+        result.push({ machineNo: machine.machine_no, sourceName })
+      })
+    })
+    return result
+  }, [filteredMachines, machineEnabledSources])
+
+  /* colIndexMap: O(1) 룩업 → columns.findIndex O(N) 반복 제거 */
+  const colIndexMap = useMemo(() => {
+    const map = {}
+    columns.forEach(({ machineNo, sourceName }, i) => {
+      map[`${machineNo}:${sourceName}`] = i
+    })
+    return map
+  }, [columns])
 
   const dateRows = useMemo(
     () =>
@@ -281,47 +303,13 @@ export default function SourceRemainingSheetTab() {
     [forecastDays],
   )
 
-  const historyByDate = useMemo(() => {
-    const map = {}
-    historyData.forEach((row) => {
-      if (!map[row.recorded_date]) map[row.recorded_date] = {}
-      map[row.recorded_date][`${row.machine_no}:${row.source_name}`] = row.remaining
-    })
-    return map
-  }, [historyData])
-
-  const historyDates = useMemo(() => {
-    const today = dayjs().format('YYYY-MM-DD')
-    return [...new Set(historyData.map((r) => r.recorded_date))]
-      .filter((d) => d < today)
-      .sort()
-      .reverse()
-  }, [historyData])
-
-
-  const handleChange = (machineNo, sourceName, field, value) => {
+  const handleChange = useCallback((machineNo, sourceName, field, value) => {
     const key = `${machineNo}:${sourceName}`
     setCellData((prev) => ({ ...prev, [key]: { ...prev[key], [field]: Number(value ?? 0) } }))
     setPendingKeys((prev) => new Set([...prev, key]))
-  }
+  }, [])
 
-  const handleToggleDisabled = (machineNo, sourceName) => {
-    const key = `${machineNo}:${sourceName}`
-    setCellData((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], is_disabled: !prev[key]?.is_disabled },
-    }))
-    setPendingKeys((prev) => new Set([...prev, key]))
-  }
-
-  const columns = []
-  filteredMachines.forEach((machine) => {
-    ;(machineEnabledSources[machine.machine_no] ?? []).forEach((sourceName) => {
-      columns.push({ machineNo: machine.machine_no, sourceName })
-    })
-  })
-
-  const handlePaste = (rowIndex, colIndex, text) => {
+  const handlePaste = useCallback((rowIndex, colIndex, text) => {
     const rows = text.replace(/\r/g, '').split('\n').filter((v) => v !== '')
     rows.forEach((rowText, ri) => {
       const targetRowIndex = rowIndex + ri
@@ -338,7 +326,7 @@ export default function SourceRemainingSheetTab() {
         }
       })
     })
-  }
+  }, [columns, cellData, handleChange])
 
   const handleSave = async () => {
     if (pendingKeys.size === 0) return
@@ -368,7 +356,6 @@ export default function SourceRemainingSheetTab() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.detail || '잔량기입 저장에 실패했습니다.')
       fetchData()
-      fetchHistory()
     } catch (err) {
       setError(err.message || '잔량기입 저장에 실패했습니다.')
     } finally {
@@ -421,14 +408,22 @@ export default function SourceRemainingSheetTab() {
     }
   }, [getTodayMinScrollTop, todayPinned])
 
+  const handleCellKeyDown = useCallback((e) => {
+    const row = Number(e.currentTarget.dataset.gridRow)
+    const col = Number(e.currentTarget.dataset.gridCol)
+    if (e.key === 'ArrowUp')                             { e.preventDefault(); navigateCell(row, col, -1,  0) }
+    else if (e.key === 'ArrowDown' || e.key === 'Enter') { e.preventDefault(); navigateCell(row, col,  1,  0) }
+    else if (e.key === 'ArrowLeft')                      { e.preventDefault(); navigateCell(row, col,  0, -1) }
+    else if (e.key === 'ArrowRight')                     { e.preventDefault(); navigateCell(row, col,  0,  1) }
+  }, [])
+
   useEffect(() => {
-    if (todayPinned) {
-      scrollToToday()
-    }
+    if (todayPinned) scrollToToday()
   }, [todayPinned, scrollToToday])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
+      <style>{`[data-grid-row]:focus{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;}`}</style>
       <Card className="nowa-card" styles={{ body: { padding: 16 } }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Space wrap size={16}>
@@ -448,10 +443,7 @@ export default function SourceRemainingSheetTab() {
 
       {error ? <Alert type="error" message={error} /> : null}
 
-      <Card
-        className="nowa-card"
-        styles={{ body: { padding: 16 } }}
-      >
+      <Card className="nowa-card" styles={{ body: { padding: 16 } }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center', paddingBottom: 12, marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.14)' }}>
           <div style={{ color: 'var(--nowa-text-soft)', fontSize: 14, fontWeight: 700 }}>전체 설비 소스 입력</div>
           <Space wrap>
@@ -463,7 +455,7 @@ export default function SourceRemainingSheetTab() {
             <Input value={quickFilter} onChange={(event) => setQuickFilter(event.target.value)} placeholder="호기 검색" style={{ width: 150 }} allowClear />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13, whiteSpace: 'nowrap' }}>예상 교체일 기준</span>
-              <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[15, 30, 60, 90, 120, 150, 180].map((value) => ({ value, label: `${value}일` }))} />
+              <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[30, 60, 90, 120, 150, 180].map((value) => ({ value, label: `${value}일` }))} />
             </div>
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
@@ -474,32 +466,36 @@ export default function SourceRemainingSheetTab() {
         </div>
         {loading ? (
           <div style={{ display: 'grid', placeItems: 'center', minHeight: 420 }}>
-            <Spin tip="잔량기입 데이터를 불러오는 중입니다." />
+            <Spin>
+              <div style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>잔량기입 데이터를 불러오는 중입니다.</div>
+            </Spin>
           </div>
         ) : (
           <div ref={scrollWrapRef} onScroll={handleSheetScroll} style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.14)' }}>
-            <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}>
+            <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14, background: BG_DEEPER }}>
               <colgroup>
-                <col style={{ width: 88 }} />
-                {filteredMachines.map((machine) =>
-                  (machineEnabledSources[machine.machine_no] ?? []).map((sourceName) => <col key={`${machine.machine_no}:${sourceName}`} style={{ width: 82 }} />),
-                )}
+                <col style={{ width: 80 }} />
+                {columns.map(({ machineNo, sourceName }) => (
+                  <col key={`${machineNo}:${sourceName}`} style={{ width: 96 }} />
+                ))}
               </colgroup>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 5, background: T.bgDeep, color: 'var(--nowa-text-muted)', border: BORDER, height: 52 }}>구분</th>
+                  <th rowSpan={2} style={{ position: 'sticky', top: HEADER_TOP_1, left: 0, zIndex: 8, background: BG_ALT, color: 'var(--nowa-text-muted)', border: BORDER, height: 72, fontSize: 14, fontWeight: 700 }}>구분</th>
                   {filteredMachines.map((machine, mi) => {
                     const enabled = machineEnabledSources[machine.machine_no] ?? []
                     if (enabled.length === 0) return null
+                    const gc = getGroupColor(machineGroupMap[machine.machine_no])
                     return (
-                      <th key={machine.machine_no} colSpan={enabled.length} style={{ position: 'sticky', top: HEADER_TOP_1, background: T.bgAlt, border: BORDER, borderLeft: mi === 0 ? BORDER : T.groupBorder, height: 52, fontWeight: 700, zIndex: 4 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <span style={{ color: 'var(--nowa-primary)' }}>{formatMachineLabel(machine.machine_no)}</span>
-                          {(() => { const gc = getGroupColor(machineGroupMap[machine.machine_no]); return gc ? (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 3, padding: '0 5px', lineHeight: '14px' }}>
+                      <th key={machine.machine_no} colSpan={enabled.length} style={{ ...th1Base }}>
+                        {mi > 0 && <GroupDivider />}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                          <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>{formatMachineLabel(machine.machine_no)}</span>
+                          {gc ? (
+                            <span style={{ fontSize: 12, fontWeight: 800, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 6, padding: '0 10px', lineHeight: '22px', minHeight: 22 }}>
                               {machineGroupMap[machine.machine_no]}
                             </span>
-                          ) : null })()}
+                          ) : null}
                         </div>
                       </th>
                     )
@@ -507,53 +503,86 @@ export default function SourceRemainingSheetTab() {
                 </tr>
                 <tr>
                   {filteredMachines.map((machine, mi) =>
-                    (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, index) => (
-                      <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...T.th2Base, borderLeft: index === 0 && mi > 0 ? T.groupBorder : BORDER, color: getSourceColor(sourceOrder.indexOf(sourceName)).main }}>
-                        {sourceName}
-                      </th>
-                    )),
+                    (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, index) => {
+                      const palette = getSourceColor(sourceOrder.indexOf(sourceName))
+                      return (
+                        <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, color: palette.main, fontWeight: 700 }}>
+                          {index === 0 && mi > 0 && <GroupDivider />}
+                          {sourceName}
+                        </th>
+                      )
+                    }),
                   )}
                 </tr>
               </thead>
               <tbody>
-                {T.editableRows.map(([label, field, color, bg, top], rowIndex) => (
+                {/* 일사용량 / 잔량 sticky 행 */}
+                {EDITABLE_ROWS.map(([label, field, color, bg, top, readOnly], rowIndex) => (
                   <tr key={field}>
-                    <td style={{ ...tdLabelBase, ...stickyDataRowStyle(top, bg, color, field === 'daily_usage' ? 5 : 4), borderRight: BORDER }}>{label}</td>
+                    <td style={{ ...tdLabelBase, position: 'sticky', top, left: 0, zIndex: 4, background: bg, color, borderRight: BORDER }}>
+                      {label}
+                    </td>
                     {filteredMachines.map((machine, machineIndex) =>
                       (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
                         const key = `${machine.machine_no}:${sourceName}`
-                        const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
+                        const colIndex = colIndexMap[key] ?? 0
                         return (
-                          <td key={`${key}:${field}`} style={{ ...stickyDataRowStyle(top, bg, 'inherit', field === 'daily_usage' ? 5 : 4), border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER, height: 30 }}>
-                            <EditField
-                              value={cellData[key]?.[field] ?? 0}
-                              color={color}
-                              bg={bg}
-                              pending={pendingKeys.has(key)}
-                              onChange={(value) => handleChange(machine.machine_no, sourceName, field, value)}
-                              onPaste={(text) => handlePaste(rowIndex, colIndex, text)}
-                            />
+                          <td
+                            key={`${key}:${field}`}
+                            tabIndex={readOnly ? 0 : undefined}
+                            data-grid-row={readOnly ? rowIndex : undefined}
+                            data-grid-col={readOnly ? colIndex : undefined}
+                            onKeyDown={readOnly ? handleCellKeyDown : undefined}
+                            style={{
+                              position: 'sticky',
+                              top,
+                              background: bg,
+                              border: BORDER,
+                              height: 30,
+                              zIndex: 3,
+                              padding: readOnly ? '0 6px' : 0,
+                              textAlign: readOnly ? 'right' : undefined,
+                              color: readOnly ? color : undefined,
+                              outline: 'none',
+                            }}
+                          >
+                            {sourceIndex === 0 && machineIndex > 0 && <GroupDivider />}
+                            {readOnly ? (
+                              fmt(cellData[key]?.[field] ?? 0)
+                            ) : (
+                              <EditField
+                                value={cellData[key]?.[field] ?? 0}
+                                color={color}
+                                bg={bg}
+
+                                disabled={disabledKeys.has(key)}
+                                onChange={(value) => handleChange(machine.machine_no, sourceName, field, value)}
+                                onPaste={(text) => handlePaste(rowIndex, colIndex, text)}
+                                numericOnly
+                                gridRow={rowIndex}
+                                gridCol={colIndex}
+                              />
+                            )}
                           </td>
                         )
                       }),
                     )}
                   </tr>
                 ))}
+
+                {/* 날짜 행 */}
                 {dateRows.map(({ label, daysAhead }, rowIndex) => {
-                  const baseBg = rowIndex % 2 === 0 ? T.bgDeep : T.bgDeeper
+                  const isToday = daysAhead === 0
+                  const rowBg = isToday ? TODAY_BG : (rowIndex % 2 === 0 ? BG_DEEP : BG_DEEPER)
                   return (
-                    <tr
-                      key={label}
-                      ref={daysAhead === 0 ? todayRowRef : null}
-                      style={{ background: baseBg }}
-                    >
+                    <tr key={label} ref={isToday ? todayRowRef : null} style={{ background: rowBg }}>
                       <td
                         style={{
                           ...tdLabelBase,
-                          background: baseBg,
-                          color: daysAhead === 0 ? 'var(--nowa-primary)' : 'var(--nowa-text-muted)',
+                          background: rowBg,
+                          color: isToday ? TODAY_COLOR : 'var(--nowa-text-muted)',
                           borderRight: BORDER,
-                          fontWeight: daysAhead === 0 ? 700 : 600,
+                          fontWeight: isToday ? 700 : 600,
                         }}
                       >
                         {label}
@@ -561,26 +590,55 @@ export default function SourceRemainingSheetTab() {
                       {filteredMachines.map((machine, machineIndex) =>
                         (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
                           const key = `${machine.machine_no}:${sourceName}`
-                          const remaining = cellData[key]?.remaining ?? 0
-                          const dailyUsage = cellData[key]?.daily_usage ?? 0
+                          const colIndex = colIndexMap[key] ?? 0
+                          // 오늘 행은 실시간 cellData, 나머지 projection은 deferredCellData (입력 반응성 우선)
+                          const liveCell = cellData[key] ?? {}
+                          const cell = isToday ? liveCell : (deferredCellData[key] ?? {})
+                          const remaining = cell.remaining ?? 0
+                          const dailyUsage = cell.daily_usage ?? 0
                           const projected = dailyUsage === 0 ? null : Math.max(0, remaining - daysAhead * dailyUsage)
-                          const colIndex = columns.findIndex((c) => c.machineNo === machine.machine_no && c.sourceName === sourceName)
-                          if (daysAhead === 0) {
+
+                          if (isToday) {
                             return (
-                              <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER, background: baseBg, height: 30 }}>
+                              <td key={`${key}:${label}`} style={{ border: BORDER, position: 'relative', background: rowBg, height: 30, padding: 0 }}>
+                                {sourceIndex === 0 && machineIndex > 0 && <GroupDivider />}
                                 <EditField
-                                  value={cellData[key]?.remaining ?? 0}
-                                  color="var(--nowa-text-soft)"
-                                  bg={baseBg}
-                                  pending={pendingKeys.has(key)}
+                                  value={remaining}
+                                  color={TODAY_COLOR}
+                                  bg={rowBg}
+  
+                                  disabled={disabledKeys.has(key)}
                                   onChange={(value) => handleChange(machine.machine_no, sourceName, 'remaining', value)}
                                   onPaste={(text) => handlePaste(1, colIndex, text)}
+                                  numericOnly
+                                  gridRow={EDITABLE_ROWS.length + rowIndex}
+                                  gridCol={colIndex}
                                 />
                               </td>
                             )
                           }
+
+                          const daysLeft = dailyUsage > 0 && projected != null ? projected / dailyUsage : Infinity
+                          const projectionColor =
+                            projected == null ? 'var(--nowa-text-muted)'
+                            : projected <= 0 ? '#fda4af'
+                            : daysLeft <= statusSettings.overdue_days ? '#fda4af'
+                            : daysLeft <= statusSettings.urgent_days ? '#fbbf24'
+                            : '#94a3b8'
+                          const projectionBg =
+                            projected == null || projected > 0 ? rowBg
+                            : rowIndex % 2 === 0 ? 'rgba(190,24,93,0.16)' : 'rgba(190,24,93,0.12)'
+
                           return (
-                            <td key={`${key}:${label}`} style={{ border: BORDER, borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER, background: baseBg, color: 'var(--nowa-text-soft)', textAlign: 'right', paddingRight: 6, height: 30 }}>
+                            <td
+                              key={`${key}:${label}`}
+                              tabIndex={0}
+                              data-grid-row={EDITABLE_ROWS.length + rowIndex}
+                              data-grid-col={colIndex}
+                              onKeyDown={handleCellKeyDown}
+                              style={{ border: BORDER, position: 'relative', background: projectionBg, color: projectionColor, textAlign: 'right', paddingRight: 6, height: 30, outline: 'none' }}
+                            >
+                              {sourceIndex === 0 && machineIndex > 0 && <GroupDivider />}
                               {projected == null ? '-' : fmt(projected)}
                             </td>
                           )
@@ -589,63 +647,6 @@ export default function SourceRemainingSheetTab() {
                     </tr>
                   )
                 })}
-                {historyDates.length > 0 && (
-                  <>
-                    <tr>
-                      <td
-                        colSpan={1 + columns.length}
-                        style={{
-                          background: T.bgDeeper,
-                          color: 'var(--nowa-text-muted)',
-                          fontSize: 11,
-                          padding: '5px 8px',
-                          borderTop: '2px solid var(--nowa-border)',
-                          textAlign: 'center',
-                          letterSpacing: 1,
-                          fontWeight: 600,
-                          opacity: 0.7,
-                        }}
-                      >
-                        과거 기록 (최근 {historyDates.length}일)
-                      </td>
-                    </tr>
-                    {historyDates.map((date, rowIndex) => {
-                      const dateObj = dayjs(date)
-                      const label = `${dateObj.month() + 1}/${dateObj.date()}`
-                      const dayRecord = historyByDate[date] ?? {}
-                      const bg = rowIndex % 2 === 0 ? T.bgDeeper : T.bgDeep
-                      return (
-                        <tr key={`hist:${date}`} style={{ background: bg }}>
-                          <td style={{ ...tdLabelBase, background: bg, color: 'var(--nowa-text-muted)', borderRight: BORDER, opacity: 0.7 }}>{label}</td>
-                          {filteredMachines.map((machine, machineIndex) =>
-                            (machineEnabledSources[machine.machine_no] ?? []).map((sourceName, sourceIndex) => {
-                              const key = `${machine.machine_no}:${sourceName}`
-                              const val = dayRecord[key]
-                              return (
-                                <td
-                                  key={`${key}:hist:${date}`}
-                                  style={{
-                                    border: BORDER,
-                                    borderLeft: sourceIndex === 0 && machineIndex > 0 ? T.groupBorder : BORDER,
-                                    background: bg,
-                                    color: 'var(--nowa-text-muted)',
-                                    textAlign: 'right',
-                                    paddingRight: 6,
-                                    height: 30,
-                                    fontSize: 13,
-                                    opacity: 0.75,
-                                  }}
-                                >
-                                  {val != null ? fmt(val) : ''}
-                                </td>
-                              )
-                            }),
-                          )}
-                        </tr>
-                      )
-                    })}
-                  </>
-                )}
               </tbody>
             </table>
           </div>

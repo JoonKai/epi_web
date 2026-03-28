@@ -1,0 +1,198 @@
+.remaining-style-jspreadsheet-shell {
+  display: block;
+  width: 100%;
+  background: transparent;
+}
+
+.remaining-style-jspreadsheet-shell .jss_spreadsheet,
+.remaining-style-jspreadsheet-shell .jss_container,
+.remaining-style-jspreadsheet-shell .jss_content {
+  background: transparent !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_container {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet {
+  border-collapse: collapse;
+  background: #171b26 !important;
+  border-right: 1px solid var(--nowa-border) !important;
+  border-bottom: 1px solid var(--nowa-border) !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > thead > tr > td {
+  background: #242834 !important;
+  color: var(--nowa-text-muted) !important;
+  border: 1px solid var(--nowa-border) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  height: 72px !important;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > thead > tr:nth-child(2) > td {
+  top: var(--remaining-top-header-2, 72px);
+  z-index: 5;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > thead > tr > td:first-child,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td:first-child,
+.remaining-style-jspreadsheet-shell .jss_corner {
+  display: none !important;
+}
+
+.remaining-style-jspreadsheet-shell .remaining-merged-label {
+  vertical-align: middle !important;
+}
+
+.remaining-style-jspreadsheet-shell .remaining-machine-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 56px;
+}
+
+.remaining-style-jspreadsheet-shell .remaining-machine-title {
+  color: #fbbf24;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.remaining-style-jspreadsheet-shell .remaining-machine-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td {
+  background: #131619 !important;
+  color: #cbd5e1 !important;
+  border: 1px solid var(--nowa-border) !important;
+  height: 30px !important;
+  font-size: 14px !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-sticky-row-1 > td {
+  position: sticky;
+  top: var(--remaining-top-row-1, 144px);
+  z-index: 4;
+  background: #171b26 !important;
+  color: #fbbf24 !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-sticky-row-2 > td {
+  position: sticky;
+  top: var(--remaining-top-row-2, 174px);
+  z-index: 4;
+  background: #131619 !important;
+  color: #fb923c !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr:nth-child(odd) > td {
+  background: #171b26 !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-today-row > td,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-today-row:nth-child(odd) > td,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-today-row:nth-child(even) > td {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #93c5fd !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > thead > tr > td.remaining-accent-yellow {
+  color: #fbbf24 !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > thead > tr > td.remaining-accent-green {
+  color: #86efac !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.remaining-accent-yellow {
+  background: #100e00 !important;
+  color: #fbbf24 !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.remaining-accent-green {
+  background: #060f06 !important;
+  color: #86efac !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.readonly {
+  background: #171b26 !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-sticky-row-1 > td:first-child,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-sticky-row-2 > td:first-child,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr.remaining-today-row > td:first-child {
+  color: var(--nowa-text-soft) !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td > input,
+.remaining-style-jspreadsheet-shell .jss_worksheet .editor,
+.remaining-style-jspreadsheet-shell .jss_worksheet .editor > input {
+  background: transparent !important;
+  color: inherit !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-align: right !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.selected,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.highlight-selected {
+  background: rgba(245, 158, 11, 0.1) !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > thead > tr > td.remaining-machine-divider,
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.remaining-machine-divider {
+  border-right: 1px solid rgba(148, 163, 184, 0.4) !important;
+  box-shadow: inset -1px 0 0 rgba(148, 163, 184, 0.12) !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.remaining-projection-normal {
+  color: #94a3b8 !important;
+  background: rgba(15, 23, 42, 0.22) !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.remaining-projection-low {
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: #fbbf24 !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_worksheet > tbody > tr > td.remaining-projection-zero {
+  background: rgba(190, 24, 93, 0.16) !important;
+  color: #fda4af !important;
+}
+
+.remaining-style-jspreadsheet-shell .jss_content {
+  border: 0 !important;
+  box-shadow: none !important;
+  scrollbar-color: rgba(245, 158, 11, 0.45) rgba(255,255,255,0.04);
+}
+
+.remaining-style-jspreadsheet-shell .jss_content::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.remaining-style-jspreadsheet-shell .jss_content::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.04);
+}
+
+.remaining-style-jspreadsheet-shell .jss_content::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.45);
+  border-radius: 999px;
+}
