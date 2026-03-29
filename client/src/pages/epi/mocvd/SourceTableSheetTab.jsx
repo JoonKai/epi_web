@@ -437,7 +437,7 @@ export default function SourceTableSheetTab() {
                   {sourceNames.map((sourceName, si) => {
                     const activeInGroup = focusedCell != null && Math.floor(focusedCell.col / 6) === si
                     return (
-                      <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14, background: activeInGroup ? 'rgba(34,211,238,0.15)' : th1Base.background }}>
+                      <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14, background: activeInGroup ? `linear-gradient(rgba(34,211,238,0.15),rgba(34,211,238,0.15)),${th1Base.background}` : th1Base.background }}>
                         {sourceName}
                       </th>
                     )
@@ -446,7 +446,7 @@ export default function SourceTableSheetTab() {
                 <tr>
                   {sourceNames.flatMap((sourceName, si) => {
                     const baseCol = si * 6
-                    const hl = (fi) => focusedCell?.col === baseCol + fi ? { background: 'rgba(34,211,238,0.25)', color: '#22d3ee' } : {}
+                    const hl = (fi) => focusedCell?.col === baseCol + fi ? { background: `linear-gradient(rgba(34,211,238,0.25),rgba(34,211,238,0.25)),${th2Base.background}`, color: '#22d3ee' } : {}
                     return [
                       <th key={`${sourceName}:head-initial`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#38bdf8', ...hl(0) }}>초기량</th>,
                       <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24', ...hl(1) }}>일사용량</th>,

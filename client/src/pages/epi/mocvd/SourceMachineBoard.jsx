@@ -1,37 +1,139 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, Empty, Input, Progress, Skeleton, Tag } from 'antd'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { Alert, Button, Card, Empty, Input, Skeleton, Tag } from 'antd'
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { getGroupColor } from './sourceColors'
 import { useThemeMode } from '../../../theme/useThemeMode'
 
 const STATUS_META = {
   overdue: { label: '부족', color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.24)' },
-  urgent: { label: '임박', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.24)' },
-  normal: { label: '정상', color: '#34d399', bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.22)' },
+  urgent:  { label: '임박', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.24)' },
+  normal:  { label: '정상', color: '#34d399', bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.22)' },
+  nodata:  { label: '미입력', color: '#64748b', bg: 'rgba(100,116,139,0.10)', border: 'rgba(100,116,139,0.22)' },
 }
 
 const FILTER_OPTIONS = [
-  { label: '전체', value: 'all', color: '#64748b' },
-  { label: '부족', value: 'overdue', color: '#f87171' },
-  { label: '임박', value: 'urgent', color: '#fbbf24' },
-  { label: '정상', value: 'normal', color: '#34d399' },
+  { label: '전체',  value: 'all',     color: '#64748b' },
+  { label: '부족',  value: 'overdue', color: '#f87171' },
+  { label: '임박',  value: 'urgent',  color: '#fbbf24' },
+  { label: '정상',  value: 'normal',  color: '#34d399' },
+  { label: '미입력', value: 'nodata', color: '#64748b' },
 ]
 
 function getBarPercent(remaining, initialAmount, fallbackValues) {
   const current = Number(remaining ?? 0)
   const initial = Number(initialAmount ?? 0)
-  if (initial > 0) {
-    return Math.max(4, Math.min(100, (current / initial) * 100))
-  }
-  const max = Math.max(...fallbackValues.map((value) => Number(value ?? 0)), 1)
-  return Math.max(4, Math.min(100, (current / max) * 100))
+  if (initial > 0) return Math.min(100, (current / initial) * 100)
+  if (current === 0) return 0
+  const max = Math.max(...fallbackValues.map((v) => Number(v ?? 0)), 1)
+  return Math.min(100, (current / max) * 100)
 }
 
 function getCardSurface(light) {
   return light
     ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)'
     : 'linear-gradient(180deg, rgba(20,27,43,0.96) 0%, rgba(12,18,30,0.96) 100%)'
+}
+
+/* ── Horizontal Linear Gauge (AG Charts gallery 스타일) ── */
+const GAUGE_ZONES = [
+  { barColor: '#ef4444', bgColor: 'rgba(239,68,68,0.18)' },  // overdue
+  { barColor: '#f59e0b', bgColor: 'rgba(245,158,11,0.14)' }, // urgent
+  { barColor: '#22c55e', bgColor: 'rgba(34,197,94,0.10)' },  // normal
+]
+
+function LinearGauge({ value, threshold }) {
+  const t1 = Math.max(5, Math.min(45, threshold))
+  const t2 = Math.min(t1 * 2, 60)
+  const pct = Math.max(0, Math.min(100, value))
+
+  if (pct <= 0) {
+    return <div style={{ height: 7, borderRadius: 5, background: 'rgba(255,255,255,0.06)' }} />
+  }
+
+  const zones = [
+    { from: 0,  to: t1,  ...GAUGE_ZONES[0] },
+    { from: t1, to: t2,  ...GAUGE_ZONES[1] },
+    { from: t2, to: 100, ...GAUGE_ZONES[2] },
+  ]
+
+  return (
+    <div style={{ display: 'flex', gap: 2, height: 7 }}>
+      {zones.map(({ from, to, barColor, bgColor }, i) => {
+        const zoneWidth = to - from
+        const filled = Math.max(0, Math.min(pct, to) - from)
+        const filledRatio = filled / zoneWidth
+        const isFirst = i === 0
+        const isLast = i === zones.length - 1
+        const r = '5px'
+        return (
+          <div
+            key={i}
+            style={{
+              flex: zoneWidth,
+              position: 'relative',
+              background: bgColor,
+              borderRadius: isFirst ? `${r} 0 0 ${r}` : isLast ? `0 ${r} ${r} 0` : 0,
+              overflow: 'hidden',
+            }}
+          >
+            {filledRatio > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: `${filledRatio * 100}%`,
+                  background: barColor,
+                  borderRadius: 'inherit',
+                }}
+              />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+const SourceGaugeRow = memo(function SourceGaugeRow({ source, light }) {
+  const itemMeta = STATUS_META[source.key] ?? STATUS_META.normal
+  const threshold = Math.max(5, Math.min(45, source.thresholdRatio ?? 15))
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: light ? '#374151' : '#94a3b8' }}>
+          {source.sourceName}
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: source.key === 'normal' ? (light ? '#9ca3af' : '#475569') : itemMeta.color }}>
+          {source.daysLeft != null ? `${source.daysLeft}일` : '-'}
+        </span>
+      </div>
+      <LinearGauge value={source.percent} threshold={threshold} />
+    </div>
+  )
+})
+
+function MachineSourceChart({ sources, light }) {
+  const remainings = useMemo(() => sources.map((s) => s.remaining), [sources])
+
+  const enriched = useMemo(
+    () =>
+      sources.map((s) => ({
+        ...s,
+        percent: getBarPercent(s.remaining, s.initialAmount, remainings),
+      })),
+    [sources, remainings],
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {enriched.map((s) => (
+        <SourceGaugeRow key={s.sourceName} source={s} light={light} />
+      ))}
+    </div>
+  )
 }
 
 export default function SourceMachineBoard() {
@@ -44,6 +146,7 @@ export default function SourceMachineBoard() {
   const [statusEvents, setStatusEvents] = useState([])
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [machineGroupMap, setMachineGroupMap] = useState({})
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -74,6 +177,17 @@ export default function SourceMachineBoard() {
     fetchData()
   }, [fetchData])
 
+  useEffect(() => {
+    authFetch('/api/admin/machine-groups')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((groups) => {
+        const map = {}
+        groups.forEach((g) => g.machine_nos.forEach((no) => { map[no] = g.name }))
+        setMachineGroupMap(map)
+      })
+      .catch(() => {})
+  }, [])
+
   const eventMap = useMemo(() => {
     const next = new Map()
     statusEvents.forEach((item) => {
@@ -99,7 +213,7 @@ export default function SourceMachineBoard() {
             dailyUsage,
             initialAmount,
             thresholdRatio,
-            key: event?.status ?? 'normal',
+            key: event?.status ?? 'nodata',
             daysLeft: event?.days_left ?? null,
             projectedReplacementDate: event?.projected_replacement_date ?? null,
             isDisabled,
@@ -109,8 +223,9 @@ export default function SourceMachineBoard() {
         const highest = sources.reduce((current, item) => {
           if (item.key === 'overdue') return 'overdue'
           if (item.key === 'urgent' && current !== 'overdue') return 'urgent'
+          if (item.key === 'normal' && current === 'nodata') return 'normal'
           return current
-        }, 'normal')
+        }, 'nodata')
 
         return {
           key: row.machine_no,
@@ -135,6 +250,20 @@ export default function SourceMachineBoard() {
       )
     })
   }, [cards, searchText, statusFilter])
+
+  const groupedCards = useMemo(() => {
+    const orderMap = {}
+    const groupCards = {}
+    filteredCards.forEach((card) => {
+      const name = machineGroupMap[card.machine_no] ?? '미분류'
+      if (!(name in orderMap)) {
+        orderMap[name] = Object.keys(orderMap).length
+        groupCards[name] = []
+      }
+      groupCards[name].push(card)
+    })
+    return Object.entries(groupCards).sort((a, b) => orderMap[a[0]] - orderMap[b[0]])
+  }, [filteredCards, machineGroupMap])
 
   if (loading) return <Skeleton active paragraph={{ rows: 12 }} />
   if (error) return <Alert type="error" message={error} showIcon />
@@ -207,130 +336,67 @@ export default function SourceMachineBoard() {
       {filteredCards.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 설비별 소스 현황이 없습니다." />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
-          {filteredCards.map((card) => {
-            const meta = STATUS_META[card.highest] ?? STATUS_META.normal
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {groupedCards.map(([groupName, gcards]) => {
+            const gc = getGroupColor(groupName)
             return (
-              <Card
-                key={card.key}
-                className="nowa-card"
-                styles={{ body: { padding: 16 } }}
-                style={{
-                  borderColor: light ? 'var(--nowa-border-strong)' : meta.border,
-                  background: getCardSurface(light),
-                  boxShadow: light
-                    ? '0 10px 24px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9)'
-                    : '0 14px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.03)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 3,
-                    background: meta.color,
-                    opacity: light ? 0.9 : 0.8,
-                  }}
-                />
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
-                  <div>
-                    <div style={{ color: meta.color, fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>
-                      {formatMachineLabel(card.machine_no)}
-                    </div>
-                    {card.description ? (
-                      <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>{card.description}</div>
-                    ) : null}
-                  </div>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '3px 9px',
-                      borderRadius: 999,
-                      color: meta.color,
-                      background: meta.bg,
-                      border: `1px solid ${meta.border}`,
-                      fontWeight: 700,
-                      fontSize: 14,
-                    }}
-                  >
-                    {meta.label}
+              <div key={groupName}>
+                {/* 그룹 헤더 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '3px 14px', borderRadius: 8,
+                    fontSize: 14, fontWeight: 800,
+                    color: gc ? gc.text : '#94a3b8',
+                    background: gc ? gc.bg : 'rgba(148,163,184,0.10)',
+                    border: `1px solid ${gc ? gc.border : 'rgba(148,163,184,0.22)'}`,
+                  }}>
+                    {groupName}
                   </span>
+                  <span style={{ color: 'var(--nowa-text-muted)', fontSize: 13 }}>{gcards.length}대</span>
+                  <div style={{ flex: 1, height: 1, background: gc ? gc.border : 'rgba(148,163,184,0.15)' }} />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {card.sources.map((item) => {
-                    const itemMeta = STATUS_META[item.key] ?? STATUS_META.normal
-                    const percent = getBarPercent(
-                      item.remaining,
-                      item.initialAmount,
-                      card.sources.map((source) => source.remaining),
-                    )
+                {/* 그룹 카드 그리드 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                  {gcards.map((card) => {
+                    const meta = STATUS_META[card.highest] ?? STATUS_META.normal
                     return (
-                      <div key={item.sourceName}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            color: 'var(--nowa-text-soft)',
-                            fontSize: 14,
-                            marginBottom: 3,
-                            lineHeight: 1.2,
-                          }}
-                        >
-                          <span style={{ fontWeight: item.key === 'normal' ? 500 : 700 }}>{item.sourceName}</span>
-                          <span
-                            style={{
-                              color: item.key === 'normal' ? 'var(--nowa-text-soft)' : itemMeta.color,
-                              fontWeight: item.key === 'normal' ? 500 : 700,
-                            }}
-                          >
-                            {item.daysLeft == null ? '-' : `${item.daysLeft}일`}
+                      <Card
+                        key={card.key}
+                        className="nowa-card"
+                        styles={{ body: { padding: '10px 12px' } }}
+                        style={{
+                          borderColor: light ? 'var(--nowa-border-strong)' : meta.border,
+                          background: getCardSurface(light),
+                          boxShadow: light
+                            ? '0 4px 12px rgba(15,23,42,0.07)'
+                            : '0 6px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: meta.color, opacity: 0.9 }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ color: meta.color, fontSize: 14, fontWeight: 800, lineHeight: 1 }}>
+                            {formatMachineLabel(card.machine_no)}
+                          </div>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center',
+                            padding: '2px 7px', borderRadius: 999,
+                            color: meta.color, background: meta.bg,
+                            border: `1px solid ${meta.border}`,
+                            fontWeight: 700, fontSize: 14, flexShrink: 0,
+                          }}>
+                            {meta.label}
                           </span>
                         </div>
-                        <Progress
-                          percent={percent}
-                          showInfo={false}
-                          strokeColor={item.key === 'normal' ? 'rgba(196,210,226,0.55)' : itemMeta.color}
-                          trailColor={light ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)'}
-                          size={['100%', 6]}
-                        />
-                      </div>
+                        <MachineSourceChart sources={card.sources} light={light} />
+                      </Card>
                     )
                   })}
                 </div>
-
-                {card.alertSources.length > 0 ? (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
-                    {card.alertSources.map((item) => {
-                      const itemMeta = STATUS_META[item.key] ?? STATUS_META.normal
-                      return (
-                        <Tag
-                          key={item.sourceName}
-                          style={{
-                            margin: 0,
-                            paddingInline: 8,
-                            color: itemMeta.color,
-                            background: itemMeta.bg,
-                            borderColor: itemMeta.border,
-                            borderRadius: 999,
-                            fontWeight: 700,
-                            fontSize: 14,
-                            lineHeight: '18px',
-                          }}
-                        >
-                          {item.sourceName}
-                        </Tag>
-                      )
-                    })}
-                  </div>
-                ) : null}
-              </Card>
+              </div>
             )
           })}
         </div>

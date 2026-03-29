@@ -499,7 +499,7 @@ export default function SourceRemainingSheetTab() {
                     const colEnd = colStart + enabled.length - 1
                     const activeInMachine = focusedCell != null && focusedCell.col >= colStart && focusedCell.col <= colEnd
                     return (
-                      <th key={machine.machine_no} colSpan={enabled.length} style={{ ...th1Base, background: activeInMachine ? 'rgba(34,211,238,0.12)' : th1Base.background }}>
+                      <th key={machine.machine_no} colSpan={enabled.length} style={{ ...th1Base, background: activeInMachine ? `linear-gradient(rgba(34,211,238,0.12),rgba(34,211,238,0.12)),${th1Base.background}` : th1Base.background }}>
                         {mi > 0 && <GroupDivider />}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                           <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>{formatMachineLabel(machine.machine_no)}</span>
@@ -520,7 +520,7 @@ export default function SourceRemainingSheetTab() {
                       const colIndex = colIndexMap[`${machine.machine_no}:${sourceName}`] ?? -1
                       const isColFocused = focusedCell?.col === colIndex
                       return (
-                        <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, color: isColFocused ? '#22d3ee' : palette.main, background: isColFocused ? 'rgba(34,211,238,0.18)' : th2Base.background, fontWeight: 700 }}>
+                        <th key={`${machine.machine_no}:${sourceName}:head`} style={{ ...th2Base, color: isColFocused ? '#22d3ee' : palette.main, background: isColFocused ? `linear-gradient(rgba(34,211,238,0.18),rgba(34,211,238,0.18)),${th2Base.background}` : th2Base.background, fontWeight: 700 }}>
                           {index === 0 && mi > 0 && <GroupDivider />}
                           {sourceName}
                         </th>

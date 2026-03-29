@@ -8,6 +8,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
+import { getWorkTimePerDay } from './PmWorkTimeSettings'
 
 dayjs.locale('ko')
 
@@ -35,7 +36,7 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
     includeFilterCritical, includeFilterUrgent,
     includeSourceOverdue, includeSourceUrgent,
     includeSun, includeSat, includeHoliday = false,
-    maxPerDay,
+    pmMaxPerDay = 2, filterMaxPerDay = 2, sourceMaxPerDay = 2,
     pmPersonCount = 2, filterPersonCount = 2, sourcePersonCount = 1,
   } = config
 
@@ -67,19 +68,25 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
   // 소스 교체 항목 수집
   sourceEvents.forEach(ev => {
     if (includeSourceOverdue && ev.status === 'overdue') {
-      items.push({ priority: 0, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '긴급' })
+      items.push({ priority: 0, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '긴급', days_left: ev.days_left ?? 0 })
     } else if (includeSourceUrgent && ev.status === 'urgent') {
-      items.push({ priority: 1, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '임박' })
+      items.push({ priority: 1, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '임박', days_left: ev.days_left ?? 999 })
     }
   })
 
-  // 그룹 확장: 한 호기가 그룹에 속해 있으면 같은 그룹의 모든 호기에 동일 이벤트 추가
+  // 그룹 확장: PM/필터만 적용 (소스 교체는 호기별 독립 관리이므로 제외)
   if (groups.length > 0) {
     const machineGroupMap = {}
     groups.forEach(g => g.machine_nos.forEach(no => { machineGroupMap[no] = g }))
     const expanded = []
-    const seen = new Set() // 중복 방지: "machine_no:event_type"
+    const seen = new Set()
     items.forEach(item => {
+      if (item.event_type === 'source_change') {
+        // 소스 교체는 그룹 확장 없이 해당 호기만
+        const key = `${item.machine_no}:${item.event_type}:${item.title}`
+        if (!seen.has(key)) { seen.add(key); expanded.push(item) }
+        return
+      }
       const group = item.machine_no ? machineGroupMap[item.machine_no] : null
       const targets = group ? group.machine_nos : [item.machine_no]
       targets.forEach(no => {
@@ -94,7 +101,13 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
     items.push(...expanded)
   }
 
-  items.sort((a, b) => a.priority - b.priority)
+  // priority(0=overdue, 1=urgent) 우선, 같은 priority 내에선 days_left 오름차순 (마이너스가 클수록 먼저)
+  items.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority
+    const da = a.days_left ?? 999
+    const db = b.days_left ?? 999
+    return da - db
+  })
   if (items.length === 0) return []
 
   // 작업일 목록 수집
@@ -111,17 +124,21 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
   }
   if (workingDays.length === 0) return []
 
-  // 날짜에 아이템 배분
-  const schedule = []
-  let dayIdx = 0, dayCount = 0
-  const mx = Math.max(1, maxPerDay)
+  // 유형별 독립 배분 (PM·필터·소스 각자 하루 최대 적용)
+  const maxMap = { pm: Math.max(1, pmMaxPerDay), filter: Math.max(1, filterMaxPerDay), source_change: Math.max(1, sourceMaxPerDay) }
+  const personMap = { pm: pmPersonCount, filter: filterPersonCount, source_change: sourcePersonCount }
+  const dayIdxMap = { pm: 0, filter: 0, source_change: 0 }
+  const dayCountMap = { pm: 0, filter: 0, source_change: 0 }
   let memberCursor = 0
 
+  const schedule = []
   for (const item of items) {
-    if (dayIdx >= workingDays.length) break
-    // 유형별 인원 수 배정
-    const countMap = { pm: pmPersonCount, filter: filterPersonCount, source_change: sourcePersonCount }
-    const count = Math.max(1, Math.min(countMap[item.event_type] ?? 1, pmMembers.length || 1))
+    const type = item.event_type
+    const mx = maxMap[type] ?? 1
+    let di = dayIdxMap[type] ?? 0
+    if (di >= workingDays.length) continue
+
+    const count = Math.max(1, Math.min(personMap[type] ?? 1, pmMembers.length || 1))
     const assigned = []
     for (let i = 0; i < count; i++) {
       if (pmMembers.length > 0) {
@@ -129,32 +146,55 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
         memberCursor++
       }
     }
-    const actor = assigned.join(', ')
-    schedule.push({ ...item, occurred_at: workingDays[dayIdx] + 'T00:00:00', date: workingDays[dayIdx], actor })
-    dayCount++
-    if (dayCount >= mx) { dayIdx++; dayCount = 0 }
+    schedule.push({ ...item, occurred_at: workingDays[di] + 'T00:00:00', date: workingDays[di], actor: assigned.join(', ') })
+    dayCountMap[type] = (dayCountMap[type] ?? 0) + 1
+    if (dayCountMap[type] >= mx) { dayIdxMap[type] = di + 1; dayCountMap[type] = 0 }
   }
   return schedule
 }
 
 /* ── 자동 생성 모달 ─────────────────────────────────────────── */
 function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year, month, holidays, groups = [], onConfirm }) {
-  const [config, setConfig] = useState({
-    includePmCritical: true,     includePmUrgent: false,
-    includeFilterCritical: true, includeFilterUrgent: false,
-    includeSourceOverdue: true,  includeSourceUrgent: false,
-    includeSat: false, includeSun: false, includeHoliday: false,
-    maxPerDay: 2,
-    pmPersonCount: 2,
-    filterPersonCount: 1,
-    sourcePersonCount: 1,
+  const [config, setConfig] = useState(() => {
+    const perDay = getWorkTimePerDay()
+    return {
+      includePmCritical: true,     includePmUrgent: false,
+      includeFilterCritical: true, includeFilterUrgent: false,
+      includeSourceOverdue: true,  includeSourceUrgent: false,
+      includeSat: false, includeSun: false, includeHoliday: false,
+      pmMaxPerDay: perDay.pm, filterMaxPerDay: perDay.filter, sourceMaxPerDay: perDay.source,
+      pmPersonCount: 2,
+      filterPersonCount: 1,
+      sourcePersonCount: 1,
+    }
   })
   const [preview, setPreview] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const sourceEvents = useMemo(() =>
-    (sourceStatus?.events || []).filter(e => e.status === 'overdue' || e.status === 'urgent')
-  , [sourceStatus])
+  // 인원 수 변경 시 하루 최대를 작업시간설정 상한 내에서 재계산
+  useEffect(() => {
+    if (pmMembers.length === 0) return
+    const perDay = getWorkTimePerDay()
+    setConfig(p => ({
+      ...p,
+      pmMaxPerDay:     Math.min(perDay.pm,     Math.max(1, Math.floor(pmMembers.length / p.pmPersonCount))),
+      filterMaxPerDay: Math.min(perDay.filter, Math.max(1, Math.floor(pmMembers.length / p.filterPersonCount))),
+      sourceMaxPerDay: Math.min(perDay.source, Math.max(1, Math.floor(pmMembers.length / p.sourcePersonCount))),
+    }))
+  }, [pmMembers.length])
+
+  // 소스 이벤트 (중복 제거: 같은 machine_no + source_name)
+  const sourceEvents = useMemo(() => {
+    const seen = new Set()
+    return (sourceStatus?.events || [])
+      .filter(e => e.status === 'overdue' || e.status === 'urgent')
+      .filter(e => {
+        const key = `${e.machine_no}:${e.source_name}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+  }, [sourceStatus])
 
   const srcOverdue = sourceEvents.filter(e => e.status === 'overdue')
   const srcUrgent  = sourceEvents.filter(e => e.status === 'urgent')
@@ -292,45 +332,41 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
         {/* 배분 설정 */}
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>② 배분 설정</div>
-          <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* 유형별 인원 + 하루 최대 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
             {[
-              { label: 'PM 인원', key: 'pmPersonCount', color: '#7dd3fc' },
-              { label: '필터 인원', key: 'filterPersonCount', color: '#a78bfa' },
-              { label: '소스교체 인원', key: 'sourcePersonCount', color: '#a3e635' },
-            ].map(({ label, key, color }) => (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14, color, fontWeight: 600 }}>{label}</span>
-                <Select
-                  value={config[key]}
-                  onChange={v => setConfig(p => ({ ...p, [key]: v }))}
-                  style={{ width: 68 }}
-                  size="small"
-                  options={[1, 2, 3, 4, 5, 6].map(n => ({ label: `${n}명`, value: n }))}
-                />
+              { label: 'PM 정비', personKey: 'pmPersonCount', maxKey: 'pmMaxPerDay', color: '#7dd3fc' },
+              { label: '필터 교체', personKey: 'filterPersonCount', maxKey: 'filterMaxPerDay', color: '#a78bfa' },
+              { label: '소스 교체', personKey: 'sourcePersonCount', maxKey: 'sourceMaxPerDay', color: '#a3e635' },
+            ].map(({ label, personKey, maxKey, color }) => (
+              <div key={personKey} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color }}>{label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)', minWidth: 42 }}>인원</span>
+                  <Select value={config[personKey]} onChange={v => setConfig(p => ({ ...p, [personKey]: v }))}
+                    style={{ flex: 1 }} size="small"
+                    options={[1, 2, 3, 4, 5, 6].map(n => ({ label: `${n}명`, value: n }))} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)', minWidth: 42 }}>하루 최대</span>
+                  <Select value={config[maxKey]} onChange={v => setConfig(p => ({ ...p, [maxKey]: v }))}
+                    style={{ flex: 1 }} size="small"
+                    options={[1, 2, 3, 4, 5, 6, 8, 10].map(n => ({ label: `${n}건`, value: n }))} />
+                </div>
               </div>
             ))}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)' }}>하루 최대</span>
-              <Select
-                value={config.maxPerDay}
-                onChange={v => setConfig(p => ({ ...p, maxPerDay: v }))}
-                style={{ width: 72 }}
-                size="small"
-                options={[1, 2, 3, 4, 5].map(n => ({ label: `${n}건`, value: n }))}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)' }}>작업일</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-                <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토요일
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-                <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-                <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
-              </label>
-            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)' }}>작업일</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
+              <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토요일
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
+              <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
+              <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
+            </label>
           </div>
           {pmMembers.length > 0 && (
             <div style={{ marginTop: 8, fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>
@@ -594,7 +630,7 @@ export default function MocvdScheduler() {
   }))
 
   return (
-    <div className="page-shell" style={{ display: 'flex', gap: 14, minHeight: 0, height: '100%' }}>
+    <div style={{ display: 'flex', gap: 14, minHeight: 0, height: '100%' }}>
 
       {/* ── 왼쪽 사이드바 ── */}
       <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
