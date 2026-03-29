@@ -596,46 +596,6 @@ function SourceStatusBoard() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <SectionCard title="소스별 요약">
-            {sourceSummary.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="표시할 소스 요약이 없습니다." style={{ padding: '36px 0 18px' }} />
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {sourceSummary.slice(0, 8).map((item) => (
-                  <div
-                    key={item.source_label}
-                    style={{
-                      flex: '1 1 220px',
-                      padding: '14px 16px',
-                      borderRadius: 16,
-                      border: '1px solid var(--nowa-border)',
-                      background: 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ color: 'var(--nowa-text)', fontWeight: 800 }}>{item.source_label}</div>
-                      <Tag color="blue">{item.count}건</Tag>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                      <span className="nowa-pill" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}>
-                        긴급 {item.overdue}
-                      </span>
-                      <span className="nowa-pill" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderColor: 'rgba(251,191,36,0.2)' }}>
-                        임박 {item.urgent}
-                      </span>
-                      <span className="nowa-pill" style={{ background: 'var(--nowa-button-bg)', color: 'var(--nowa-text-muted)' }}>
-                        최근 {formatDate(item.nearest)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-        </Col>
-      </Row>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>

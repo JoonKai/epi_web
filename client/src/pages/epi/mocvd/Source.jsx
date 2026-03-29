@@ -927,6 +927,7 @@ export default function Source() {
         borderBottom: '1px solid rgba(245,158,11,0.18)',
         marginBottom: 20,
         paddingBottom: 0,
+        fontSize: 16,
       }}
       items={[
         { key: 'status-board', label: <span><BarChartOutlined />{"\uC18C\uC2A4\uAD50\uCCB4 \uD604\uD669\uD310"}</span>, children: <SourceStatusBoard /> },

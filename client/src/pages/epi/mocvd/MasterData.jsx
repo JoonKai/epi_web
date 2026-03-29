@@ -794,6 +794,7 @@ const tabBarStyle = {
   borderBottom: '1px solid rgba(245,158,11,0.18)',
   marginBottom: 20,
   paddingBottom: 0,
+  fontSize: 16,
 }
 
 export default function MasterData() {

@@ -26,7 +26,7 @@ export default function SourceTabs() {
       activeKey={activeTab}
       destroyOnHidden
       onChange={(key) => navigate(`/epi/mocvd/source?tab=${key}`)}
-      tabBarStyle={{ borderBottom: '1px solid rgba(245,158,11,0.18)', marginBottom: 20, paddingBottom: 0 }}
+      tabBarStyle={{ borderBottom: '1px solid rgba(245,158,11,0.18)', marginBottom: 20, paddingBottom: 0, fontSize: 16 }}
       items={[
         { key: 'status-board', label: <span><BarChartOutlined /> 소스교체 현황판</span>, children: <SourceStatusBoard /> },
         { key: 'machine-board', label: <span><HeatMapOutlined /> 장비별 소스 현황</span>, children: <SourceMachineBoard /> },

@@ -1,4 +1,5 @@
 import json
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -783,3 +784,42 @@ def get_sync_logs(limit: int = 30, db: Session = Depends(get_db), _=Depends(requ
         }
         for r in rows
     ]
+
+
+@router.get("/file-browse")
+def file_browse(path: str = "", _=Depends(require_admin)):
+    """서버 파일시스템 탐색 (관리자 전용)"""
+    # 기본 경로: 드라이브 목록
+    if not path:
+        import string
+        drives = [f"{d}:\\" for d in string.ascii_uppercase if os.path.exists(f"{d}:\\")]
+        return {"path": "", "parent": None, "dirs": drives, "files": []}
+
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다.")
+    if not os.path.isdir(path):
+        raise HTTPException(status_code=400, detail="디렉토리가 아닙니다.")
+
+    try:
+        entries = os.scandir(path)
+        dirs, files = [], []
+        for e in entries:
+            try:
+                if e.is_dir(follow_symlinks=False):
+                    dirs.append(e.name)
+                elif e.is_file():
+                    name = e.name.lower()
+                    if name.endswith(('.xlsx', '.xlsm', '.xls')):
+                        files.append(e.name)
+            except PermissionError:
+                pass
+        dirs.sort(key=str.lower)
+        files.sort(key=str.lower)
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
+
+    parent = str(os.path.dirname(path.rstrip("\\/")) or "")
+    if parent == path.rstrip("\\/"):
+        parent = ""
+
+    return {"path": path, "parent": parent, "dirs": dirs, "files": files}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, message } from 'antd'
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
@@ -6,16 +6,29 @@ import { formatMachineLabel } from './machineLabel'
 
 const LEVEL_COLOR = { 1: '#f59e0b', 2: '#38bdf8', 3: '#a78bfa' }
 
-// ── 머신 칩 (외부 컴포넌트) ──────────────────────────────
-function MachineChip({ machine, labelFormatter, onEdit, onDelete }) {
+// ── 드래그 컨텍스트 ────────────────────────────────────────
+let draggedMachineNo = null
+
+// ── 머신 칩 ───────────────────────────────────────────────
+function MachineChip({ machine, labelFormatter, onEdit, onDelete, draggable: isDraggable = false }) {
   return (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      background: machine.is_active ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
-      border: `1px solid ${machine.is_active ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}`,
-      borderRadius: 6, padding: '3px 8px 3px 5px',
-      opacity: machine.is_active ? 1 : 0.45,
-    }}>
+    <div
+      draggable={isDraggable}
+      onDragStart={isDraggable ? (e) => {
+        draggedMachineNo = machine.machine_no
+        e.dataTransfer.effectAllowed = 'move'
+      } : undefined}
+      onDragEnd={isDraggable ? () => { draggedMachineNo = null } : undefined}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        background: machine.is_active ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${machine.is_active ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}`,
+        borderRadius: 6, padding: '3px 8px 3px 5px',
+        opacity: machine.is_active ? 1 : 0.45,
+        cursor: isDraggable ? 'grab' : 'default',
+        userSelect: 'none',
+      }}
+    >
       <span style={{
         width: 20, height: 20, borderRadius: 4, flexShrink: 0,
         background: machine.is_active ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.05)',
@@ -35,10 +48,12 @@ function MachineChip({ machine, labelFormatter, onEdit, onDelete }) {
   )
 }
 
-// ── 그룹 카드 (재귀 외부 컴포넌트) ──────────────────────
-function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, setCollapsed, onEditGroup, onDeleteGroup, onEditMachine, onDeleteMachine, depth = 0 }) {
+// ── 그룹 카드 ─────────────────────────────────────────────
+function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, setCollapsed, onEditGroup, onDeleteGroup, onEditMachine, onDeleteMachine, onDropMachine, depth = 0 }) {
   const lc = LEVEL_COLOR[group.level ?? 1] ?? LEVEL_COLOR[1]
   const isCollapsed = collapsed[group.id]
+  const [dragOver, setDragOver] = useState(false)
+  const dragCounter = useRef(0)
 
   const children = useMemo(() =>
     allGroups
@@ -51,36 +66,69 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
   , [allMachines, group.machine_nos])
 
   const totalCount = useMemo(() => {
-    const countDescendants = (gid) => {
-      const subs = allGroups.filter(g => g.parent_id === gid)
-      return allGroups.find(g => g.id === gid)?.machine_nos.length ?? 0 + subs.reduce((s, c) => s + countDescendants(c.id), 0)
-    }
     return groupMachines.length + children.reduce((s, c) => s + (c.machine_nos.length + allGroups.filter(g => g.parent_id === c.id).reduce((ss, sc) => ss + sc.machine_nos.length, 0)), 0)
   }, [groupMachines, children, allGroups])
 
   const hasContent = groupMachines.length > 0 || children.length > 0
-
   const isRoot = depth === 0
   const isMid = depth === 1
 
+  // 리프 그룹(직접 머신을 받을 수 있는 그룹)인지 확인
+  const isLeaf = children.length === 0
+
+  const handleDragEnter = (e) => {
+    if (draggedMachineNo == null) return
+    e.preventDefault()
+    dragCounter.current += 1
+    setDragOver(true)
+  }
+  const handleDragLeave = () => {
+    dragCounter.current -= 1
+    if (dragCounter.current === 0) setDragOver(false)
+  }
+  const handleDragOver = (e) => {
+    if (draggedMachineNo == null) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+  const handleDrop = (e) => {
+    e.preventDefault()
+    dragCounter.current = 0
+    setDragOver(false)
+    if (draggedMachineNo != null) {
+      onDropMachine(draggedMachineNo, group.id)
+      draggedMachineNo = null
+    }
+  }
+
   return (
-    <div style={{
-      background: isRoot ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.015)',
-      border: `1px solid ${isRoot ? `${lc}25` : 'rgba(255,255,255,0.06)'}`,
-      borderTop: `2px solid ${lc}${isRoot ? '55' : '44'}`,
-      borderRadius: isRoot ? 10 : 7,
-      overflow: 'hidden',
-      ...(isMid ? { flex: '1 1 220px', minWidth: 220 } : {}),
-    }}>
+    <div
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      style={{
+        background: isRoot ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.015)',
+        border: dragOver
+          ? `2px solid ${lc}88`
+          : `1px solid ${isRoot ? `${lc}25` : 'rgba(255,255,255,0.06)'}`,
+        borderTop: dragOver ? `2px solid ${lc}` : `2px solid ${lc}${isRoot ? '55' : '44'}`,
+        borderRadius: isRoot ? 10 : 7,
+        overflow: 'hidden',
+        transition: 'border-color 0.15s',
+        ...(isMid ? { minWidth: 220 } : {}),
+      }}
+    >
       {/* 헤더 */}
       <div
         onClick={() => hasContent && setCollapsed(p => ({ ...p, [group.id]: !p[group.id] }))}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: isRoot ? '10px 14px' : '7px 10px',
-          background: `${lc}${isRoot ? '09' : '07'}`,
+          background: dragOver ? `${lc}18` : `${lc}${isRoot ? '09' : '07'}`,
           borderBottom: (!isCollapsed && hasContent) ? '1px solid rgba(255,255,255,0.05)' : 'none',
           cursor: hasContent ? 'pointer' : 'default',
+          transition: 'background 0.15s',
         }}
       >
         {hasContent && (
@@ -92,6 +140,7 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
         )}
         <span style={{ fontSize: isRoot ? 14 : 12, fontWeight: 700, color: lc, flex: 1, letterSpacing: isRoot ? 0.3 : 0 }}>
           {group.name}
+          {dragOver && <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 8, color: `${lc}99` }}>여기에 놓기</span>}
         </span>
         {group.description && (
           <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.3)' }}>{group.description}</span>
@@ -128,7 +177,6 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
           flexWrap: isRoot ? undefined : 'wrap',
           gap: isRoot ? 6 : 5,
         }}>
-          {/* 직접 배정 머신 */}
           {groupMachines.map(m => (
             <MachineChip
               key={m.machine_no}
@@ -138,7 +186,6 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
               onDelete={onDeleteMachine}
             />
           ))}
-          {/* 하위 그룹 */}
           {children.map(c => (
             <GroupCard
               key={c.id}
@@ -152,6 +199,7 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
               onDeleteGroup={onDeleteGroup}
               onEditMachine={onEditMachine}
               onDeleteMachine={onDeleteMachine}
+              onDropMachine={onDropMachine}
               depth={depth + 1}
             />
           ))}
@@ -198,6 +246,40 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
   }, [groups])
 
   const allMachines = useMemo(() => [...machines].sort((a, b) => a.machine_no - b.machine_no), [machines])
+
+  // ── 드롭으로 그룹 배정 ────────────────────────────────
+  const handleDropMachine = async (machineNo, targetGroupId) => {
+    const oldGroupId = machineGroupMap[machineNo] ?? null
+    if (oldGroupId === targetGroupId) return
+
+    const targetGroup = groups.find(g => g.id === targetGroupId)
+    if (!targetGroup) return
+    if (targetGroup.machine_nos.includes(machineNo)) return
+
+    try {
+      // 기존 그룹에서 제거
+      if (oldGroupId) {
+        const og = groups.find(g => g.id === oldGroupId)
+        if (og) {
+          await authFetch(`/api/admin/machine-groups/${oldGroupId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...og, machine_nos: og.machine_nos.filter(n => n !== machineNo) }),
+          })
+        }
+      }
+      // 새 그룹에 추가
+      await authFetch(`/api/admin/machine-groups/${targetGroupId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...targetGroup, machine_nos: [...targetGroup.machine_nos, machineNo] }),
+      })
+      message.success(`${machineNo}호기 → ${targetGroup.name} 배정`)
+      fetchAll()
+    } catch {
+      message.error('배정 실패')
+    }
+  }
 
   // ── 머신 저장 ──────────────────────────────────────────
   const openCreateMachine = () => { setEditingMachine(null); machineForm.resetFields(); setMachineModal(true) }
@@ -333,6 +415,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
             onDeleteGroup={handleDeleteGroup}
             onEditMachine={openEditMachine}
             onDeleteMachine={handleDeleteMachine}
+            onDropMachine={handleDropMachine}
             depth={0}
           />
         ))}
@@ -341,9 +424,21 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       {/* 미배정 */}
       {unassigned.length > 0 && (
         <div style={{ background: 'rgba(100,116,139,0.04)', border: '1px solid rgba(100,116,139,0.1)', borderRadius: 8, padding: '8px 12px', marginTop: 8 }}>
-          <div style={{ fontSize: 14, color: 'rgba(148,163,184,0.5)', marginBottom: 6 }}>미배정 {unassigned.length}대</div>
+          <div style={{ fontSize: 14, color: 'rgba(148,163,184,0.5)', marginBottom: 6 }}>
+            미배정 {unassigned.length}대
+            <span style={{ fontSize: 12, color: 'rgba(148,163,184,0.35)', marginLeft: 8 }}>드래그해서 그룹에 놓으세요</span>
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {unassigned.map(m => <MachineChip key={m.machine_no} machine={m} labelFormatter={labelFormatter} onEdit={openEditMachine} onDelete={handleDeleteMachine} />)}
+            {unassigned.map(m => (
+              <MachineChip
+                key={m.machine_no}
+                machine={m}
+                labelFormatter={labelFormatter}
+                onEdit={openEditMachine}
+                onDelete={handleDeleteMachine}
+                draggable
+              />
+            ))}
           </div>
         </div>
       )}

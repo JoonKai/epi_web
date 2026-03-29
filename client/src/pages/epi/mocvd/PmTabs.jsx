@@ -21,7 +21,7 @@ export default function PmTabs() {
       activeKey={activeTab}
       destroyOnHidden
       onChange={(key) => navigate(`/epi/mocvd/scheduler?tab=${key}`)}
-      tabBarStyle={{ borderBottom: '1px solid rgba(245,158,11,0.18)', marginBottom: 16, paddingBottom: 0 }}
+      tabBarStyle={{ borderBottom: '1px solid rgba(245,158,11,0.18)', marginBottom: 16, paddingBottom: 0, fontSize: 16 }}
       items={[
         { key: 'scheduler', label: <span><CalendarOutlined /> PM 스케줄러</span>, children: <MocvdScheduler /> },
         { key: 'work-time', label: <span><ClockCircleOutlined /> 작업 시간 설정</span>, children: <PmWorkTimeSettings /> },

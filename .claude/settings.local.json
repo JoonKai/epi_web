@@ -31,7 +31,8 @@
       "Bash(.venv/Scripts/python -c \"from database import Base, engine; from models import MachineGroup, MachineGroupMember; Base.metadata.create_all\\(bind=engine, tables=[MachineGroup.__table__, MachineGroupMember.__table__]\\); print\\(''테이블 생성 완료''\\)\")",
       "Bash(.venv/Scripts/python -c \":*)",
       "Bash(node -e \":*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(.venv/Scripts/python init_data.py)"
     ]
   }
 }

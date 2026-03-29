@@ -26,6 +26,7 @@ const tabBarStyle = {
   borderBottom: '1px solid rgba(245,158,11,0.2)',
   marginBottom: 0,
   paddingLeft: 8,
+  fontSize: 16,
 }
 
 const CELL_W = 46   // 날짜 셀 고정 너비
@@ -58,7 +59,7 @@ function normalizeRows(rows = []) {
 }
 
 // ── 근무현황판 ──────────────────────────────────────────────────────
-function ScheduleTab() {
+function ScheduleTab({ pmOnly = false }) {
   const [currentMonth, setCurrentMonth] = useState(dayjs())
   const [members, setMembers]           = useState([])
   const [scheduleMap, setScheduleMap]   = useState({})
@@ -68,6 +69,7 @@ function ScheduleTab() {
   const [isSaving, setIsSaving]         = useState(false)
   const [addOpen, setAddOpen]           = useState(false)
   const [personnelGroups, setPersonnelGroups] = useState({ vendors: [], members: [] })
+  const [pmMemberIds, setPmMemberIds]   = useState(new Set())
   const [selectedPids, setSelectedPids] = useState([])
   const [shiftTypes, setShiftTypes]     = useState([])
   const [holidays, setHolidays]         = useState({})   // { 'YYYY-MM-DD': name }
@@ -205,13 +207,20 @@ function ScheduleTab() {
     setAddOpen(true)
     setSelectedPids([])
     try {
-      const res = await apiFetch('/personnel-groups')
-      if (!res.ok) throw new Error()
-      setPersonnelGroups(await res.json())
+      const [pgRes, pmRes] = await Promise.all([
+        apiFetch('/personnel-groups'),
+        pmOnly ? authFetch('/api/admin/personnel/pm-assign') : Promise.resolve(null),
+      ])
+      if (!pgRes.ok) throw new Error()
+      setPersonnelGroups(await pgRes.json())
+      if (pmRes) {
+        const pmData = await pmRes.json()
+        setPmMemberIds(new Set(Array.isArray(pmData) ? pmData.map((p) => p.member_id) : []))
+      }
     } catch {
       message.error('인원관리 데이터를 불러오지 못했습니다.')
     }
-  }, [])
+  }, [pmOnly])
 
   // 인원 추가 실행
   const handleAdd = useCallback(async () => {
@@ -770,7 +779,8 @@ function ScheduleTab() {
         </div>
         {personnelGroups.vendors.map((vendor) => {
           const available = personnelGroups.members.filter(
-            (m) => m.vendor_id === vendor.id && !m.already_added
+            (m) => m.vendor_id === vendor.id && !m.already_added &&
+              (!pmOnly || pmMemberIds.has(m.id))
           )
           if (!available.length) return null
           return (
@@ -1214,6 +1224,11 @@ function ShiftSchedule() {
       key: 'pm-personnel',
       label: <span><ToolOutlined style={{ marginRight: 5 }} />PM 인원 구성</span>,
       children: tabWrap(<PmPersonnelTab vendors={vendors} members={members} />),
+    },
+    {
+      key: 'pm-schedule',
+      label: <span><CalendarOutlined style={{ marginRight: 5 }} />PM 인원 근무표</span>,
+      children: tabWrap(<ScheduleTab pmOnly />),
     },
   ]
 

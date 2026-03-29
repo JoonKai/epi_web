@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
-import { Alert, Button, Calendar, Card, Col, Input, Row, Segmented, Select, Spin, Table, Tabs, Tag, TimePicker, message } from 'antd'
-import { AppstoreOutlined, BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SyncOutlined, UnorderedListOutlined, UploadOutlined, WarningOutlined } from '@ant-design/icons'
+import { Alert, Button, Calendar, Card, Col, Input, Modal, Row, Segmented, Select, Spin, Table, Tabs, Tag, TimePicker, message } from 'antd'
+import { AppstoreOutlined, BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, FolderOpenOutlined, FolderOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SyncOutlined, UnorderedListOutlined, UploadOutlined, WarningOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
@@ -926,7 +926,7 @@ function PmMachineBoard({ refreshKey, thresholds = {} }) {
   )
 }
 
-function PmCycleGlobalCard({ onApplied }) {
+function usePmCycleGlobal(onApplied) {
   const [pmBase, setPmBase]         = useState('')
   const [filterBase, setFilterBase] = useState('')
   const [fetched, setFetched]       = useState(false)
@@ -976,48 +976,7 @@ function PmCycleGlobalCard({ onApplied }) {
     }
   }
 
-  if (!fetched) return null
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 20,
-      padding: '14px 20px', borderRadius: 12, marginBottom: 16,
-      border: '1px solid rgba(245,158,11,0.22)',
-      background: 'rgba(245,158,11,0.05)',
-      flexWrap: 'wrap',
-    }}>
-      <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b', whiteSpace: 'nowrap' }}>
-        PM 주기 일괄 설정
-      </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>PM 주기</span>
-        <Input
-          value={pmBase}
-          onChange={e => setPmBase(e.target.value)}
-          style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
-        />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>필터 주기</span>
-        <Input
-          value={filterBase}
-          onChange={e => setFilterBase(e.target.value)}
-          style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
-        />
-      </div>
-      <Button
-        type="primary"
-        loading={saving}
-        onClick={handleApply}
-        style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}
-      >
-        전체 적용
-      </Button>
-      <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>전체 기기에 기준횟수 일괄 적용</span>
-    </div>
-  )
+  return { pmBase, filterBase, setPmBase, setFilterBase, saving, handleApply, fetched }
 }
 
 function PmSyncCard({ onSynced }) {
@@ -1029,6 +988,13 @@ function PmSyncCard({ onSynced }) {
   const [schedSaving, setSchedSaving] = useState(false)
   const [logs, setLogs]               = useState([])
   const pollRef = useRef(null)
+  const [browseOpen, setBrowseOpen]   = useState(false)
+  const [browseIdx, setBrowseIdx]     = useState(null)
+  const [browsePath, setBrowsePath]   = useState('')
+  const [browseDirs, setBrowseDirs]   = useState([])
+  const [browseFiles, setBrowseFiles] = useState([])
+  const [browseParent, setBrowseParent] = useState(null)
+  const [browseLoading, setBrowseLoading] = useState(false)
 
   const fetchLogs = useCallback(() => {
     authFetch('/api/admin/sync-pm-counter/logs')
@@ -1093,6 +1059,33 @@ function PmSyncCard({ onSynced }) {
     }, 2000)
   }
 
+  const openBrowse = async (idx) => {
+    setBrowseIdx(idx)
+    setBrowseOpen(true)
+    await loadBrowse('')
+  }
+
+  const loadBrowse = async (path) => {
+    setBrowseLoading(true)
+    try {
+      const res = await authFetch(`/api/admin/file-browse?path=${encodeURIComponent(path)}`)
+      if (!res.ok) { message.error('접근할 수 없는 경로입니다.'); return }
+      const data = await res.json()
+      setBrowsePath(data.path)
+      setBrowseParent(data.parent)
+      setBrowseDirs(data.dirs)
+      setBrowseFiles(data.files)
+    } catch { message.error('파일 탐색 실패') }
+    finally { setBrowseLoading(false) }
+  }
+
+  const handleBrowseSelectFile = (fileName) => {
+    const sep = browsePath.endsWith('\\') || browsePath.endsWith('/') ? '' : '\\'
+    const fullPath = browsePath + sep + fileName
+    setPaths(prev => prev.map((v, idx) => idx === browseIdx ? fullPath : v))
+    setBrowseOpen(false)
+  }
+
   const handleSavePaths = async () => {
     setPathSaving(true)
     try {
@@ -1137,12 +1130,69 @@ function PmSyncCard({ onSynced }) {
               placeholder={`예: \\\\서버\\공유폴더\\파일${i + 1}.xlsm`}
               style={{ fontFamily: 'monospace', fontSize: 14 }}
             />
+            <Button icon={<FolderOpenOutlined />} onClick={() => openBrowse(i)} title="파일 열기" />
           </div>
         ))}
         <Button size="small" onClick={handleSavePaths} loading={pathSaving} style={{ marginTop: 4 }}>
           경로 저장
         </Button>
       </div>
+
+      {/* 파일 탐색 모달 */}
+      <Modal
+        title={<span><FolderOpenOutlined style={{ marginRight: 6 }} />파일 선택</span>}
+        open={browseOpen}
+        onCancel={() => setBrowseOpen(false)}
+        footer={null}
+        width={560}
+      >
+        <div style={{ marginBottom: 8, fontFamily: 'monospace', fontSize: 12, color: 'rgba(255,255,255,0.45)', wordBreak: 'break-all' }}>
+          {browsePath || '드라이브 선택'}
+        </div>
+        <Spin spinning={browseLoading}>
+          <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: 4 }}>
+            {browseParent !== null && (
+              <div
+                onClick={() => loadBrowse(browseParent)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderRadius: 6, color: 'rgba(255,255,255,0.55)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <LeftOutlined style={{ fontSize: 11 }} /> 상위 폴더
+              </div>
+            )}
+            {browseDirs.map(d => (
+              <div
+                key={d}
+                onClick={() => loadBrowse((browsePath ? (browsePath.endsWith('\\') ? browsePath : browsePath + '\\') : '') + d)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderRadius: 6 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <FolderOutlined style={{ color: '#f59e0b' }} />
+                <span>{d}</span>
+              </div>
+            ))}
+            {browseFiles.map(f => (
+              <div
+                key={f}
+                onClick={() => handleBrowseSelectFile(f)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderRadius: 6 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <SaveOutlined style={{ color: '#4ade80' }} />
+                <span style={{ color: '#4ade80' }}>{f}</span>
+              </div>
+            ))}
+            {browseDirs.length === 0 && browseFiles.length === 0 && !browseLoading && (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+                엑셀 파일이 없습니다
+              </div>
+            )}
+          </div>
+        </Spin>
+      </Modal>
 
       {/* 자동 실행 시간 설정 */}
       <div style={{ marginBottom: 16 }}>
@@ -1268,15 +1318,18 @@ function PmSyncCard({ onSynced }) {
   )
 }
 
-function PmThresholdCard({ thresholds = {}, onChange }) {
+function PmSettingsCard({ onApplied, thresholds = {}, onChange }) {
+  // PM 주기 일괄 설정
+  const { pmBase, filterBase, setPmBase, setFilterBase, saving, handleApply, fetched } = usePmCycleGlobal(onApplied)
+
+  // 상태 기준 설정
   const { critical = 5, urgent = 20 } = thresholds
   const [localCritical, setLocalCritical] = useState(String(critical))
   const [localUrgent, setLocalUrgent] = useState(String(urgent))
-
   useEffect(() => { setLocalCritical(String(critical)) }, [critical])
   useEffect(() => { setLocalUrgent(String(urgent)) }, [urgent])
 
-  const handleSave = () => {
+  const handleSaveThreshold = () => {
     const c = Number(localCritical)
     const u = Number(localUrgent)
     if (!Number.isFinite(c) || c < 1 || !Number.isFinite(u) || u < 1) { message.warning('1 이상의 숫자를 입력하세요.'); return }
@@ -1285,45 +1338,42 @@ function PmThresholdCard({ thresholds = {}, onChange }) {
     message.success('상태 기준이 저장되었습니다.')
   }
 
+  if (!fetched) return null
+
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 20,
-      padding: '14px 20px', borderRadius: 12, marginBottom: 16,
-      border: '1px solid rgba(99,102,241,0.22)',
-      background: 'rgba(99,102,241,0.05)',
-      flexWrap: 'wrap',
-    }}>
-      <span style={{ fontWeight: 700, fontSize: 14, color: '#818cf8', whiteSpace: 'nowrap' }}>
-        상태 기준 설정
-      </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14, color: '#f87171', whiteSpace: 'nowrap', fontWeight: 600 }}>긴급 기준</span>
-        <Input
-          value={localCritical}
-          onChange={e => setLocalCritical(e.target.value)}
-          onPressEnter={handleSave}
-          style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
-        />
+    <Card className="nowa-card" styles={{ body: { padding: '14px 20px' } }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
+        {/* PM 주기 일괄 설정 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b', whiteSpace: 'nowrap' }}>PM 주기 일괄 설정</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>PM 주기</span>
+            <Input value={pmBase} onChange={e => setPmBase(e.target.value)} style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>필터 주기</span>
+            <Input value={filterBase} onChange={e => setFilterBase(e.target.value)} style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+          </div>
+          <Button type="primary" loading={saving} onClick={handleApply} style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}>전체 적용</Button>
+        </div>
+
+        <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+
+        {/* 상태 기준 설정 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#818cf8', whiteSpace: 'nowrap' }}>상태 기준 설정</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, color: '#f87171', whiteSpace: 'nowrap', fontWeight: 600 }}>긴급 기준</span>
+            <Input value={localCritical} onChange={e => setLocalCritical(e.target.value)} onPressEnter={handleSaveThreshold} style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, color: '#fbbf24', whiteSpace: 'nowrap', fontWeight: 600 }}>임박 기준</span>
+            <Input value={localUrgent} onChange={e => setLocalUrgent(e.target.value)} onPressEnter={handleSaveThreshold} style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+          </div>
+          <Button onClick={handleSaveThreshold} style={{ background: '#6366f1', borderColor: '#6366f1', color: '#fff', fontWeight: 700 }}>기준 저장</Button>
+        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14, color: '#fbbf24', whiteSpace: 'nowrap', fontWeight: 600 }}>임박 기준</span>
-        <Input
-          value={localUrgent}
-          onChange={e => setLocalUrgent(e.target.value)}
-          onPressEnter={handleSave}
-          style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }}
-          suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>}
-        />
-      </div>
-      <Button
-        onClick={handleSave}
-        style={{ background: '#6366f1', borderColor: '#6366f1', color: '#fff', fontWeight: 700 }}
-      >
-        기준 저장
-      </Button>
-      <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>긴급 &lt; 임박 순서로 설정</span>
-    </div>
+    </Card>
   )
 }
 
@@ -1482,37 +1532,22 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="console-toolbar">
-        <div>
-          <div style={sectionTitleStyle}>PM 주기 입력</div>
-          <div style={{ color: 'var(--console-text)', fontSize: 28, fontWeight: 800, marginTop: 8 }}>
-            MOCVD PM 주기 입력
-          </div>
-          <div style={{ color: 'rgba(220,232,255,0.72)', marginTop: 6 }}>
-            기준정보의 MO 설비 전체를 기준으로 챔버사용 기준횟수, 필터사용 기준횟수, 챔버사용횟수, 필터사용횟수를 입력합니다.
-          </div>
-        </div>
-        <div className="console-toolbar-group">
-          <div className="console-pill">{rows.length}대</div>
-          <div className="console-pill" style={{ color: changedCount > 0 ? '#fbbf24' : undefined }}>변경 {changedCount}건</div>
-          <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleCsvImport} style={{ display: 'none' }} />
-          <Button icon={<UploadOutlined />} onClick={() => fileInputRef.current?.click()} disabled={loading || saving}>
-            CSV 불러오기
-          </Button>
-          <Button onClick={handleReset} disabled={loading || saving}>초기화</Button>
-          <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={loading}>
-            저장
-          </Button>
-        </div>
-      </div>
-
-      <PmCycleGlobalCard onApplied={fetchRows} />
-      <PmThresholdCard thresholds={thresholds} onChange={onThresholdChange} />
+      <PmSettingsCard onApplied={fetchRows} thresholds={thresholds} onChange={onThresholdChange} />
 
       <Spin spinning={loading}>
         <Row gutter={[16, 16]} align="stretch">
           <Col xs={24} xl={18}>
-            <Card className="console-panel" style={{ ...panelStyle, height: '100%' }} title="챔버사용횟수 / 필터사용횟수 입력">
+            <Card
+              className="console-panel"
+              style={{ ...panelStyle, height: '100%' }}
+              title="챔버사용횟수 / 필터사용횟수 입력"
+              extra={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Button size="small" onClick={handleReset} disabled={loading || saving}>초기화</Button>
+                  <Button size="small" type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={loading}>저장</Button>
+                </div>
+              }
+            >
               <PmInputSheet rows={rows} onChange={updateCount} />
             </Card>
           </Col>
@@ -1637,6 +1672,7 @@ const tabBarStyle = {
   borderBottom: '1px solid rgba(245,158,11,0.18)',
   marginBottom: 20,
   paddingBottom: 0,
+  fontSize: 16,
 }
 
 export default function PmPlan() {
