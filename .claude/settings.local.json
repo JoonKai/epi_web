@@ -32,7 +32,8 @@
       "Bash(.venv/Scripts/python -c \":*)",
       "Bash(node -e \":*)",
       "Bash(npm uninstall:*)",
-      "Bash(.venv/Scripts/python init_data.py)"
+      "Bash(.venv/Scripts/python init_data.py)",
+      "Bash(git config:*)"
     ]
   }
 }
