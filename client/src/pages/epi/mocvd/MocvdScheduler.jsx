@@ -153,8 +153,8 @@ function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month
   return schedule
 }
 
-/* ── 자동 생성 모달 ─────────────────────────────────────────── */
-function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year, month, holidays, groups = [], onConfirm }) {
+/* ── 자동 생성 카드 ─────────────────────────────────────────── */
+function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holidays, groups = [], onConfirm }) {
   const [config, setConfig] = useState(() => {
     const perDay = getWorkTimePerDay()
     return {
@@ -207,10 +207,11 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
   const filterCritical = pmCounters.filter(r => (r.filter_base_count - r.filter_count) <= thresholds.critical)
   const filterUrgent   = pmCounters.filter(r => { const v = r.filter_base_count - r.filter_count; return v > thresholds.critical && v <= thresholds.urgent })
 
-  const handlePreview = () => {
+  // config/year/month 변경 시 자동 미리보기
+  useEffect(() => {
     const result = autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays, groups })
     setPreview(result)
-  }
+  }, [config, year, month, pmCounters, pmMembers, holidays])
 
   const handleConfirm = async () => {
     if (!preview || preview.length === 0) return
@@ -241,215 +242,203 @@ function AutoGenModal({ open, onClose, pmCounters, sourceStatus, pmMembers, year
   const toggle = (key) => setConfig(p => ({ ...p, [key]: !p[key] }))
 
   return (
-    <Modal
-      title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><RobotOutlined style={{ color: '#7dd3fc' }} /> 자동 일정 생성</span>}
-      open={open}
-      onCancel={onClose}
-      width={580}
-      footer={null}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '8px 0' }}>
-
-        {/* 대상 선택 */}
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>① 일정 대상 선택</div>
-          <div style={{ display: 'flex', gap: 12 }}>
-
-            {/* PM 정비 */}
-            <div style={{ flex: 1, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc', marginBottom: 8 }}>PM 정비 (챔버)</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <Checkbox checked={config.includePmCritical} onChange={() => toggle('includePmCritical')} />
-                  <span style={{ fontSize: 14 }}>긴급</span>
-                  <span style={{ fontSize: 14, color: '#f87171', marginLeft: 2 }}>({pmCritical.length}대)</span>
-                </label>
-                {pmCritical.length > 0 && config.includePmCritical && (
-                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
-                    {pmCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-                  </div>
-                )}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <Checkbox checked={config.includePmUrgent} onChange={() => toggle('includePmUrgent')} />
-                  <span style={{ fontSize: 14 }}>임박</span>
-                  <span style={{ fontSize: 14, color: '#fbbf24', marginLeft: 2 }}>({pmUrgent.length}대)</span>
-                </label>
-                {pmUrgent.length > 0 && config.includePmUrgent && (
-                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
-                    {pmUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 필터 교체 */}
-            <div style={{ flex: 1, background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa', marginBottom: 8 }}>필터 교체</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <Checkbox checked={config.includeFilterCritical} onChange={() => toggle('includeFilterCritical')} />
-                  <span style={{ fontSize: 14 }}>긴급</span>
-                  <span style={{ fontSize: 14, color: '#f87171', marginLeft: 2 }}>({filterCritical.length}대)</span>
-                </label>
-                {filterCritical.length > 0 && config.includeFilterCritical && (
-                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
-                    {filterCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-                  </div>
-                )}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <Checkbox checked={config.includeFilterUrgent} onChange={() => toggle('includeFilterUrgent')} />
-                  <span style={{ fontSize: 14 }}>임박</span>
-                  <span style={{ fontSize: 14, color: '#fbbf24', marginLeft: 2 }}>({filterUrgent.length}대)</span>
-                </label>
-                {filterUrgent.length > 0 && config.includeFilterUrgent && (
-                  <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', paddingLeft: 24, lineHeight: 1.6 }}>
-                    {filterUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 소스 교체 */}
-            <div style={{ flex: 1, background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#a3e635', marginBottom: 8 }}>소스 교체</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <Checkbox checked={config.includeSourceOverdue} onChange={() => toggle('includeSourceOverdue')} />
-                  <span style={{ fontSize: 14 }}>긴급</span>
-                  <span style={{ fontSize: 14, color: '#f87171', marginLeft: 2 }}>({srcOverdue.length}건)</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <Checkbox checked={config.includeSourceUrgent} onChange={() => toggle('includeSourceUrgent')} />
-                  <span style={{ fontSize: 14 }}>임박</span>
-                  <span style={{ fontSize: 14, color: '#fbbf24', marginLeft: 2 }}>({srcUrgent.length}건)</span>
-                </label>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* 배분 설정 */}
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 10 }}>② 배분 설정</div>
-          {/* 유형별 인원 + 하루 최대 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
-            {[
-              { label: 'PM 정비', personKey: 'pmPersonCount', maxKey: 'pmMaxPerDay', color: '#7dd3fc' },
-              { label: '필터 교체', personKey: 'filterPersonCount', maxKey: 'filterMaxPerDay', color: '#a78bfa' },
-              { label: '소스 교체', personKey: 'sourcePersonCount', maxKey: 'sourceMaxPerDay', color: '#a3e635' },
-            ].map(({ label, personKey, maxKey, color }) => (
-              <div key={personKey} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color }}>{label}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)', minWidth: 42 }}>인원</span>
-                  <Select value={config[personKey]} onChange={v => setConfig(p => ({ ...p, [personKey]: v }))}
-                    style={{ flex: 1 }} size="small"
-                    options={[1, 2, 3, 4, 5, 6].map(n => ({ label: `${n}명`, value: n }))} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.7)', minWidth: 42 }}>하루 최대</span>
-                  <Select value={config[maxKey]} onChange={v => setConfig(p => ({ ...p, [maxKey]: v }))}
-                    style={{ flex: 1 }} size="small"
-                    options={[1, 2, 3, 4, 5, 6, 8, 10].map(n => ({ label: `${n}건`, value: n }))} />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)' }}>작업일</span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-              <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토요일
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-              <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 14 }}>
-              <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
-            </label>
-          </div>
-          {pmMembers.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 14, color: 'rgba(196,210,226,0.68)' }}>
-              투입 인원 {pmMembers.length}명 중 {Math.min(config.pmPersonCount, pmMembers.length)}명 배정 →&nbsp;
-              {pmMembers.slice(0, config.pmPersonCount).map(m => m.name).join(', ')}
-              {config.pmPersonCount > pmMembers.length && ' (인원 부족, 순환 배정)'}
-            </div>
-          )}
-        </div>
-
-        {/* 미리보기 생성 버튼 */}
-        <button
-          onClick={handlePreview}
-          style={{
-            background: 'rgba(125,211,252,0.1)', border: '1px solid rgba(125,211,252,0.35)',
-            borderRadius: 8, padding: '8px 0', cursor: 'pointer',
-            color: '#7dd3fc', fontSize: 14, fontWeight: 700, width: '100%',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.2)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
-        >미리보기 생성</button>
-
-        {/* 미리보기 */}
+    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10, padding: '8px 12px', marginBottom: 10 }}>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <RobotOutlined style={{ color: '#4ade80', fontSize: 13 }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#4ade80' }}>자동 일정 생성</span>
+        <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.4)', marginLeft: 2 }}>설정 변경 시 자동 업데이트</span>
         {preview !== null && (
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.6)', marginBottom: 8 }}>
-              ③ 생성 미리보기 <span style={{ color: preview.length > 0 ? '#7dd3fc' : '#f87171', fontWeight: 800 }}>{preview.length}건</span>
-            </div>
-            {preview.length === 0 ? (
-              <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)', textAlign: 'center', padding: '16px 0' }}>
-                조건에 해당하는 항목이 없습니다.
-              </div>
-            ) : (
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 5,
-                maxHeight: 260, overflowY: 'auto',
-                background: 'var(--nowa-bg)', borderRadius: 10, padding: '8px 10px',
-                border: '1px solid var(--nowa-border)',
-              }}>
-                {preview.map((item, i) => {
-                  const cfg = evtCfg(item.event_type)
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '4px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
-                      <span style={{ color: 'rgba(196,210,226,0.75)', minWidth: 80 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
-                      <span style={{
-                        fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 5px', flexShrink: 0,
-                        color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
-                      }}>{cfg.label}</span>
-                      <span style={{ color: 'var(--nowa-text)', flex: 1 }}>
-                        {item.machine_no ? `${formatMachineLabel(item.machine_no)} ` : ''}{item.title}
-                      </span>
-                      {item.actor && (
-                        <span style={{ color: '#7dd3fc', fontSize: 14, flexShrink: 0 }}>{item.actor}</span>
-                      )}
-                      <span style={{
-                        fontSize: 14, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
-                        color: item.badge === '긴급' ? '#f87171' : '#fbbf24',
-                        background: item.badge === '긴급' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
-                        border: `1px solid ${item.badge === '긴급' ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.3)'}`,
-                      }}>{item.badge}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {preview.length > 0 && (
-              <button
-                onClick={handleConfirm}
-                disabled={saving}
-                style={{
-                  marginTop: 12,
-                  background: saving ? 'rgba(74,222,128,0.08)' : 'rgba(74,222,128,0.15)',
-                  border: '1px solid rgba(74,222,128,0.4)',
-                  borderRadius: 8, padding: '8px 0', cursor: saving ? 'default' : 'pointer',
-                  color: '#4ade80', fontSize: 14, fontWeight: 700, width: '100%',
-                }}
-              >{saving ? '저장 중...' : `${preview.length}건 일정 저장`}</button>
-            )}
-          </div>
+          <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: preview.length > 0 ? '#7dd3fc' : 'rgba(196,210,226,0.4)' }}>
+            {preview.length}건 예정
+          </span>
         )}
       </div>
-    </Modal>
+
+      {/* 3개 카테고리 + 배분설정 통합 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+        {/* PM 정비 */}
+        <div style={{ flex: 1, background: 'rgba(125,211,252,0.04)', border: '1px solid rgba(125,211,252,0.18)', borderRadius: 8, padding: '6px 8px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', marginBottom: 5 }}>PM 정비 (챔버)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+              <Checkbox checked={config.includePmCritical} onChange={() => toggle('includePmCritical')} />
+              <span>긴급</span><span style={{ color: '#f87171' }}>({pmCritical.length}대)</span>
+            </label>
+            {pmCritical.length > 0 && config.includePmCritical && (
+              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
+                {pmCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
+              </div>
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+              <Checkbox checked={config.includePmUrgent} onChange={() => toggle('includePmUrgent')} />
+              <span>임박</span><span style={{ color: '#fbbf24' }}>({pmUrgent.length}대)</span>
+            </label>
+            {pmUrgent.length > 0 && config.includePmUrgent && (
+              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
+                {pmUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(125,211,252,0.1)', paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>인원</span>
+              <Select value={config.pmPersonCount} onChange={v => setConfig(p => ({ ...p, pmPersonCount: v }))}
+                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>최대</span>
+              <Select value={config.pmMaxPerDay} onChange={v => setConfig(p => ({ ...p, pmMaxPerDay: v }))}
+                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6,8,10].map(n => ({ label: `${n}건`, value: n }))} />
+            </div>
+          </div>
+        </div>
+
+        {/* 필터 교체 */}
+        <div style={{ flex: 1, background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.18)', borderRadius: 8, padding: '6px 8px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa', marginBottom: 5 }}>필터 교체</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+              <Checkbox checked={config.includeFilterCritical} onChange={() => toggle('includeFilterCritical')} />
+              <span>긴급</span><span style={{ color: '#f87171' }}>({filterCritical.length}대)</span>
+            </label>
+            {filterCritical.length > 0 && config.includeFilterCritical && (
+              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
+                {filterCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
+              </div>
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+              <Checkbox checked={config.includeFilterUrgent} onChange={() => toggle('includeFilterUrgent')} />
+              <span>임박</span><span style={{ color: '#fbbf24' }}>({filterUrgent.length}대)</span>
+            </label>
+            {filterUrgent.length > 0 && config.includeFilterUrgent && (
+              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
+                {filterUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(167,139,250,0.1)', paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>인원</span>
+              <Select value={config.filterPersonCount} onChange={v => setConfig(p => ({ ...p, filterPersonCount: v }))}
+                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>최대</span>
+              <Select value={config.filterMaxPerDay} onChange={v => setConfig(p => ({ ...p, filterMaxPerDay: v }))}
+                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6,8,10].map(n => ({ label: `${n}건`, value: n }))} />
+            </div>
+          </div>
+        </div>
+
+        {/* 소스 교체 */}
+        <div style={{ flex: 1, background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.18)', borderRadius: 8, padding: '6px 8px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#a3e635', marginBottom: 5 }}>소스 교체</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+              <Checkbox checked={config.includeSourceOverdue} onChange={() => toggle('includeSourceOverdue')} />
+              <span>긴급</span><span style={{ color: '#f87171' }}>({srcOverdue.length}건)</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+              <Checkbox checked={config.includeSourceUrgent} onChange={() => toggle('includeSourceUrgent')} />
+              <span>임박</span><span style={{ color: '#fbbf24' }}>({srcUrgent.length}건)</span>
+            </label>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(74,222,128,0.1)', paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>인원</span>
+              <Select value={config.sourcePersonCount} onChange={v => setConfig(p => ({ ...p, sourcePersonCount: v }))}
+                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>최대</span>
+              <Select value={config.sourceMaxPerDay} onChange={v => setConfig(p => ({ ...p, sourceMaxPerDay: v }))}
+                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6,8,10].map(n => ({ label: `${n}건`, value: n }))} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 작업일 + 투입인원 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, marginBottom: preview !== null ? 6 : 0 }}>
+        <span style={{ color: 'rgba(196,210,226,0.6)' }}>작업일</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토요일
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
+        </label>
+        {pmMembers.length > 0 && (
+          <span style={{ marginLeft: 8, color: 'rgba(196,210,226,0.55)' }}>
+            투입 {pmMembers.length}명 중 {Math.min(config.pmPersonCount, pmMembers.length)}명 →&nbsp;
+            {pmMembers.slice(0, config.pmPersonCount).map(m => m.name).join(', ')}
+            {config.pmPersonCount > pmMembers.length && ' (인원 부족)'}
+          </span>
+        )}
+      </div>
+
+      {/* 미리보기 */}
+      {preview !== null && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.55)', marginBottom: 5 }}>
+            미리보기 <span style={{ color: preview.length > 0 ? '#7dd3fc' : '#f87171', fontWeight: 800 }}>{preview.length}건</span>
+          </div>
+          {preview.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'rgba(196,210,226,0.55)', textAlign: 'center', padding: '10px 0' }}>
+              조건에 해당하는 항목이 없습니다.
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 3,
+              maxHeight: 200, overflowY: 'auto',
+              background: 'var(--nowa-bg)', borderRadius: 8, padding: '6px 8px',
+              border: '1px solid var(--nowa-border)',
+            }}>
+              {preview.map((item, i) => {
+                const cfg = evtCfg(item.event_type)
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '3px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
+                    <span style={{ color: 'rgba(196,210,226,0.7)', minWidth: 72 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
+                      color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
+                    }}>{cfg.label}</span>
+                    <span style={{ color: 'var(--nowa-text)', flex: 1 }}>
+                      {item.machine_no ? `${formatMachineLabel(item.machine_no)} ` : ''}{item.title}
+                    </span>
+                    {item.actor && (
+                      <span style={{ color: '#7dd3fc', fontSize: 12, flexShrink: 0 }}>{item.actor}</span>
+                    )}
+                    <span style={{
+                      fontSize: 11, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
+                      color: item.badge === '긴급' ? '#f87171' : '#fbbf24',
+                      background: item.badge === '긴급' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
+                      border: `1px solid ${item.badge === '긴급' ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.3)'}`,
+                    }}>{item.badge}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {preview.length > 0 && (
+            <button
+              onClick={handleConfirm}
+              disabled={saving}
+              style={{
+                marginTop: 8,
+                background: saving ? 'rgba(74,222,128,0.08)' : 'rgba(74,222,128,0.15)',
+                border: '1px solid rgba(74,222,128,0.4)',
+                borderRadius: 6, padding: '6px 0', cursor: saving ? 'default' : 'pointer',
+                color: '#4ade80', fontSize: 13, fontWeight: 700, width: '100%',
+              }}
+            >{saving ? '저장 중...' : `${preview.length}건 일정 저장`}</button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -470,7 +459,6 @@ export default function MocvdScheduler() {
   const [groups, setGroups] = useState([])     // [{ id, name, machine_nos }]
 
   const [manualOpen, setManualOpen] = useState(false)
-  const [autoOpen, setAutoOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [applyGroup, setApplyGroup] = useState(false)
   const [form] = Form.useForm()
@@ -715,12 +703,6 @@ export default function MocvdScheduler() {
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
               ><PlusOutlined /> 수동 추가</button>
-              <button
-                onClick={() => setAutoOpen(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,222,128,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(74,222,128,0.1)'}
-              ><RobotOutlined /> 자동 생성</button>
               <Popconfirm
                 title={`${year}년 ${month}월 일정 ${monthEvents.length}건을 모두 삭제하시겠습니까?`}
                 okText="전체 삭제" cancelText="취소"
@@ -742,6 +724,18 @@ export default function MocvdScheduler() {
               </Popconfirm>
             </div>
           </div>
+
+          {/* 자동 생성 카드 */}
+          <AutoGenCard
+            pmCounters={pmCounters}
+            sourceStatus={sourceStatus}
+            pmMembers={pmMembers}
+            year={year}
+            month={month}
+            holidays={holidays}
+            groups={groups}
+            onConfirm={fetchAll}
+          />
 
           {/* 요일 헤더 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
@@ -900,19 +894,6 @@ export default function MocvdScheduler() {
         </Form>
       </Modal>
 
-      {/* 자동 생성 모달 */}
-      <AutoGenModal
-        open={autoOpen}
-        onClose={() => setAutoOpen(false)}
-        pmCounters={pmCounters}
-        sourceStatus={sourceStatus}
-        pmMembers={pmMembers}
-        year={year}
-        month={month}
-        holidays={holidays}
-        groups={groups}
-        onConfirm={fetchAll}
-      />
     </div>
   )
 }

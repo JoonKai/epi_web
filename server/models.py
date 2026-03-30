@@ -18,7 +18,8 @@ class MocvdMachine(Base):
     __tablename__ = "mocvd_machine"
 
     id = Column(Integer, primary_key=True, index=True)
-    machine_no = Column(Integer, unique=True, nullable=False, comment="호기 번호")
+    machine_no = Column(Integer, nullable=False, comment="호기 번호")
+    machine_type = Column(String(20), default="mocvd", nullable=False)
     description = Column(String(100), default="")
     is_active = Column(Boolean, default=True)
 
@@ -265,6 +266,7 @@ class ShiftMember(Base):
     personnel_member_id = Column(Integer, nullable=True)
     order_idx = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
+    schedule_type = Column(String(20), default="general", nullable=False)
     created_at = Column(DateTime, default=func.now())
 
 
@@ -320,6 +322,7 @@ class MachineGroup(Base):
     parent_id = Column(Integer, nullable=True, comment="부모 그룹 ID (null=최상위)")
     level = Column(Integer, default=1, comment="1=대그룹 2=중그룹 3=소그룹")
     order_idx = Column(Integer, default=0, comment="같은 부모 내 표시 순서")
+    machine_type = Column(String(20), default="mocvd", nullable=False)
     created_at = Column(DateTime, default=func.now())
 
 

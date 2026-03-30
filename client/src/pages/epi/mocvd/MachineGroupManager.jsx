@@ -210,7 +210,7 @@ function GroupCard({ group, allGroups, allMachines, labelFormatter, collapsed, s
 }
 
 // ── 메인 ─────────────────────────────────────────────────
-export default function MachineGroupManager({ labelFormatter = formatMachineLabel }) {
+export default function MachineGroupManager({ labelFormatter = formatMachineLabel, machineType = 'mocvd' }) {
   const [machines, setMachines] = useState([])
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(false)
@@ -229,8 +229,8 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
     setLoading(true)
     try {
       const [mRes, gRes] = await Promise.all([
-        authFetch('/api/admin/machines'),
-        authFetch('/api/admin/machine-groups'),
+        authFetch(`/api/admin/machines?machine_type=${machineType}`),
+        authFetch(`/api/admin/machine-groups?machine_type=${machineType}`),
       ])
       if (mRes.ok) setMachines(await mRes.json())
       if (gRes.ok) setGroups(await gRes.json())
@@ -297,7 +297,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       const res = await authFetch(url, {
         method: editingMachine ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, is_active: data.is_active ?? true }),
+        body: JSON.stringify({ ...data, is_active: data.is_active ?? true, machine_type: machineType }),
       })
       if (!res.ok) { const e = await res.json().catch(() => ({})); message.error(e.detail || '저장 실패'); return }
 
@@ -355,7 +355,7 @@ export default function MachineGroupManager({ labelFormatter = formatMachineLabe
       const res = await authFetch(url, {
         method: editingGroup ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: values.name, description: values.description ?? '', machine_nos: editingGroup?.machine_nos ?? [], parent_id: parentId, level }),
+        body: JSON.stringify({ name: values.name, description: values.description ?? '', machine_nos: editingGroup?.machine_nos ?? [], parent_id: parentId, level, machine_type: machineType }),
       })
       if (!res.ok) { message.error('저장 실패'); return }
       message.success(editingGroup ? '수정했습니다.' : '그룹을 추가했습니다.')

@@ -59,7 +59,7 @@ function normalizeRows(rows = []) {
 }
 
 // ── 근무현황판 ──────────────────────────────────────────────────────
-function ScheduleTab({ pmOnly = false }) {
+function ScheduleTab({ pmOnly = false, scheduleType = 'general' }) {
   const [currentMonth, setCurrentMonth] = useState(dayjs())
   const [members, setMembers]           = useState([])
   const [scheduleMap, setScheduleMap]   = useState({})
@@ -101,7 +101,7 @@ function ScheduleTab({ pmOnly = false }) {
     setLoading(true)
     try {
       const [mRes, sRes] = await Promise.all([
-        apiFetch('/members'),
+        apiFetch(`/members?schedule_type=${scheduleType}`),
         apiFetch(`/schedules?year=${year}&month=${month}`),
       ])
       if (!mRes.ok || !sRes.ok) throw new Error()
@@ -208,7 +208,7 @@ function ScheduleTab({ pmOnly = false }) {
     setSelectedPids([])
     try {
       const [pgRes, pmRes] = await Promise.all([
-        apiFetch('/personnel-groups'),
+        apiFetch(`/personnel-groups?schedule_type=${scheduleType}`),
         pmOnly ? authFetch('/api/admin/personnel/pm-assign') : Promise.resolve(null),
       ])
       if (!pgRes.ok) throw new Error()
@@ -228,7 +228,7 @@ function ScheduleTab({ pmOnly = false }) {
     try {
       const res = await apiFetch('/import-from-personnel', {
         method: 'POST',
-        body: JSON.stringify({ personnel_member_ids: selectedPids }),
+        body: JSON.stringify({ personnel_member_ids: selectedPids, schedule_type: scheduleType }),
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -1228,7 +1228,7 @@ function ShiftSchedule() {
     {
       key: 'pm-schedule',
       label: <span><CalendarOutlined style={{ marginRight: 5 }} />PM 인원 근무표</span>,
-      children: tabWrap(<ScheduleTab pmOnly />),
+      children: tabWrap(<ScheduleTab pmOnly scheduleType="pm" />),
     },
   ]
 

@@ -42,6 +42,7 @@ class UserUpdate(BaseModel):
 class MachineCreate(BaseModel):
     machine_no: int
     description: str = ""
+    machine_type: str = "mocvd"
 
 
 class SourceCreate(BaseModel):
@@ -151,12 +152,13 @@ def reset_password(user_id: int, body: dict, db: Session = Depends(get_db), _=De
 
 
 @router.get("/machines")
-def list_machines(db: Session = Depends(get_db), _=Depends(require_admin)):
-    rows = db.query(MocvdMachine).order_by(MocvdMachine.machine_no).all()
+def list_machines(machine_type: str = "mocvd", db: Session = Depends(get_db), _=Depends(require_admin)):
+    rows = db.query(MocvdMachine).filter(MocvdMachine.machine_type == machine_type).order_by(MocvdMachine.machine_no).all()
     return [
         {
             "id": row.id,
             "machine_no": row.machine_no,
+            "machine_type": row.machine_type,
             "description": row.description,
             "is_active": row.is_active,
         }
@@ -166,9 +168,9 @@ def list_machines(db: Session = Depends(get_db), _=Depends(require_admin)):
 
 @router.post("/machines")
 def create_machine(body: MachineCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
-    if db.query(MocvdMachine).filter(MocvdMachine.machine_no == body.machine_no).first():
+    if db.query(MocvdMachine).filter(MocvdMachine.machine_no == body.machine_no, MocvdMachine.machine_type == body.machine_type).first():
         raise HTTPException(status_code=400, detail="이미 존재하는 호기 번호입니다.")
-    db.add(MocvdMachine(machine_no=body.machine_no, description=body.description))
+    db.add(MocvdMachine(machine_no=body.machine_no, description=body.description, machine_type=body.machine_type))
     db.commit()
     return {"result": "ok"}
 
@@ -687,6 +689,7 @@ class MachineGroupCreate(BaseModel):
     parent_id: Optional[int] = None
     level: int = 1
     order_idx: int = 0
+    machine_type: str = "mocvd"
 
 
 class MachineGroupReorderItem(BaseModel):
@@ -695,8 +698,8 @@ class MachineGroupReorderItem(BaseModel):
 
 
 @router.get("/machine-groups")
-def list_machine_groups(db: Session = Depends(get_db), _=Depends(require_admin)):
-    groups = db.query(MachineGroup).order_by(MachineGroup.order_idx, MachineGroup.id).all()
+def list_machine_groups(machine_type: str = "mocvd", db: Session = Depends(get_db), _=Depends(require_admin)):
+    groups = db.query(MachineGroup).filter(MachineGroup.machine_type == machine_type).order_by(MachineGroup.order_idx, MachineGroup.id).all()
     members = db.query(MachineGroupMember).all()
     member_map = {}
     for m in members:
@@ -705,6 +708,7 @@ def list_machine_groups(db: Session = Depends(get_db), _=Depends(require_admin))
         {"id": g.id, "name": g.name, "description": g.description,
          "parent_id": g.parent_id, "level": g.level if g.level else 1,
          "order_idx": g.order_idx if g.order_idx is not None else 0,
+         "machine_type": g.machine_type or "mocvd",
          "machine_nos": sorted(member_map.get(g.id, []))}
         for g in groups
     ]
@@ -720,7 +724,7 @@ def reorder_machine_groups(items: List[MachineGroupReorderItem], db: Session = D
 
 @router.post("/machine-groups")
 def create_machine_group(body: MachineGroupCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
-    group = MachineGroup(name=body.name, description=body.description, parent_id=body.parent_id, level=body.level)
+    group = MachineGroup(name=body.name, description=body.description, parent_id=body.parent_id, level=body.level, machine_type=body.machine_type)
     db.add(group)
     db.flush()
     for no in body.machine_nos:

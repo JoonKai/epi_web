@@ -91,6 +91,7 @@ class MemberCreate(BaseModel):
     vendor_name: str = ""
     personnel_member_id: Optional[int] = None
     order_idx: int = 0
+    schedule_type: str = "general"
 
 
 class MemberUpdate(BaseModel):
@@ -110,12 +111,16 @@ def member_to_dict(m: ShiftMember):
         "personnel_member_id": m.personnel_member_id,
         "order_idx": m.order_idx,
         "is_active": m.is_active,
+        "schedule_type": m.schedule_type or "general",
     }
 
 
 @router.get("/members")
-def list_members(db: Session = Depends(get_db)):
-    rows = db.query(ShiftMember).filter(ShiftMember.is_active == True).order_by(ShiftMember.order_idx, ShiftMember.id).all()
+def list_members(schedule_type: str = "general", db: Session = Depends(get_db)):
+    rows = db.query(ShiftMember).filter(
+        ShiftMember.is_active == True,
+        ShiftMember.schedule_type == schedule_type,
+    ).order_by(ShiftMember.order_idx, ShiftMember.id).all()
     return [member_to_dict(r) for r in rows]
 
 
@@ -126,6 +131,7 @@ def create_member(body: MemberCreate, db: Session = Depends(get_db)):
         vendor_name=body.vendor_name,
         personnel_member_id=body.personnel_member_id,
         order_idx=body.order_idx,
+        schedule_type=body.schedule_type,
     )
     db.add(m)
     db.commit()
@@ -250,7 +256,7 @@ def save_summary_rows(body: dict, db: Session = Depends(get_db)):
 # ─── 인원관리 연동 ─────────────────────────────────────────────────────────────
 
 @router.get("/personnel-groups")
-def get_personnel_groups(db: Session = Depends(get_db)):
+def get_personnel_groups(schedule_type: str = "general", db: Session = Depends(get_db)):
     """인원관리의 업체+직원 목록을 읽기 전용으로 반환 (근무표 연동용)"""
     vendors = db.query(PersonnelVendor).filter(PersonnelVendor.is_active == True).order_by(PersonnelVendor.name).all()
     members = db.query(PersonnelMember).filter(PersonnelMember.is_active == True).order_by(PersonnelMember.name).all()
@@ -261,6 +267,7 @@ def get_personnel_groups(db: Session = Depends(get_db)):
         for m in db.query(ShiftMember).filter(
             ShiftMember.is_active == True,
             ShiftMember.personnel_member_id != None,
+            ShiftMember.schedule_type == schedule_type,
         ).all()
     }
 
@@ -283,6 +290,7 @@ def get_personnel_groups(db: Session = Depends(get_db)):
 
 class ImportMembersBody(BaseModel):
     personnel_member_ids: list[int]
+    schedule_type: str = "general"
 
 
 @router.post("/import-from-personnel")
@@ -292,16 +300,17 @@ def import_from_personnel(body: ImportMembersBody, db: Session = Depends(get_db)
     vendor_map = {v.id: v.name for v in vendors}
 
     added = 0
-    max_order = db.query(ShiftMember).count()
+    max_order = db.query(ShiftMember).filter(ShiftMember.schedule_type == body.schedule_type).count()
 
     for pid in body.personnel_member_ids:
         pm = db.query(PersonnelMember).filter(PersonnelMember.id == pid, PersonnelMember.is_active == True).first()
         if not pm:
             continue
-        # 이미 등록된 경우 스킵
+        # 해당 schedule_type에 이미 등록된 경우 스킵
         existing = db.query(ShiftMember).filter(
             ShiftMember.personnel_member_id == pid,
             ShiftMember.is_active == True,
+            ShiftMember.schedule_type == body.schedule_type,
         ).first()
         if existing:
             continue
@@ -311,6 +320,7 @@ def import_from_personnel(body: ImportMembersBody, db: Session = Depends(get_db)
             vendor_name=vendor_map.get(pm.vendor_id, ""),
             personnel_member_id=pid,
             order_idx=max_order + added,
+            schedule_type=body.schedule_type,
         )
         db.add(m)
         added += 1

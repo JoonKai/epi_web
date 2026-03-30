@@ -809,7 +809,7 @@ export default function MasterData() {
             label: <span><AppstoreOutlined /> MOCVD 호기 관리</span>,
             children: <MachineGroupManager />,
           },
-          { key: 'scr-machines', label: <span><AppstoreOutlined /> SCR 호기 관리</span>, children: <MachineGroupManager labelFormatter={formatScrubberLabel} /> },
+          { key: 'scr-machines', label: <span><AppstoreOutlined /> SCR 호기 관리</span>, children: <MachineGroupManager labelFormatter={formatScrubberLabel} machineType="scr" /> },
           { key: 'sources', label: <span><ExperimentOutlined /> 소스 종류 관리</span>, children: <SourceTab /> },
           { key: 'shift-types', label: <span><CalendarOutlined /> 근무 유형 관리</span>, children: <ShiftTypeTab /> },
         ]}
