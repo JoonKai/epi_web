@@ -60,8 +60,8 @@ const REPORT_META = {
     group: 'MOCVD',
     title: 'MOCVD 관리',
     path: '/epi/mocvd/management',
-    summary: '장비 현황판과 강제 다운 관리로 구성되며, 설비 상태와 강제 제어 상태를 함께 관리합니다.',
-    bullets: ['장비 상태 카드', '위험 분포 차트', '강제 다운 저장'],
+    summary: '장비 현황과 리스크를 중심으로 설비 상태를 한눈에 관리하는 화면입니다.',
+    bullets: ['장비 상태 카드', '위험 분포 차트', '업무 일지/장비 이력 연계'],
   },
   'mocvd-work-log': {
     group: 'MOCVD',

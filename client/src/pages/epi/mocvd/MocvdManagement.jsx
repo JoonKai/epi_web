@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
-import { Alert, Button, Card, Col, DatePicker, Empty, Form, Input, Modal, Popconfirm, Row, Select, Skeleton, Switch, Tabs, Tag, Tooltip, message } from 'antd'
+import { Alert, Button, Card, Col, DatePicker, Empty, Form, Input, Modal, Popconfirm, Row, Select, Skeleton, Tabs, Tag, Tooltip, message } from 'antd'
 import {
   AlertOutlined,
   CheckCircleOutlined,
@@ -12,9 +12,7 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   PlusOutlined,
-  PoweroffOutlined,
   ReloadOutlined,
-  SaveOutlined,
   SearchOutlined,
   ToolOutlined,
   WarningOutlined,
@@ -25,9 +23,7 @@ import { useThemeMode } from '../../../theme/useThemeMode'
 import WorkLog from './WorkLog'
 import PageBanner from '../../../components/PageBanner'
 
-function getMachineRiskStatus(sources, forcedDown) {
-  if (forcedDown) return 'forced'
-
+function getMachineRiskStatus(sources) {
   let critical = 0
   let warning = 0
   sources.forEach(({ remaining, daily_usage }) => {
@@ -43,13 +39,6 @@ function getMachineRiskStatus(sources, forcedDown) {
 }
 
 const STATUS_META = {
-  forced: {
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.10)',
-    border: 'rgba(239,68,68,0.28)',
-    label: '강제 다운',
-    icon: <CloseCircleOutlined />,
-  },
   down: {
     color: '#f43f5e',
     bg: 'rgba(244,63,94,0.08)',
@@ -128,12 +117,12 @@ function RiskBar({ name, remaining, daily_usage }) {
   )
 }
 
-function MachineCard({ machine_no, description, is_active, forcedDown, sources }) {
+function MachineCard({ machine_no, description, is_active, sources }) {
   const { isLight } = useThemeMode()
-  const status = is_active ? getMachineRiskStatus(sources, forcedDown) : 'inactive'
+  const status = is_active ? getMachineRiskStatus(sources) : 'inactive'
   const meta = STATUS_META[status]
   const riskySources = getRiskSources(sources)
-  const aggregateSource = forcedDown ? null : riskySources.find((item) => item.daysLeft != null) ?? null
+  const aggregateSource = riskySources.find((item) => item.daysLeft != null) ?? null
 
   return (
     <div
@@ -160,9 +149,7 @@ function MachineCard({ machine_no, description, is_active, forcedDown, sources }
 
       <div>
         <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, fontWeight: 700, marginBottom: 8 }}>다운 리스크 요인</div>
-        {forcedDown ? (
-          <div style={{ color: meta.color, fontSize: 14, fontWeight: 700 }}>강제 다운으로 지정된 설비입니다.</div>
-        ) : aggregateSource == null ? (
+        {aggregateSource == null ? (
           <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>등록된 리스크 데이터가 없습니다.</div>
         ) : (
           <RiskBar key={`${machine_no}:aggregate-source`} name="소스" remaining={aggregateSource.daysLeft} daily_usage={1} />
@@ -170,7 +157,7 @@ function MachineCard({ machine_no, description, is_active, forcedDown, sources }
       </div>
 
       <div style={{ marginTop: 'auto', color: 'var(--nowa-text-muted)', fontSize: 14 }}>
-        {forcedDown ? '현황판에서 강제 다운 상태로 표시됩니다.' : '현재 소스 상태를 기준으로 리스크를 표시합니다.'}
+        현재 소스 상태를 기준으로 리스크를 표시합니다.
       </div>
     </div>
   )
@@ -563,73 +550,21 @@ function EquipmentHistoryTab({ machineList }) {
   )
 }
 
-function ForceDownTab({ machineList, pendingForcedDownMap, onToggle, onResetAll, onSave, saving }) {
-  const rows = machineList.filter((machine) => machine.is_active)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Card className="nowa-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--nowa-text)' }}>장비 강제 다운</div>
-            <div style={{ color: 'var(--nowa-text-muted)', marginTop: 4 }}>특정 MO 설비를 수동으로 다운 상태로 고정합니다.</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button onClick={onResetAll} disabled={saving}>
-              전설비 정상화
-            </Button>
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={onSave}>
-              저장
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      <Row gutter={[12, 12]}>
-        {rows.map((machine) => {
-          const forced = pendingForcedDownMap[machine.machine_no] ?? false
-          return (
-            <Col key={machine.machine_no} xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Card className="nowa-card" styles={{ body: { padding: 16 } }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ color: forced ? '#ef4444' : 'var(--nowa-text)', fontWeight: 800, fontSize: 16 }}>
-                      {formatMachineLabel(machine.machine_no)}
-                    </div>
-                    <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 4 }}>
-                      {machine.description || '설비 설명 없음'}
-                    </div>
-                  </div>
-                  <Switch checked={forced} onChange={(checked) => onToggle(machine.machine_no, checked)} />
-                </div>
-                <div style={{ marginTop: 14, color: forced ? '#ef4444' : 'var(--nowa-text-muted)', fontSize: 14, fontWeight: forced ? 700 : 500 }}>
-                  {forced ? '현황판에서 강제 다운으로 표시됩니다.' : '현재는 강제 다운 미적용 상태입니다.'}
-                </div>
-              </Card>
-            </Col>
-          )
-        })}
-      </Row>
-    </div>
-  )
-}
-
 function OverviewTab({ machineList, filtered, filter, setFilter, search, setSearch, fetchAll }) {
   const statusMap = useMemo(() => {
     const next = {}
     machineList.forEach((machine) => {
-      next[machine.machine_no] = machine.is_active ? getMachineRiskStatus(machine.sources, machine.forced_down) : 'inactive'
+      next[machine.machine_no] = machine.is_active ? getMachineRiskStatus(machine.sources) : 'inactive'
     })
     return next
   }, [machineList])
 
   const activeCount = machineList.filter((machine) => machine.is_active).length
-  const downCount = machineList.filter((machine) => statusMap[machine.machine_no] === 'down' || statusMap[machine.machine_no] === 'forced').length
+  const downCount = machineList.filter((machine) => statusMap[machine.machine_no] === 'down').length
   const warningCount = machineList.filter((machine) => statusMap[machine.machine_no] === 'warning').length
 
   const filterButtons = [
     { key: 'all', label: '전체', color: undefined },
-    { key: 'forced', label: '강제 다운', color: '#ef4444' },
     { key: 'down', label: '다운 위험', color: '#f43f5e' },
     { key: 'warning', label: '주의', color: '#f59e0b' },
     { key: 'normal', label: '정상', color: '#14b8a6' },
@@ -640,13 +575,12 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
       const riskSources = getRiskSources(machine.sources)
       return {
         machine_no: machine.machine_no,
-        forced: machine.forced_down ? 1 : 0,
-        down: machine.forced_down ? 0 : riskSources.filter((item) => item.risk === 'down').length,
-        warning: machine.forced_down ? 0 : riskSources.filter((item) => item.risk === 'warning').length,
+        down: riskSources.filter((item) => item.risk === 'down').length,
+        warning: riskSources.filter((item) => item.risk === 'warning').length,
       }
     })
-    .filter((machine) => machine.forced > 0 || machine.down > 0 || machine.warning > 0)
-    .sort((a, b) => (b.forced + b.down + b.warning) - (a.forced + a.down + a.warning))
+    .filter((machine) => machine.down > 0 || machine.warning > 0)
+    .sort((a, b) => (b.down + b.warning) - (a.down + a.warning))
     .slice(0, 20)
 
   const distributionBuckets = [
@@ -658,10 +592,6 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
   ]
   const distributionCounts = distributionBuckets.map(() => 0)
   machineList.forEach((machine) => {
-    if (machine.forced_down) {
-      distributionCounts[0] += 1
-      return
-    }
     machine.sources.forEach((source) => {
       if (source.daily_usage <= 0) return
       const daysLeft = source.remaining / source.daily_usage
@@ -679,7 +609,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
       <PageBanner
         kicker="설비 관리"
         title="MOCVD 장비 현황판"
-        desc="현재 소스 사용 데이터와 강제 다운 지정 상태를 기준으로 장비 상태를 보여줍니다."
+        desc="현재 소스 사용 데이터를 기준으로 장비 상태를 보여줍니다."
         extra={(
           <Button icon={<ReloadOutlined />} onClick={fetchAll} className="nowa-btn">
             현황 새로고침
@@ -692,7 +622,7 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
           <SummaryCard label="가동 설비" value={activeCount} suffix="대" accent="#818cf8" gradient="linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)" icon={<ToolOutlined />} sub="현재 운영 중인 설비" />
         </Col>
         <Col xs={24} md={8}>
-          <SummaryCard label="다운 위험 설비" value={downCount} suffix="대" accent="#fb7185" gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)" icon={<AlertOutlined />} sub="강제 다운 포함" />
+          <SummaryCard label="다운 위험 설비" value={downCount} suffix="대" accent="#fb7185" gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)" icon={<AlertOutlined />} />
         </Col>
         <Col xs={24} md={8}>
           <SummaryCard label="주의 설비" value={warningCount} suffix="대" accent="#fbbf24" gradient="linear-gradient(135deg,#f59e0b 0%,#f97316 100%)" icon={<WarningOutlined />} sub="단기 점검 필요 대상" />
@@ -728,7 +658,6 @@ function OverviewTab({ machineList, filtered, filter, setFilter, search, setSear
                     splitLine: { lineStyle: { color: '#1e2a3c' } },
                   },
                   series: [
-                    { name: '강제 다운', type: 'bar', stack: 'risk', data: riskChartRows.map((row) => row.forced), itemStyle: { color: '#ef4444' }, barMaxWidth: 28 },
                     { name: '다운 위험', type: 'bar', stack: 'risk', data: riskChartRows.map((row) => row.down), itemStyle: { color: '#f43f5e' }, barMaxWidth: 28 },
                     { name: '주의', type: 'bar', stack: 'risk', data: riskChartRows.map((row) => row.warning), itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] }, barMaxWidth: 28 },
                   ],
@@ -832,27 +761,20 @@ export default function MocvdManagement() {
   const [error, setError] = useState(null)
   const [machines, setMachines] = useState([])
   const [sourceData, setSourceData] = useState({ rows: [], source_names: [] })
-  const [forcedDown, setForcedDown] = useState([])
-  const [pendingForcedDownMap, setPendingForcedDownMap] = useState({})
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
-  const [saving, setSaving] = useState(false)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [mRes, sRes, fRes] = await Promise.all([
+      const [mRes, sRes] = await Promise.all([
         authFetch('/api/mocvd/machines'),
         authFetch('/api/mocvd/sources/all'),
-        authFetch('/api/mocvd/forced-down'),
       ])
-      const [mJson, sJson, fJson] = await Promise.all([mRes.json(), sRes.json(), fRes.json()])
+      const [mJson, sJson] = await Promise.all([mRes.json(), sRes.json()])
       setMachines(Array.isArray(mJson) ? mJson : [])
       setSourceData(sJson)
-      const machineNos = Array.isArray(fJson.machine_nos) ? fJson.machine_nos : []
-      setForcedDown(machineNos)
-      setPendingForcedDownMap(Object.fromEntries(machineNos.map((machineNo) => [machineNo, true])))
     } catch {
       setError('MOCVD 설비 데이터를 불러오지 못했습니다.')
     } finally {
@@ -868,7 +790,6 @@ export default function MocvdManagement() {
     const rows = sourceData.rows ?? []
     const sourceNames = sourceData.source_names ?? []
     const rowMap = new Map(rows.map((row) => [row.machine_no, row]))
-    const forcedDownSet = new Set(forcedDown)
 
     return machines.map((machine) => {
       const row = rowMap.get(machine.machine_no) ?? {}
@@ -877,9 +798,9 @@ export default function MocvdManagement() {
         remaining: row[name] ?? 0,
         daily_usage: row[`${name}_daily_usage`] ?? 0,
       }))
-      return { ...machine, forced_down: forcedDownSet.has(machine.machine_no), sources }
+      return { ...machine, sources }
     })
-  }, [machines, sourceData, forcedDown])
+  }, [machines, sourceData])
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -892,52 +813,11 @@ export default function MocvdManagement() {
       ) {
         return false
       }
-      const status = machine.is_active ? getMachineRiskStatus(machine.sources, machine.forced_down) : 'inactive'
+      const status = machine.is_active ? getMachineRiskStatus(machine.sources) : 'inactive'
       if (filter !== 'all' && status !== filter) return false
       return true
     })
   }, [machineList, search, filter])
-
-  const handleToggleForcedDown = useCallback((machineNo, checked) => {
-    setPendingForcedDownMap((prev) => {
-      const next = { ...prev }
-      if (checked) next[machineNo] = true
-      else delete next[machineNo]
-      return next
-    })
-  }, [])
-
-  const handleResetAllForcedDown = useCallback(() => {
-    setPendingForcedDownMap({})
-  }, [])
-
-  const handleSaveForcedDown = useCallback(async () => {
-    setSaving(true)
-    try {
-      const machineNos = Object.entries(pendingForcedDownMap)
-        .filter(([, checked]) => checked)
-        .map(([machineNo]) => Number(machineNo))
-        .sort((a, b) => a - b)
-
-      const res = await authFetch('/api/mocvd/forced-down', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ machine_nos: machineNos }),
-      })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || '강제 다운 저장에 실패했습니다.')
-      }
-
-      message.success('장비 강제 다운 상태를 저장했습니다.')
-      setForcedDown(machineNos)
-    } catch (error) {
-      message.error(error.message || '강제 다운 저장 중 오류가 발생했습니다.')
-    } finally {
-      setSaving(false)
-    }
-  }, [pendingForcedDownMap])
 
   if (loading) return <Skeleton active paragraph={{ rows: 10 }} />
   if (error) return <Alert type="error" showIcon message={error} />
@@ -962,20 +842,6 @@ export default function MocvdManagement() {
           ),
         },
         {
-          key: 'forced-down',
-          label: <span><PoweroffOutlined /> 장비 강제 다운</span>,
-          children: (
-            <ForceDownTab
-              machineList={machineList}
-              pendingForcedDownMap={pendingForcedDownMap}
-              onToggle={handleToggleForcedDown}
-              onResetAll={handleResetAllForcedDown}
-              onSave={handleSaveForcedDown}
-              saving={saving}
-            />
-          ),
-        },
-        {
           key: 'work-log',
           label: <span><FileTextOutlined /> 업무 일지</span>,
           children: <div style={{ paddingTop: 12 }}><WorkLog /></div>,
@@ -989,3 +855,6 @@ export default function MocvdManagement() {
     />
   )
 }
+
+
+

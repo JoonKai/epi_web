@@ -11,7 +11,7 @@ import PageBanner from '../../../components/PageBanner'
 
 const PM_ROW_H = 34
 const PM_HEAD_H = 38
-const PM_BORDER = '1px solid rgba(245,158,11,0.12)'
+const PM_BORDER = '1px solid rgba(245,158,11,0.28)'
 const PM_GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
 
 const pmHeadBase = {
@@ -245,13 +245,14 @@ function PmInputSheet({ rows, onChange }) {
 
   return (
     <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', position: 'relative' }}>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 760, fontSize: 14 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 900, fontSize: 14 }}>
         <colgroup>
           <col style={{ width: 160, minWidth: 160 }} />
-          <col style={{ width: 160, minWidth: 160 }} />
-          <col style={{ width: 180, minWidth: 180 }} />
           <col style={{ width: 150, minWidth: 150 }} />
-          <col style={{ width: 160, minWidth: 160 }} />
+          <col style={{ width: 170, minWidth: 170 }} />
+          <col style={{ width: 150, minWidth: 150 }} />
+          <col style={{ width: 150, minWidth: 150 }} />
+          <col style={{ width: 150, minWidth: 150 }} />
         </colgroup>
         <thead>
           <tr>
@@ -269,6 +270,7 @@ function PmInputSheet({ rows, onChange }) {
             </th>
             <th style={{ ...pmHeadBase, borderLeft: PM_GROUP_BORDER, color: '#7dd3fc', fontWeight: 700 }}>PM 기준 횟수</th>
             <th style={{ ...pmHeadBase, color: '#fcd34d', fontWeight: 700 }}>필터 교체 기준 횟수</th>
+            <th style={{ ...pmHeadBase, color: '#fb923c', fontWeight: 700 }}>필터 교체기준 Half</th>
             <th style={{ ...pmHeadBase, color: '#38bdf8', fontWeight: 700 }}>챔버사용횟수</th>
             <th style={{ ...pmHeadBase, color: '#fbbf24', fontWeight: 700 }}>필터사용횟수</th>
           </tr>
@@ -300,6 +302,9 @@ function PmInputSheet({ rows, onChange }) {
                   onTabNavigate={handleTabNavigate}
                   onChange={(value) => onChange(row.key, 'filter_base_count', value)}
                 />
+              </td>
+              <td style={{ ...pmCellBase, background: '#1a1000', color: '#fed7aa', textAlign: 'right', paddingRight: 12, fontWeight: 700 }}>
+                {Math.floor((row.filter_base_count || 0) / 2)}
               </td>
               <td style={{ ...pmCellBase, background: '#0a1119' }}>
                 <PmEditCell

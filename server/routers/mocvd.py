@@ -120,10 +120,6 @@ class PmCounterUpdateItem(BaseModel):
     filter_base_count: float = 0.0
 
 
-class ForcedDownUpdate(BaseModel):
-    machine_nos: list[int] = []
-
-
 def _can_manage_handover_note(current_user, row: MocvdHandoverNote) -> bool:
     return getattr(current_user, "role", "") == "admin" or row.author == getattr(current_user, "username", "")
 
@@ -155,51 +151,10 @@ def _get_source_status_settings(db: Session) -> dict[str, int]:
     return {"overdue_days": overdue_days, "urgent_days": urgent_days}
 
 
-def _get_forced_down_machine_nos(db: Session) -> list[int]:
-    row = db.query(SystemSetting).filter(SystemSetting.key == "mocvd_forced_down_machine_nos").first()
-    if not row or not row.value:
-        return []
-    machine_nos = []
-    for token in row.value.split(","):
-        token = token.strip()
-        if not token:
-            continue
-        try:
-            machine_nos.append(int(token))
-        except ValueError:
-            continue
-    return sorted(set(machine_nos))
-
-
-
-
 @router.get("/machines")
 def get_machines(db: Session = Depends(get_db), _=Depends(get_current_user)):
     rows = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
     return [{"machine_no": row.machine_no, "description": row.description, "is_active": row.is_active} for row in rows]
-
-
-@router.get("/forced-down")
-def get_forced_down(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    return {"machine_nos": _get_forced_down_machine_nos(db)}
-
-
-@router.put("/forced-down")
-def update_forced_down(body: ForcedDownUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
-    active_machine_nos = {
-        machine_no
-        for (machine_no,) in db.query(MocvdMachine.machine_no).filter(MocvdMachine.is_active == True).all()
-    }
-    machine_nos = sorted({machine_no for machine_no in body.machine_nos if machine_no in active_machine_nos})
-    value = ",".join(str(machine_no) for machine_no in machine_nos)
-
-    row = db.query(SystemSetting).filter(SystemSetting.key == "mocvd_forced_down_machine_nos").first()
-    if row:
-        row.value = value
-    else:
-        db.add(SystemSetting(key="mocvd_forced_down_machine_nos", value=value))
-    db.commit()
-    return {"result": "ok", "machine_nos": machine_nos}
 
 
 @router.get("/pm-counters")

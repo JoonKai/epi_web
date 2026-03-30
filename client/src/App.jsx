@@ -27,6 +27,7 @@ import Simulator from './pages/epi/Simulator'
 import PurchaseRequest from './pages/cost/PurchaseRequest'
 import CostMasterData from './pages/cost/CostMasterData'
 import RepairStatus from './pages/cost/RepairStatus'
+import PageDescription from './pages/PageDescription'
 
 // ── Nowa-TS Design Tokens ──────────────────────────────────────────
 const DARK_TOKENS = {
@@ -112,6 +113,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/cost/purchase-request" element={<PurchaseRequest />} />
           <Route path="/cost/repair-status" element={<RepairStatus />} />
           <Route path="/cost/master-data" element={<CostMasterData />} />
+          {user.role === 'admin' && <Route path="/page-description" element={<PageDescription />} />}
           {user.role === 'admin' && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

@@ -21,6 +21,7 @@ const EVENT_CONFIG = {
   other:         { label: '기타',    color: '#fbbf24', bg: 'rgba(251,191,36,0.15)',   border: 'rgba(251,191,36,0.35)' },
 }
 const evtCfg = (t) => EVENT_CONFIG[t] || EVENT_CONFIG.other
+const EVENT_DURATION = { pm: 5, filter: 1, bm: 1, source_change: 1, other: 1 }
 const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const navBtnStyle = {
   background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)',
@@ -30,216 +31,190 @@ const navBtnStyle = {
 }
 
 /* ── 자동 일정 생성 알고리즘 ────────────────────────────────── */
-function autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays = {}, groups = [] }) {
-  const {
-    includePmCritical, includePmUrgent,
-    includeFilterCritical, includeFilterUrgent,
-    includeSourceOverdue, includeSourceUrgent,
-    includeSun, includeSat, includeHoliday = false,
-    pmMaxPerDay = 2, filterMaxPerDay = 2, sourceMaxPerDay = 2,
-    pmPersonCount = 2, filterPersonCount = 2, sourcePersonCount = 1,
-  } = config
+// 예상 교체일이 해당 월에 해당하는 항목을 그 날짜에 직접 배치
+function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays = {} }) {
+  const { includeSun, includeSat, includeHoliday = false, pmPersonCount = 2, sourcePersonCount = 1 } = config
 
-  let thresholds = { critical: 5, urgent: 20 }
-  try { thresholds = { ...thresholds, ...JSON.parse(localStorage.getItem('pm_thresholds') || '{}') } } catch {}
+  const today = dayjs()
 
-  const items = []
-
-  // PM 챔버 항목 수집
-  pmCounters.forEach(row => {
-    const pmRem = row.pm_base_count - row.chamber_count
-    if (includePmCritical && pmRem <= thresholds.critical) {
-      items.push({ priority: 0, event_type: 'pm', machine_no: row.machine_no, title: 'PM 정비', badge: '긴급' })
-    } else if (includePmUrgent && pmRem <= thresholds.urgent) {
-      items.push({ priority: 1, event_type: 'pm', machine_no: row.machine_no, title: 'PM 정비', badge: '임박' })
+  // 주말/공휴일이면 다음 평일로 이동
+  const nearestWorkday = (dateStr) => {
+    let d = dayjs(dateStr)
+    for (let i = 0; i < 7; i++) {
+      const ds = d.format('YYYY-MM-DD')
+      const dow = d.day()
+      const sat = dow === 6, sun = dow === 0
+      const holiday = !!holidays[ds]
+      if ((!sat || includeSat) && (!sun || includeSun) && (!holiday || includeHoliday)) return ds
+      d = d.add(1, 'day')
     }
-  })
-
-  // 필터 교체 항목 수집 (PM과 별도)
-  pmCounters.forEach(row => {
-    const filterRem = row.filter_base_count - row.filter_count
-    if (includeFilterCritical && filterRem <= thresholds.critical) {
-      items.push({ priority: 0, event_type: 'filter', machine_no: row.machine_no, title: '필터 교체', badge: '긴급' })
-    } else if (includeFilterUrgent && filterRem <= thresholds.urgent) {
-      items.push({ priority: 1, event_type: 'filter', machine_no: row.machine_no, title: '필터 교체', badge: '임박' })
-    }
-  })
-
-  // 소스 교체 항목 수집
-  sourceEvents.forEach(ev => {
-    if (includeSourceOverdue && ev.status === 'overdue') {
-      items.push({ priority: 0, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '긴급', days_left: ev.days_left ?? 0 })
-    } else if (includeSourceUrgent && ev.status === 'urgent') {
-      items.push({ priority: 1, event_type: 'source_change', machine_no: ev.machine_no, title: `(${ev.source_label || ev.source_name || ''})`, badge: '임박', days_left: ev.days_left ?? 999 })
-    }
-  })
-
-  // 그룹 확장: PM/필터만 적용 (소스 교체는 호기별 독립 관리이므로 제외)
-  if (groups.length > 0) {
-    const machineGroupMap = {}
-    groups.forEach(g => g.machine_nos.forEach(no => { machineGroupMap[no] = g }))
-    const expanded = []
-    const seen = new Set()
-    items.forEach(item => {
-      if (item.event_type === 'source_change') {
-        // 소스 교체는 그룹 확장 없이 해당 호기만
-        const key = `${item.machine_no}:${item.event_type}:${item.title}`
-        if (!seen.has(key)) { seen.add(key); expanded.push(item) }
-        return
-      }
-      const group = item.machine_no ? machineGroupMap[item.machine_no] : null
-      const targets = group ? group.machine_nos : [item.machine_no]
-      targets.forEach(no => {
-        const key = `${no}:${item.event_type}:${item.title}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          expanded.push({ ...item, machine_no: no })
-        }
-      })
-    })
-    items.length = 0
-    items.push(...expanded)
+    return null
   }
-
-  // priority(0=overdue, 1=urgent) 우선, 같은 priority 내에선 days_left 오름차순 (마이너스가 클수록 먼저)
-  items.sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority - b.priority
-    const da = a.days_left ?? 999
-    const db = b.days_left ?? 999
-    return da - db
-  })
-  if (items.length === 0) return []
-
-  // 작업일 목록 수집
-  const ms = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
-  const workingDays = []
-  for (let d = 1; d <= ms.daysInMonth(); d++) {
-    const dd = ms.date(d)
-    const dow = dd.day()
-    const ds = dd.format('YYYY-MM-DD')
-    if (dow === 0 && !includeSun) continue
-    if (dow === 6 && !includeSat) continue
-    if (!includeHoliday && holidays[ds]) continue  // 공휴일 제외
-    workingDays.push(ds)
-  }
-  if (workingDays.length === 0) return []
-
-  // 유형별 독립 배분 (PM·필터·소스 각자 하루 최대 적용)
-  const maxMap = { pm: Math.max(1, pmMaxPerDay), filter: Math.max(1, filterMaxPerDay), source_change: Math.max(1, sourceMaxPerDay) }
-  const personMap = { pm: pmPersonCount, filter: filterPersonCount, source_change: sourcePersonCount }
-  const dayIdxMap = { pm: 0, filter: 0, source_change: 0 }
-  const dayCountMap = { pm: 0, filter: 0, source_change: 0 }
-  let memberCursor = 0
 
   const schedule = []
-  for (const item of items) {
-    const type = item.event_type
-    const mx = maxMap[type] ?? 1
-    let di = dayIdxMap[type] ?? 0
-    if (di >= workingDays.length) continue
+  let memberCursor = 0
 
-    const count = Math.max(1, Math.min(personMap[type] ?? 1, pmMembers.length || 1))
-    const assigned = []
-    for (let i = 0; i < count; i++) {
-      if (pmMembers.length > 0) {
-        assigned.push(pmMembers[memberCursor % pmMembers.length].name)
-        memberCursor++
-      }
+  const assignActors = (count) => {
+    const n = Math.max(1, Math.min(count, pmMembers.length || 1))
+    const names = []
+    for (let i = 0; i < n; i++) {
+      if (pmMembers.length > 0) { names.push(pmMembers[memberCursor % pmMembers.length].name); memberCursor++ }
     }
-    schedule.push({ ...item, occurred_at: workingDays[di] + 'T00:00:00', date: workingDays[di], actor: assigned.join(', ') })
-    dayCountMap[type] = (dayCountMap[type] ?? 0) + 1
-    if (dayCountMap[type] >= mx) { dayIdxMap[type] = di + 1; dayCountMap[type] = 0 }
+    return names.join(', ')
   }
-  return schedule
+
+  // ── PM 정비: pm_base_count - chamber_count 잔여 런 기준 예상일 계산
+  if (config.includePm) {
+    const sourceMap = {}
+    ;(sourceStatus?.events || []).forEach(ev => {
+      if (ev.source_label === 'NH3' && ev.daily_usage > 0) sourceMap[ev.machine_no] = ev.daily_usage
+    })
+    pmCounters.forEach(row => {
+      const pmRem = (row.pm_base_count || 0) - (row.chamber_count || 0)
+      if (pmRem <= 0) return
+      const dailyRate = sourceMap[row.machine_no] || 1
+      const daysLeft = Math.ceil(pmRem / dailyRate)
+      const dateStr = nearestWorkday(today.add(daysLeft, 'day').format('YYYY-MM-DD'))
+      if (!dateStr) return
+      schedule.push({
+        event_type: 'pm', machine_no: row.machine_no, title: 'PM 정비',
+        occurred_at: dateStr + 'T00:00:00', date: dateStr,
+        actor: assignActors(pmPersonCount), badge: '예정',
+      })
+    })
+  }
+
+  // ── 필터 교체
+  // 1) PM 1일차에 무조건 필터 교체
+  // 2) filter_base_count 절반 지점에 추가 필터 교체
+  if (config.includeFilter) {
+    const sourceMap = {}
+    ;(sourceStatus?.events || []).forEach(ev => {
+      if (ev.source_label === 'NH3' && ev.daily_usage > 0) sourceMap[ev.machine_no] = ev.daily_usage
+    })
+
+    // PM 1일차 날짜 수집
+    const pmDateByMachine = {}
+    schedule.forEach(ev => {
+      if (ev.event_type === 'pm') pmDateByMachine[ev.machine_no] = ev.date
+    })
+
+    pmCounters.forEach(row => {
+      const dailyRate = sourceMap[row.machine_no] || 1
+
+      // 1) PM 1일차 필터 교체
+      const pmDate = pmDateByMachine[row.machine_no]
+      if (pmDate) {
+        schedule.push({
+          event_type: 'filter', machine_no: row.machine_no, title: '필터 교체',
+          occurred_at: pmDate + 'T00:00:00', date: pmDate,
+          actor: assignActors(1), badge: '예정',
+        })
+      }
+
+      // 2) Half 지점 추가 필터 교체
+      const halfBase = Math.floor((row.filter_base_count || 0) / 2)
+      const halfRem = halfBase - (row.filter_count || 0)
+      if (halfRem > 0) {
+        const daysLeft = Math.ceil(halfRem / dailyRate)
+        const dateStr = nearestWorkday(today.add(daysLeft, 'day').format('YYYY-MM-DD'))
+        if (dateStr) {
+          schedule.push({
+            event_type: 'filter', machine_no: row.machine_no, title: '필터 교체 (Half)',
+            occurred_at: dateStr + 'T00:00:00', date: dateStr,
+            actor: assignActors(1), badge: '예정',
+          })
+        }
+      }
+    })
+  }
+
+  // ── 소스 교체: projected_replacement_date 기준 (날짜 그대로)
+  if (config.includeSource) {
+    const seen = new Set()
+    ;(sourceStatus?.events || []).forEach(ev => {
+      const dateStr = ev.projected_replacement_date
+      if (!dateStr) return
+      const key = `${ev.machine_no}:${ev.source_label}`
+      if (seen.has(key)) return
+      seen.add(key)
+      schedule.push({
+        event_type: 'source_change', machine_no: ev.machine_no,
+        title: `소스 교체 (${ev.source_label})`,
+        occurred_at: dateStr + 'T00:00:00', date: dateStr,
+        actor: assignActors(sourcePersonCount), badge: '예정',
+      })
+    })
+  }
+
+  // ── 소스 교체가 PM 기간(5일) 안에 겹치면 무조건 PM 2일차로 이동
+  const pmStartByMachine = {}
+  schedule.forEach(ev => {
+    if (ev.event_type === 'pm') pmStartByMachine[ev.machine_no] = ev.date
+  })
+  schedule.forEach(ev => {
+    if (ev.event_type !== 'source_change') return
+    const pmStart = pmStartByMachine[ev.machine_no]
+    if (!pmStart) return
+    const pmStartD = dayjs(pmStart)
+    const evD = dayjs(ev.date)
+    const diff = evD.diff(pmStartD, 'day')
+    if (diff >= 0 && diff < (EVENT_DURATION.pm ?? 5)) {
+      const newDate = pmStartD.add(1, 'day').format('YYYY-MM-DD')
+      ev.date = newDate
+      ev.occurred_at = newDate + 'T00:00:00'
+    }
+  })
+
+  return schedule.sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /* ── 자동 생성 카드 ─────────────────────────────────────────── */
-function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holidays, groups = [], onConfirm }) {
-  const [config, setConfig] = useState(() => {
-    const perDay = getWorkTimePerDay()
-    return {
-      includePmCritical: true,     includePmUrgent: false,
-      includeFilterCritical: true, includeFilterUrgent: false,
-      includeSourceOverdue: true,  includeSourceUrgent: false,
-      includeSat: false, includeSun: false, includeHoliday: false,
-      pmMaxPerDay: perDay.pm, filterMaxPerDay: perDay.filter, sourceMaxPerDay: perDay.source,
-      pmPersonCount: 2,
-      filterPersonCount: 1,
-      sourcePersonCount: 1,
-    }
+function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holidays, events = [], onConfirm }) {
+  const [config, setConfig] = useState({
+    includePm: true, includeFilter: true, includeSource: true,
+    includeSat: false, includeSun: false, includeHoliday: false,
+    pmPersonCount: 2, sourcePersonCount: 1,
   })
   const [preview, setPreview] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // 인원 수 변경 시 하루 최대를 작업시간설정 상한 내에서 재계산
   useEffect(() => {
-    if (pmMembers.length === 0) return
-    const perDay = getWorkTimePerDay()
-    setConfig(p => ({
-      ...p,
-      pmMaxPerDay:     Math.min(perDay.pm,     Math.max(1, Math.floor(pmMembers.length / p.pmPersonCount))),
-      filterMaxPerDay: Math.min(perDay.filter, Math.max(1, Math.floor(pmMembers.length / p.filterPersonCount))),
-      sourceMaxPerDay: Math.min(perDay.source, Math.max(1, Math.floor(pmMembers.length / p.sourcePersonCount))),
-    }))
-  }, [pmMembers.length])
-
-  // 소스 이벤트 (중복 제거: 같은 machine_no + source_name)
-  const sourceEvents = useMemo(() => {
-    const seen = new Set()
-    return (sourceStatus?.events || [])
-      .filter(e => e.status === 'overdue' || e.status === 'urgent')
-      .filter(e => {
-        const key = `${e.machine_no}:${e.source_name}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
-  }, [sourceStatus])
-
-  const srcOverdue = sourceEvents.filter(e => e.status === 'overdue')
-  const srcUrgent  = sourceEvents.filter(e => e.status === 'urgent')
-
-  let thresholds = { critical: 5, urgent: 20 }
-  try { thresholds = { ...thresholds, ...JSON.parse(localStorage.getItem('pm_thresholds') || '{}') } } catch {}
-
-  const pmCritical     = pmCounters.filter(r => (r.pm_base_count - r.chamber_count) <= thresholds.critical)
-  const pmUrgent       = pmCounters.filter(r => { const v = r.pm_base_count - r.chamber_count; return v > thresholds.critical && v <= thresholds.urgent })
-  const filterCritical = pmCounters.filter(r => (r.filter_base_count - r.filter_count) <= thresholds.critical)
-  const filterUrgent   = pmCounters.filter(r => { const v = r.filter_base_count - r.filter_count; return v > thresholds.critical && v <= thresholds.urgent })
-
-  // config/year/month 변경 시 자동 미리보기
-  useEffect(() => {
-    const result = autoGenerate({ pmCounters, sourceEvents, pmMembers, config, year, month, holidays, groups })
+    const result = autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays })
     setPreview(result)
-  }, [config, year, month, pmCounters, pmMembers, holidays])
+  }, [config, year, month, pmCounters, pmMembers, sourceStatus, holidays])
 
   const handleConfirm = async () => {
     if (!preview || preview.length === 0) return
     setSaving(true)
     try {
+      // 기존 자동생성 이벤트 전부 삭제
+      const autoEvents = events.filter(e => e.detail === '자동 생성 (예상일 기준)')
+      for (const ev of autoEvents) {
+        await authFetch(`/api/mocvd/equipment-history/${ev.id}`, { method: 'DELETE' })
+      }
+      // 새 일정 저장
       for (const item of preview) {
         await authFetch('/api/mocvd/equipment-history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            machine_no: item.machine_no,
-            event_type: item.event_type,
-            title: item.title,
-            detail: `자동 생성 (${item.badge})`,
-            occurred_at: item.occurred_at,
-            actor: item.actor,
+            machine_no: item.machine_no, event_type: item.event_type,
+            title: item.title, detail: '자동 생성 (예상일 기준)',
+            occurred_at: item.occurred_at, actor: item.actor,
           }),
         })
       }
-      message.success(`${preview.length}건의 일정을 생성했습니다.`)
+      message.success(`기존 ${autoEvents.length}건 삭제 후 ${preview.length}건 생성했습니다.`)
       setPreview(null)
       onConfirm()
-      onClose()
     } catch { message.error('일정 생성에 실패했습니다.') }
     setSaving(false)
   }
 
   const toggle = (key) => setConfig(p => ({ ...p, [key]: !p[key] }))
+  const pmCount  = preview?.filter(i => i.event_type === 'pm').length ?? 0
+  const filCount = preview?.filter(i => i.event_type === 'filter').length ?? 0
+  const srcCount = preview?.filter(i => i.event_type === 'source_change').length ?? 0
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10, padding: '8px 12px', marginBottom: 10 }}>
@@ -247,7 +222,7 @@ function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holiday
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <RobotOutlined style={{ color: '#4ade80', fontSize: 13 }} />
         <span style={{ fontSize: 13, fontWeight: 700, color: '#4ade80' }}>자동 일정 생성</span>
-        <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.4)', marginLeft: 2 }}>설정 변경 시 자동 업데이트</span>
+        <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.4)', marginLeft: 2 }}>예상 교체일 기준으로 해당 월 일정 생성</span>
         {preview !== null && (
           <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: preview.length > 0 ? '#7dd3fc' : 'rgba(196,210,226,0.4)' }}>
             {preview.length}건 예정
@@ -255,127 +230,60 @@ function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holiday
         )}
       </div>
 
-      {/* 3개 카테고리 + 배분설정 통합 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-        {/* PM 정비 */}
-        <div style={{ flex: 1, background: 'rgba(125,211,252,0.04)', border: '1px solid rgba(125,211,252,0.18)', borderRadius: 8, padding: '6px 8px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', marginBottom: 5 }}>PM 정비 (챔버)</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
-              <Checkbox checked={config.includePmCritical} onChange={() => toggle('includePmCritical')} />
-              <span>긴급</span><span style={{ color: '#f87171' }}>({pmCritical.length}대)</span>
-            </label>
-            {pmCritical.length > 0 && config.includePmCritical && (
-              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
-                {pmCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-              </div>
-            )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
-              <Checkbox checked={config.includePmUrgent} onChange={() => toggle('includePmUrgent')} />
-              <span>임박</span><span style={{ color: '#fbbf24' }}>({pmUrgent.length}대)</span>
-            </label>
-            {pmUrgent.length > 0 && config.includePmUrgent && (
-              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
-                {pmUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-              </div>
-            )}
-          </div>
-          <div style={{ borderTop: '1px solid rgba(125,211,252,0.1)', paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>인원</span>
-              <Select value={config.pmPersonCount} onChange={v => setConfig(p => ({ ...p, pmPersonCount: v }))}
-                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>최대</span>
-              <Select value={config.pmMaxPerDay} onChange={v => setConfig(p => ({ ...p, pmMaxPerDay: v }))}
-                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6,8,10].map(n => ({ label: `${n}건`, value: n }))} />
-            </div>
-          </div>
+      {/* 설정 행 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 6, fontSize: 12 }}>
+        {/* 포함 유형 */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+            <Checkbox checked={config.includePm} onChange={() => toggle('includePm')} />
+            <span style={{ color: '#7dd3fc', fontWeight: 700 }}>PM 정비</span>
+            {preview && <span style={{ color: 'rgba(196,210,226,0.5)', marginLeft: 2 }}>({pmCount}건)</span>}
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+            <Checkbox checked={config.includeFilter} onChange={() => toggle('includeFilter')} />
+            <span style={{ color: '#a78bfa', fontWeight: 700 }}>필터 교체</span>
+            {preview && <span style={{ color: 'rgba(196,210,226,0.5)', marginLeft: 2 }}>({filCount}건)</span>}
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+            <Checkbox checked={config.includeSource} onChange={() => toggle('includeSource')} />
+            <span style={{ color: '#a3e635', fontWeight: 700 }}>소스 교체</span>
+            {preview && <span style={{ color: 'rgba(196,210,226,0.5)', marginLeft: 2 }}>({srcCount}건)</span>}
+          </label>
         </div>
 
-        {/* 필터 교체 */}
-        <div style={{ flex: 1, background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.18)', borderRadius: 8, padding: '6px 8px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa', marginBottom: 5 }}>필터 교체</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
-              <Checkbox checked={config.includeFilterCritical} onChange={() => toggle('includeFilterCritical')} />
-              <span>긴급</span><span style={{ color: '#f87171' }}>({filterCritical.length}대)</span>
-            </label>
-            {filterCritical.length > 0 && config.includeFilterCritical && (
-              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
-                {filterCritical.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-              </div>
-            )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
-              <Checkbox checked={config.includeFilterUrgent} onChange={() => toggle('includeFilterUrgent')} />
-              <span>임박</span><span style={{ color: '#fbbf24' }}>({filterUrgent.length}대)</span>
-            </label>
-            {filterUrgent.length > 0 && config.includeFilterUrgent && (
-              <div style={{ fontSize: 11, color: 'rgba(196,210,226,0.6)', paddingLeft: 20, lineHeight: 1.5 }}>
-                {filterUrgent.map(r => formatMachineLabel(r.machine_no)).join(', ')}
-              </div>
-            )}
-          </div>
-          <div style={{ borderTop: '1px solid rgba(167,139,250,0.1)', paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>인원</span>
-              <Select value={config.filterPersonCount} onChange={v => setConfig(p => ({ ...p, filterPersonCount: v }))}
-                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>최대</span>
-              <Select value={config.filterMaxPerDay} onChange={v => setConfig(p => ({ ...p, filterMaxPerDay: v }))}
-                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6,8,10].map(n => ({ label: `${n}건`, value: n }))} />
-            </div>
-          </div>
+        {/* 구분선 */}
+        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+
+        {/* 작업일 */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ color: 'rgba(196,210,226,0.55)' }}>작업일</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+            <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+            <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+            <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
+          </label>
         </div>
 
-        {/* 소스 교체 */}
-        <div style={{ flex: 1, background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.18)', borderRadius: 8, padding: '6px 8px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#a3e635', marginBottom: 5 }}>소스 교체</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
-              <Checkbox checked={config.includeSourceOverdue} onChange={() => toggle('includeSourceOverdue')} />
-              <span>긴급</span><span style={{ color: '#f87171' }}>({srcOverdue.length}건)</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
-              <Checkbox checked={config.includeSourceUrgent} onChange={() => toggle('includeSourceUrgent')} />
-              <span>임박</span><span style={{ color: '#fbbf24' }}>({srcUrgent.length}건)</span>
-            </label>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(74,222,128,0.1)', paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>인원</span>
-              <Select value={config.sourcePersonCount} onChange={v => setConfig(p => ({ ...p, sourcePersonCount: v }))}
-                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-              <span style={{ color: 'rgba(196,210,226,0.6)', minWidth: 36 }}>최대</span>
-              <Select value={config.sourceMaxPerDay} onChange={v => setConfig(p => ({ ...p, sourceMaxPerDay: v }))}
-                style={{ flex: 1 }} size="small" options={[1,2,3,4,5,6,8,10].map(n => ({ label: `${n}건`, value: n }))} />
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* 구분선 */}
+        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
 
-      {/* 작업일 + 투입인원 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, marginBottom: preview !== null ? 6 : 0 }}>
-        <span style={{ color: 'rgba(196,210,226,0.6)' }}>작업일</span>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-          <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토요일
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-          <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일요일
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-          <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
-        </label>
+        {/* 인원 */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ color: 'rgba(196,210,226,0.55)' }}>PM 인원</span>
+          <Select value={config.pmPersonCount} onChange={v => setConfig(p => ({ ...p, pmPersonCount: v }))}
+            style={{ width: 70 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
+          <span style={{ color: 'rgba(196,210,226,0.55)' }}>소스 인원</span>
+          <Select value={config.sourcePersonCount} onChange={v => setConfig(p => ({ ...p, sourcePersonCount: v }))}
+            style={{ width: 70 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
+        </div>
+
         {pmMembers.length > 0 && (
-          <span style={{ marginLeft: 8, color: 'rgba(196,210,226,0.55)' }}>
-            투입 {pmMembers.length}명 중 {Math.min(config.pmPersonCount, pmMembers.length)}명 →&nbsp;
-            {pmMembers.slice(0, config.pmPersonCount).map(m => m.name).join(', ')}
-            {config.pmPersonCount > pmMembers.length && ' (인원 부족)'}
+          <span style={{ color: 'rgba(196,210,226,0.45)', marginLeft: 4 }}>
+            투입 {pmMembers.length}명 → {pmMembers.slice(0, config.pmPersonCount).map(m => m.name).join(', ')}
           </span>
         )}
       </div>
@@ -383,58 +291,31 @@ function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holiday
       {/* 미리보기 */}
       {preview !== null && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.55)', marginBottom: 5 }}>
-            미리보기 <span style={{ color: preview.length > 0 ? '#7dd3fc' : '#f87171', fontWeight: 800 }}>{preview.length}건</span>
-          </div>
           {preview.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'rgba(196,210,226,0.55)', textAlign: 'center', padding: '10px 0' }}>
-              조건에 해당하는 항목이 없습니다.
+            <div style={{ fontSize: 12, color: 'rgba(196,210,226,0.5)', textAlign: 'center', padding: '8px 0' }}>
+              해당 월에 예정된 항목이 없습니다.
             </div>
           ) : (
-            <div style={{
-              display: 'flex', flexDirection: 'column', gap: 3,
-              maxHeight: 200, overflowY: 'auto',
-              background: 'var(--nowa-bg)', borderRadius: 8, padding: '6px 8px',
-              border: '1px solid var(--nowa-border)',
-            }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 200, overflowY: 'auto', background: 'var(--nowa-bg)', borderRadius: 8, padding: '5px 8px', border: '1px solid var(--nowa-border)' }}>
               {preview.map((item, i) => {
                 const cfg = evtCfg(item.event_type)
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '3px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '2px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
                     <span style={{ color: 'rgba(196,210,226,0.7)', minWidth: 72 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
-                    <span style={{
-                      fontSize: 12, fontWeight: 700, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
-                      color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
-                    }}>{cfg.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 3, padding: '1px 4px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
                     <span style={{ color: 'var(--nowa-text)', flex: 1 }}>
                       {item.machine_no ? `${formatMachineLabel(item.machine_no)} ` : ''}{item.title}
                     </span>
-                    {item.actor && (
-                      <span style={{ color: '#7dd3fc', fontSize: 12, flexShrink: 0 }}>{item.actor}</span>
-                    )}
-                    <span style={{
-                      fontSize: 11, borderRadius: 3, padding: '1px 4px', flexShrink: 0,
-                      color: item.badge === '긴급' ? '#f87171' : '#fbbf24',
-                      background: item.badge === '긴급' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
-                      border: `1px solid ${item.badge === '긴급' ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.3)'}`,
-                    }}>{item.badge}</span>
+                    {item.actor && <span style={{ color: '#7dd3fc', fontSize: 12, flexShrink: 0 }}>{item.actor}</span>}
                   </div>
                 )
               })}
             </div>
           )}
           {preview.length > 0 && (
-            <button
-              onClick={handleConfirm}
-              disabled={saving}
-              style={{
-                marginTop: 8,
-                background: saving ? 'rgba(74,222,128,0.08)' : 'rgba(74,222,128,0.15)',
-                border: '1px solid rgba(74,222,128,0.4)',
-                borderRadius: 6, padding: '6px 0', cursor: saving ? 'default' : 'pointer',
-                color: '#4ade80', fontSize: 13, fontWeight: 700, width: '100%',
-              }}
-            >{saving ? '저장 중...' : `${preview.length}건 일정 저장`}</button>
+            <button onClick={handleConfirm} disabled={saving} style={{ marginTop: 6, background: saving ? 'rgba(74,222,128,0.08)' : 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 6, padding: '6px 0', cursor: saving ? 'default' : 'pointer', color: '#4ade80', fontSize: 13, fontWeight: 700, width: '100%' }}>
+              {saving ? '저장 중...' : `${preview.length}건 일정 저장`}
+            </button>
           )}
         </div>
       )}
@@ -459,6 +340,7 @@ export default function MocvdScheduler() {
   const [groups, setGroups] = useState([])     // [{ id, name, machine_nos }]
 
   const [manualOpen, setManualOpen] = useState(false)
+  const [autoGenOpen, setAutoGenOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [applyGroup, setApplyGroup] = useState(false)
   const [form] = Form.useForm()
@@ -534,6 +416,30 @@ export default function MocvdScheduler() {
     return map
   }, [events])
 
+  const eventsByMachineDate = useMemo(() => {
+    const map = {}
+    events.forEach(ev => {
+      const startD = ev.occurred_at?.slice(0, 10)
+      if (!startD || !ev.machine_no) return
+      const duration = EVENT_DURATION[ev.event_type] ?? 1
+      for (let i = 0; i < duration; i++) {
+        const d = dayjs(startD).add(i, 'day').format('YYYY-MM-DD')
+        const key = `${ev.machine_no}:${d}`
+        if (!map[key]) map[key] = []
+        const role = duration === 1 ? 'single' : i === 0 ? 'start' : i === duration - 1 ? 'end' : 'mid'
+        map[key].push({ ...ev, spanRole: role, spanDay: i + 1, spanTotal: duration })
+      }
+    })
+    return map
+  }, [events])
+
+  const monthDays = useMemo(() => {
+    const ms = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
+    const days = []
+    for (let d = 1; d <= ms.daysInMonth(); d++) days.push(ms.date(d))
+    return days
+  }, [year, month])
+
   const pmMembers = useMemo(() =>
     members.filter(m => Object.prototype.hasOwnProperty.call(pmAssign, m.id) && m.is_active)
   , [members, pmAssign])
@@ -550,11 +456,11 @@ export default function MocvdScheduler() {
     setMonth(m); setYear(y)
   }
 
-  const openCreate = (date) => {
+  const openCreate = (date, machineNo = null) => {
     setEditingEvent(null)
     setApplyGroup(false)
     form.resetFields()
-    form.setFieldsValue({ occurred_at: date, event_type: 'pm' })
+    form.setFieldsValue({ occurred_at: date, event_type: 'pm', ...(machineNo ? { machine_no: machineNo } : {}) })
     setManualOpen(true)
   }
 
@@ -618,114 +524,102 @@ export default function MocvdScheduler() {
   }))
 
   return (
-    <div style={{ display: 'flex', gap: 14, minHeight: 0, height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, height: '100%' }}>
 
-      {/* ── 왼쪽 사이드바 ── */}
-      <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* ── 상단 정보 바 ── */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
 
-        {/* 이번 달 통계 */}
-        <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, padding: '14px 16px' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.75)', marginBottom: 12 }}>
-            {year}년 {month}월 현황
-          </div>
+        {/* 이번 달 현황 */}
+        <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.55)', marginRight: 4, whiteSpace: 'nowrap' }}>{year}년 {month}월 현황</span>
           {monthStats.map(({ key, cfg, count }) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ width: 42, textAlign: 'center', fontSize: 14, fontWeight: 700, borderRadius: 4, padding: '1px 6px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-              <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-                {count > 0 && <div style={{ height: '100%', borderRadius: 2, background: cfg.color, width: `${Math.min(100, count * 10)}%`, opacity: 0.7 }} />}
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: count > 0 ? cfg.color : 'rgba(196,210,226,0.62)', minWidth: 20, textAlign: 'right' }}>{count}</span>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, borderRadius: 4, padding: '1px 6px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: count > 0 ? cfg.color : 'rgba(196,210,226,0.35)', minWidth: 14 }}>{count}</span>
             </div>
           ))}
         </div>
 
         {/* 범례 */}
-        <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, padding: '14px 16px' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.75)', marginBottom: 10 }}>범례</div>
+        <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.55)', marginRight: 4 }}>범례</span>
           {Object.entries(EVENT_CONFIG).map(([key, cfg]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ width: 42, textAlign: 'center', fontSize: 14, fontWeight: 700, borderRadius: 4, padding: '1px 6px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.78)' }}>
-                {key === 'pm' ? 'PM 정비 (챔버)' : key === 'filter' ? '필터 교체' : key === 'bm' ? 'BM 수리' : key === 'source_change' ? '소스 교체' : '기타 일정'}
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, borderRadius: 4, padding: '1px 6px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+              <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.65)', whiteSpace: 'nowrap' }}>
+                {key === 'pm' ? 'PM 정비' : key === 'filter' ? '필터 교체' : key === 'bm' ? 'BM 수리' : key === 'source_change' ? '소스 교체' : '기타'}
               </span>
             </div>
           ))}
         </div>
 
         {/* PM 투입 인원 */}
-        <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, padding: '14px 16px', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.75)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ToolOutlined style={{ color: '#7dd3fc' }} />
-            PM 투입 인원
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc', background: 'rgba(125,211,252,0.12)', padding: '0 6px', borderRadius: 8, marginLeft: 2 }}>{pmMembers.length}명</span>
+        <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <ToolOutlined style={{ color: '#7dd3fc', fontSize: 13, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(196,210,226,0.55)', whiteSpace: 'nowrap' }}>PM 투입 인원</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', background: 'rgba(125,211,252,0.12)', padding: '1px 7px', borderRadius: 8 }}>{pmMembers.length}명</span>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', alignItems: 'center' }}>
+            {pmMembers.length === 0 ? (
+              <span style={{ fontSize: 12, color: 'rgba(196,210,226,0.4)' }}>배정된 인원이 없습니다</span>
+            ) : pmMembers.map(m => (
+              <div key={m.id} title={`${m.name}${pmAssign[m.id] ? ' / ' + pmAssign[m.id] : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(125,211,252,0.07)', border: '1px solid rgba(125,211,252,0.2)', borderRadius: 20, padding: '2px 8px 2px 4px', flexShrink: 0 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(125,211,252,0.15)', border: '1.5px solid rgba(125,211,252,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#7dd3fc' }}>{m.name?.[0] || '?'}</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{m.name}</span>
+              </div>
+            ))}
           </div>
-          {pmMembers.length === 0 ? (
-            <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)', textAlign: 'center', padding: '16px 0' }}>배정된 인원이 없습니다</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, overflowY: 'auto' }}>
-              {pmMembers.map(m => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(125,211,252,0.1)', border: '1.5px solid rgba(125,211,252,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#7dd3fc', flexShrink: 0, boxShadow: '0 0 6px rgba(125,211,252,0.2)' }}>{m.name?.[0] || '?'}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-                    {pmAssign[m.id] && <div style={{ fontSize: 14, color: '#7dd3fc', opacity: 0.65 }}>{pmAssign[m.id]}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── 메인: 달력 + 상세 ── */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 14 }}>
+      {/* ── 메인: 간트 차트 ── */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* 달력 */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-          {/* 헤더 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button onClick={() => navMonth(-1)} style={navBtnStyle}><LeftOutlined /></button>
-              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--nowa-text)', minWidth: 130, textAlign: 'center' }}>{year}년 {month}월</span>
-              <button onClick={() => navMonth(1)} style={navBtnStyle}><RightOutlined /></button>
-              <button
-                onClick={() => { setYear(today.year()); setMonth(today.month() + 1); setSelectedDate(today.format('YYYY-MM-DD')) }}
-                style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', cursor: 'pointer', background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 6, padding: '4px 12px' }}
-              >오늘</button>
-            </div>
-
-            {/* 수동 / 자동 / 초기화 버튼 */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => openCreate(selectedDate)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(125,211,252,0.35)', background: 'rgba(125,211,252,0.1)', color: '#7dd3fc' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
-              ><PlusOutlined /> 수동 추가</button>
-              <Popconfirm
-                title={`${year}년 ${month}월 일정 ${monthEvents.length}건을 모두 삭제하시겠습니까?`}
-                okText="전체 삭제" cancelText="취소"
-                disabled={monthEvents.length === 0}
-                onConfirm={async () => {
-                  try {
-                    await Promise.all(monthEvents.map(ev => authFetch(`/api/mocvd/equipment-history/${ev.id}`, { method: 'DELETE' })))
-                    message.success(`${monthEvents.length}건 삭제했습니다.`)
-                    fetchAll()
-                  } catch { message.error('삭제에 실패했습니다.') }
-                }}
-              >
-                <button
-                  disabled={monthEvents.length === 0}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: monthEvents.length === 0 ? 'default' : 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.08)', color: monthEvents.length === 0 ? 'rgba(248,113,113,0.3)' : '#f87171' }}
-                  onMouseEnter={e => { if (monthEvents.length > 0) e.currentTarget.style.background = 'rgba(248,113,113,0.18)' }}
-                  onMouseLeave={e => { if (monthEvents.length > 0) e.currentTarget.style.background = 'rgba(248,113,113,0.08)' }}
-                >초기화 ({monthEvents.length})</button>
-              </Popconfirm>
-            </div>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={() => navMonth(-1)} style={navBtnStyle}><LeftOutlined /></button>
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--nowa-text)', minWidth: 130, textAlign: 'center' }}>{year}년 {month}월</span>
+            <button onClick={() => navMonth(1)} style={navBtnStyle}><RightOutlined /></button>
+            <button
+              onClick={() => { setYear(today.year()); setMonth(today.month() + 1); setSelectedDate(today.format('YYYY-MM-DD')) }}
+              style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)', cursor: 'pointer', background: 'var(--nowa-button-bg)', border: '1px solid var(--nowa-border)', borderRadius: 6, padding: '4px 12px' }}
+            >오늘</button>
           </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => openCreate(today.format('YYYY-MM-DD'))}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(125,211,252,0.35)', background: 'rgba(125,211,252,0.1)', color: '#7dd3fc' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
+            ><PlusOutlined /> 수동 추가</button>
+            <button
+              onClick={() => setAutoGenOpen(o => !o)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: `1px solid ${autoGenOpen ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.3)'}`, background: autoGenOpen ? 'rgba(74,222,128,0.18)' : 'rgba(74,222,128,0.08)', color: '#4ade80' }}
+            ><RobotOutlined /> 자동 생성</button>
+            <Popconfirm
+              title={`${year}년 ${month}월 일정 ${monthEvents.length}건을 모두 삭제하시겠습니까?`}
+              okText="전체 삭제" cancelText="취소"
+              disabled={monthEvents.length === 0}
+              onConfirm={async () => {
+                try {
+                  await Promise.all(monthEvents.map(ev => authFetch(`/api/mocvd/equipment-history/${ev.id}`, { method: 'DELETE' })))
+                  message.success(`${monthEvents.length}건 삭제했습니다.`)
+                  fetchAll()
+                } catch { message.error('삭제에 실패했습니다.') }
+              }}
+            >
+              <button
+                disabled={monthEvents.length === 0}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: monthEvents.length === 0 ? 'default' : 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.08)', color: monthEvents.length === 0 ? 'rgba(248,113,113,0.3)' : '#f87171' }}
+                onMouseEnter={e => { if (monthEvents.length > 0) e.currentTarget.style.background = 'rgba(248,113,113,0.18)' }}
+                onMouseLeave={e => { if (monthEvents.length > 0) e.currentTarget.style.background = 'rgba(248,113,113,0.08)' }}
+              >초기화 ({monthEvents.length})</button>
+            </Popconfirm>
+          </div>
+        </div>
 
-          {/* 자동 생성 카드 */}
+        {/* 자동 생성 카드 (토글) */}
+        {autoGenOpen && (
           <AutoGenCard
             pmCounters={pmCounters}
             sourceStatus={sourceStatus}
@@ -734,122 +628,183 @@ export default function MocvdScheduler() {
             month={month}
             holidays={holidays}
             groups={groups}
-            onConfirm={fetchAll}
+            events={events}
+            onConfirm={() => { fetchAll(); setAutoGenOpen(false) }}
           />
+        )}
 
-          {/* 요일 헤더 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
-            {WEEK_DAYS.map((d, i) => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, padding: '6px 0', color: i === 0 ? '#f87171' : i === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.72)' }}>{d}</div>
-            ))}
-          </div>
+        {/* 간트 차트 본체 */}
+        <div style={{ flex: 1, overflow: 'auto', background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12 }}>
+          <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
+            <colgroup>
+              <col style={{ width: 90 }} />
+              {monthDays.map(d => <col key={d.date()} style={{ minWidth: 36 }} />)}
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{
+                  position: 'sticky', left: 0, top: 0, zIndex: 11,
+                  background: '#171b26', padding: '8px 10px',
+                  textAlign: 'left', fontSize: 12, color: 'rgba(196,210,226,0.5)',
+                  borderBottom: '2px solid rgba(245,158,11,0.25)',
+                  borderRight: '2px solid rgba(245,158,11,0.25)',
+                }}>호기</th>
+                {monthDays.map(d => {
+                  const dateStr = d.format('YYYY-MM-DD')
+                  const dow = d.day()
+                  const isToday = dateStr === today.format('YYYY-MM-DD')
+                  const isHoliday = !!holidays[dateStr]
+                  const isSun = dow === 0
+                  const isSat = dow === 6
+                  return (
+                    <th key={dateStr} style={{
+                      position: 'sticky', top: 0, zIndex: 10,
+                      background: isToday ? 'rgba(245,158,11,0.18)' : isHoliday ? 'rgba(248,113,113,0.1)' : isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.06)' : '#171b26',
+                      padding: '5px 2px', textAlign: 'center',
+                      borderBottom: '2px solid rgba(245,158,11,0.25)',
+                      borderLeft: '1px solid rgba(245,158,11,0.15)',
+                      color: isToday ? '#f59e0b' : isSun || isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,226,0.6)',
+                    }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.2 }}>{d.date()}</div>
+                      <div style={{ fontSize: 10, opacity: 0.8 }}>{WEEK_DAYS[dow]}</div>
+                      {isHoliday && <div style={{ fontSize: 8, color: '#f87171', lineHeight: 1, marginTop: 1, overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 42, textOverflow: 'ellipsis' }}>{holidays[dateStr]}</div>}
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const activeMachines = machines
+                  .filter(m => m.is_active)
+                  .sort((a, b) => String(a.machine_no).localeCompare(String(b.machine_no), undefined, { numeric: true }))
 
-          {/* 날짜 그리드 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, flex: 1 }}>
-            {calDays.map((d, idx) => {
-              const dateStr = d.format('YYYY-MM-DD')
-              const isCurrentMonth = d.month() + 1 === month && d.year() === year
-              const isToday = dateStr === today.format('YYYY-MM-DD')
-              const isSelected = dateStr === selectedDate
-              const dayEvents = eventsByDate[dateStr] || []
-              const dow = idx % 7
-              const holidayName = holidays[dateStr]
-              const isHoliday = !!holidayName
-              const isRed = dow === 0 || isHoliday
-              return (
-                <div
-                  key={dateStr + idx}
-                  onClick={() => setSelectedDate(dateStr)}
-                  style={{
-                    background: isSelected ? 'rgba(125,211,252,0.06)' : isHoliday ? 'rgba(248,113,113,0.04)' : 'var(--nowa-panel)',
-                    border: `1px solid ${isSelected ? 'rgba(125,211,252,0.4)' : isToday ? 'rgba(245,158,11,0.35)' : isHoliday ? 'rgba(248,113,113,0.2)' : 'var(--nowa-border)'}`,
-                    borderRadius: 8, padding: '6px 7px', cursor: 'pointer',
-                    minHeight: 82, display: 'flex', flexDirection: 'column', gap: 2,
-                    opacity: isCurrentMonth ? 1 : 0.3, transition: 'border-color 0.12s',
-                  }}
-                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(125,211,252,0.2)' }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = isToday ? 'rgba(245,158,11,0.35)' : isHoliday ? 'rgba(248,113,113,0.2)' : 'rgba(245,158,11,0.15)' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={isToday ? {
-                      background: '#f59e0b', color: '#171b26', width: 22, height: 22,
-                      borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800,
-                    } : { fontSize: 14, fontWeight: 600, color: isRed ? '#f87171' : dow === 6 ? '#7dd3fc' : 'rgba(196,210,226,0.65)' }}>{d.date()}</span>
-                    {dayEvents.length > 0 && isCurrentMonth && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)' }}>{dayEvents.length}</span>}
-                  </div>
-                  {holidayName && isCurrentMonth && (
-                    <div style={{ fontSize: 14, color: '#f87171', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 1 }}>{holidayName}</div>
-                  )}
-                  {dayEvents.slice(0, 3).map(ev => {
-                    const cfg = evtCfg(ev.event_type)
-                    return (
-                      <div key={ev.id} style={{ fontSize: 14, borderRadius: 3, padding: '1px 5px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '15px' }}>
-                        <span style={{ fontWeight: 700, marginRight: 2 }}>{cfg.label}</span>
-                        {ev.machine_no ? `${formatMachineLabel(ev.machine_no)} ` : ''}{ev.title}
-                      </div>
+                // 그룹 순서 유지: groups 배열 순서대로, 미배정은 마지막
+                // 중그룹 맵 (machine_no → group)
+                const midGroupMap = {}
+                groups.filter(g => g.level >= 2).forEach(g => {
+                  g.machine_nos.forEach(no => { midGroupMap[no] = g })
+                })
+
+                const rows = []
+                let lastGroupId = undefined
+                let rowIdx = 0
+
+                activeMachines.forEach(m => {
+                  const grp = midGroupMap[m.machine_no]
+                  const grpId = grp?.id ?? null
+
+                  if (grpId !== lastGroupId) {
+                    lastGroupId = grpId
+                    rows.push(
+                      <tr key={`grp-${grpId}-${m.machine_no}`}>
+                        <td colSpan={monthDays.length + 1} style={{
+                          position: 'sticky', left: 0,
+                          background: 'rgba(245,158,11,0.08)',
+                          padding: '3px 10px', fontSize: 11, fontWeight: 800,
+                          color: '#f59e0b', letterSpacing: 1,
+                          borderBottom: '1px solid rgba(245,158,11,0.25)',
+                          borderTop: '2px solid rgba(245,158,11,0.2)',
+                        }}>
+                          {grp?.name ?? '미배정'}
+                        </td>
+                      </tr>
                     )
-                  })}
-                  {dayEvents.length > 3 && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.62)', paddingLeft: 2 }}>+{dayEvents.length - 3}개 더</div>}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+                  }
 
-        {/* 선택 날 상세 */}
-        <div style={{ width: 270, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* 상세 헤더 */}
-            <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--nowa-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>{dayjs(selectedDate).format('M월 D일')}</div>
-                <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.68)', marginTop: 1 }}>{dayjs(selectedDate).format('dddd')}</div>
-              </div>
-              <button
-                onClick={() => openCreate(selectedDate)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(125,211,252,0.1)', border: '1px solid rgba(125,211,252,0.3)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', color: '#7dd3fc', fontSize: 14, fontWeight: 700 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.22)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
-              ><PlusOutlined /> 추가</button>
-            </div>
-
-            {/* 이벤트 목록 */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {selectedEvents.length === 0 ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(196,210,226,0.62)', fontSize: 14, gap: 8 }}>
-                  <span style={{ fontSize: 28, opacity: 0.3 }}>📅</span>
-                  <span>등록된 일정이 없습니다</span>
-                </div>
-              ) : selectedEvents.map(ev => {
-                const cfg = evtCfg(ev.event_type)
-                return (
-                  <div key={ev.id} style={{ background: 'var(--nowa-bg)', borderRadius: 10, padding: '10px 12px', border: `1px solid ${cfg.border}`, borderLeft: `3px solid ${cfg.color}` }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 5px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-                          {ev.machine_no && <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>{formatMachineLabel(ev.machine_no)}</span>}
-                        </div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', lineHeight: 1.4 }}>{ev.title || '-'}</div>
-                        {ev.detail && <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.72)', marginTop: 4, lineHeight: 1.4 }}>{ev.detail}</div>}
-                        {ev.actor && (
-                          <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.65)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <UserOutlined style={{ fontSize: 14 }} />{ev.actor}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: 7, flexShrink: 0, paddingTop: 2 }}>
-                        <EditOutlined onClick={() => openEdit(ev)} style={{ color: 'rgba(245,158,11,0.7)', fontSize: 14, cursor: 'pointer' }} />
-                        <Popconfirm title="일정을 삭제하시겠습니까?" onConfirm={() => handleDelete(ev.id)} okText="삭제" cancelText="취소">
-                          <DeleteOutlined style={{ color: '#f87171', fontSize: 14, cursor: 'pointer', opacity: 0.8 }} />
-                        </Popconfirm>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+                  const rIdx2 = rowIdx++
+                  const rowBg = rIdx2 % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                  const stickyBg = rIdx2 % 2 === 0 ? '#171b26' : '#1b1f2c'
+                  rows.push(
+                    <tr key={m.machine_no}>
+                      <td style={{
+                        position: 'sticky', left: 0, zIndex: 2,
+                        background: stickyBg,
+                        padding: '4px 10px', fontSize: 12, fontWeight: 700, color: '#fbbf24',
+                        borderBottom: '1px solid rgba(245,158,11,0.1)',
+                        borderRight: '2px solid rgba(245,158,11,0.25)',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {formatMachineLabel(m.machine_no)}
+                      </td>
+                      {monthDays.map(d => {
+                        const dateStr = d.format('YYYY-MM-DD')
+                        const dow = d.day()
+                        const isToday = dateStr === today.format('YYYY-MM-DD')
+                        const isHoliday = !!holidays[dateStr]
+                        const isSun = dow === 0, isSat = dow === 6
+                        const cellEvents = eventsByMachineDate[`${m.machine_no}:${dateStr}`] || []
+                        const spanEvents = cellEvents.filter(e => e.spanTotal > 1)
+                        const singleEvents = cellEvents.filter(e => !e.spanTotal || e.spanTotal === 1)
+                        const hasFromLeft = spanEvents.some(e => e.spanRole === 'mid' || e.spanRole === 'end')
+                        const hasToRight = spanEvents.some(e => e.spanRole === 'start' || e.spanRole === 'mid')
+                        const cellBg = isToday ? 'rgba(245,158,11,0.07)' : isHoliday || isSun ? 'rgba(248,113,113,0.03)' : isSat ? 'rgba(125,211,252,0.02)' : rowBg
+                        return (
+                          <td key={dateStr}
+                            onClick={() => cellEvents.length === 0 && openCreate(dateStr, m.machine_no)}
+                            style={{
+                              padding: 0, background: cellBg,
+                              borderBottom: '1px solid rgba(245,158,11,0.1)',
+                              borderLeft: '1px solid rgba(245,158,11,0.1)',
+                              cursor: cellEvents.length === 0 ? 'pointer' : 'default',
+                              verticalAlign: 'top', height: 30,
+                              overflow: 'visible', position: 'relative',
+                            }}
+                            onMouseEnter={e => { if (cellEvents.length === 0) e.currentTarget.style.background = 'rgba(125,211,252,0.08)' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = cellBg }}
+                          >
+                            {spanEvents.map(ev => {
+                              const cfg = evtCfg(ev.event_type)
+                              const role = ev.spanRole
+                              const isStart = role === 'start', isEnd = role === 'end'
+                              const ml = hasFromLeft ? -1 : 2, mr = hasToRight ? -1 : 2
+                              return (
+                                <div key={ev.id + ':' + role}
+                                  onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
+                                  title={isStart ? `${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}` : undefined}
+                                  style={{
+                                    fontSize: 10, fontWeight: 700,
+                                    borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
+                                    padding: '1px 3px',
+                                    marginLeft: ml, marginRight: mr, marginBottom: 1, marginTop: 2,
+                                    color: cfg.color, background: cfg.bg,
+                                    borderTop: `1px solid ${cfg.border}`,
+                                    borderBottom: `1px solid ${cfg.border}`,
+                                    borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
+                                    borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
+                                    cursor: isStart ? 'pointer' : 'default',
+                                    whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
+                                  }}
+                                >{`${cfg.label} ${ev.spanDay}`}</div>
+                              )
+                            })}
+                            {singleEvents.map(ev => {
+                              const cfg = evtCfg(ev.event_type)
+                              return (
+                                <div key={ev.id}
+                                  onClick={e => { e.stopPropagation(); openEdit(ev) }}
+                                  title={`${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}`}
+                                  style={{
+                                    fontSize: 10, fontWeight: 700, borderRadius: 2,
+                                    padding: '1px 3px', margin: '2px 2px 1px',
+                                    color: cfg.color, background: cfg.bg,
+                                    border: `1px solid ${cfg.border}`,
+                                    cursor: 'pointer', whiteSpace: 'nowrap',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
+                                  }}
+                                >{cfg.label}</div>
+                              )
+                            })}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })
+                return rows
+              })()}
+            </tbody>
+          </table>
         </div>
       </div>
 

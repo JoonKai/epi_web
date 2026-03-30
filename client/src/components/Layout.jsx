@@ -21,6 +21,7 @@ BuildOutlined,
   MenuUnfoldOutlined,
   NodeIndexOutlined,
   RocketOutlined,
+  ReadOutlined,
   SettingOutlined,
   TableOutlined,
   ToolOutlined,
@@ -102,6 +103,7 @@ function buildMenuItems(isAdmin) {
   ]
 
   if (isAdmin) {
+    items.push({ key: '/page-description', icon: <ReadOutlined />, label: '페이지 설명' })
     items.push({ key: '/admin', icon: <SettingOutlined />, label: '관리자 설정' })
   }
 
@@ -151,6 +153,7 @@ const PAGE_COLOR = {
   '/cost/repair-status': '#ef4444',
   '/cost/master-data': '#f97316',
   '/grid': '#22c55e',
+  '/page-description': '#94a3b8',
   '/admin': '#f43f5e',
 }
 
