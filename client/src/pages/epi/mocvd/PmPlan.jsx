@@ -702,7 +702,7 @@ function PmCalendarBoard({ refreshKey }) {
         .pm-cal-wrap .ant-picker-cell-in-view:hover > div { background: rgba(245,158,11,0.06) !important; }
         .pm-cal-wrap .ant-picker-panel { background: transparent !important; }
         .pm-cal-wrap table { border-collapse: collapse !important; }
-        .pm-cal-wrap thead th { padding: 6px 0 10px !important; font-size: 12px !important; font-weight: 700 !important; color: rgba(148,163,184,0.7) !important; letter-spacing: 0.5px !important; }
+        .pm-cal-wrap thead th { padding: 6px 0 10px !important; font-size: 14px !important; font-weight: 700 !important; color: rgba(148,163,184,0.7) !important; letter-spacing: 0.5px !important; }
         .pm-cal-wrap td { padding: 0 !important; border: 1px solid rgba(255,255,255,0.04) !important; }
         .pm-day-card.ant-card { display: flex !important; flex-direction: column !important; }
         .pm-day-card > .ant-card-body { flex: 1 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; min-height: 0 !important; }
@@ -1151,7 +1151,7 @@ function PmSyncCard({ onSynced }) {
         footer={null}
         width={560}
       >
-        <div style={{ marginBottom: 8, fontFamily: 'monospace', fontSize: 12, color: 'rgba(255,255,255,0.45)', wordBreak: 'break-all' }}>
+        <div style={{ marginBottom: 8, fontFamily: 'monospace', fontSize: 14, color: 'rgba(255,255,255,0.45)', wordBreak: 'break-all' }}>
           {browsePath || '드라이브 선택'}
         </div>
         <Spin spinning={browseLoading}>
@@ -1163,7 +1163,7 @@ function PmSyncCard({ onSynced }) {
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <LeftOutlined style={{ fontSize: 11 }} /> 상위 폴더
+                <LeftOutlined style={{ fontSize: 14 }} /> 상위 폴더
               </div>
             )}
             {browseDirs.map(d => (
@@ -1191,7 +1191,7 @@ function PmSyncCard({ onSynced }) {
               </div>
             ))}
             {browseDirs.length === 0 && browseFiles.length === 0 && !browseLoading && (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
                 엑셀 파일이 없습니다
               </div>
             )}
