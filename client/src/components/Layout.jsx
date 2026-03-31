@@ -3,25 +3,20 @@ import { Layout as AntLayout, Menu, Button, Badge, Avatar, Dropdown, Tooltip } f
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   ApartmentOutlined,
-  ApiOutlined,
   AppstoreAddOutlined,
   BarChartOutlined,
   BellOutlined,
-BuildOutlined,
   CalendarOutlined,
   ControlOutlined,
   DashboardOutlined,
-  DollarOutlined,
   FireOutlined,
   HeatMapOutlined,
-  ShoppingCartOutlined,
   SwapOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   NodeIndexOutlined,
   RocketOutlined,
-  ReadOutlined,
   SettingOutlined,
   TableOutlined,
   ToolOutlined,
@@ -53,7 +48,7 @@ function buildMenuItems(isAdmin) {
             { key: '/epi/mocvd/source', icon: <NodeIndexOutlined />, label: '소스 관리' },
             { key: '/epi/mocvd/pm-plan', icon: <CalendarOutlined />, label: 'PM/BM 관리' },
             { key: '/epi/mocvd/scrubber', icon: <ToolOutlined />, label: '스크러버 관리' },
-            { key: '/epi/mocvd/scheduler', icon: <ScheduleOutlined />, label: '스케줄러' },
+            { key: '/epi/mocvd/scheduler', icon: <ScheduleOutlined />, label: '스케쥴러' },
             { key: '/epi/mocvd/shift-schedule', icon: <UserOutlined />, label: '인원 관리' },
             { key: '/epi/mocvd/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 관리' },
           ],
@@ -61,20 +56,6 @@ function buildMenuItems(isAdmin) {
         { key: '/epi/bake', icon: <FireOutlined />, label: '베이크', disabled: true },
         { key: '/epi/measurement', icon: <ApartmentOutlined />, label: '측정설비' },
       ],
-    },
-    {
-      key: 'process',
-      icon: <ApiOutlined />,
-      label: '공정',
-      className: 'menu-color-teal',
-      children: [{ key: 'process-ready', label: '추가 예정', disabled: true }],
-    },
-    {
-      key: 'manufacturing',
-      icon: <BuildOutlined />,
-      label: '제조',
-      className: 'menu-color-blue',
-      children: [{ key: 'manufacturing-ready', label: '추가 예정', disabled: true }],
     },
     {
       key: 'analysis',
@@ -87,23 +68,11 @@ function buildMenuItems(isAdmin) {
         { key: '/run-comparison', icon: <SwapOutlined />, label: 'Run 비교' },
       ],
     },
-    {
-      key: 'cost',
-      icon: <DollarOutlined />,
-      label: '비용',
-      className: 'menu-color-green',
-      children: [
-        { key: '/cost/purchase-request', icon: <ShoppingCartOutlined />, label: '구매 요청' },
-        { key: '/cost/repair-status', icon: <ToolOutlined />, label: '수리 현황' },
-        { key: '/cost/master-data', icon: <AppstoreAddOutlined />, label: '기준정보 등록' },
-      ],
-    },
     { key: '/epi/simulator', icon: <RocketOutlined />, label: '시뮬레이터', className: 'menu-color-orange' },
     { key: '/grid', icon: <TableOutlined />, label: '레포트', className: 'menu-color-cyan' },
   ]
 
   if (isAdmin) {
-    items.push({ key: '/page-description', icon: <ReadOutlined />, label: '페이지 설명' })
     items.push({ key: '/admin', icon: <SettingOutlined />, label: '관리자 설정' })
   }
 

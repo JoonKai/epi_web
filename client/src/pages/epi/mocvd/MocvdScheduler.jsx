@@ -679,44 +679,48 @@ export default function MocvdScheduler() {
                   .filter(m => m.is_active)
                   .sort((a, b) => String(a.machine_no).localeCompare(String(b.machine_no), undefined, { numeric: true }))
 
-                // 그룹 순서 유지: groups 배열 순서대로, 미배정은 마지막
-                // 중그룹 맵 (machine_no → group)
                 const midGroupMap = {}
                 groups.filter(g => g.level >= 2).forEach(g => {
                   g.machine_nos.forEach(no => { midGroupMap[no] = g })
                 })
 
                 const rows = []
-                let lastGroupId = undefined
+                const processedNos = new Set()
                 let rowIdx = 0
 
+                // 그룹 등장 순서 추출
+                const seenGroupIds = []
+                const orderedGroups = []
                 activeMachines.forEach(m => {
                   const grp = midGroupMap[m.machine_no]
-                  const grpId = grp?.id ?? null
-
-                  if (grpId !== lastGroupId) {
-                    lastGroupId = grpId
-                    rows.push(
-                      <tr key={`grp-${grpId}-${m.machine_no}`}>
-                        <td colSpan={monthDays.length + 1} style={{
-                          position: 'sticky', left: 0,
-                          background: 'rgba(245,158,11,0.08)',
-                          padding: '3px 10px', fontSize: 11, fontWeight: 800,
-                          color: '#f59e0b', letterSpacing: 1,
-                          borderBottom: '1px solid rgba(245,158,11,0.25)',
-                          borderTop: '2px solid rgba(245,158,11,0.2)',
-                        }}>
-                          {grp?.name ?? '미배정'}
-                        </td>
-                      </tr>
-                    )
+                  if (grp && !seenGroupIds.includes(grp.id)) {
+                    seenGroupIds.push(grp.id)
+                    orderedGroups.push(grp)
                   }
+                })
 
-                  const rIdx2 = rowIdx++
-                  const rowBg = rIdx2 % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
-                  const stickyBg = rIdx2 % 2 === 0 ? '#171b26' : '#1b1f2c'
+                // ── 그룹 호기: 한 줄로 합침 ──
+                const renderGroupRow = (grp) => {
+                  grp.machine_nos.forEach(no => processedNos.add(no))
                   rows.push(
-                    <tr key={m.machine_no}>
+                    <tr key={`grp-header-${grp.id}`}>
+                      <td colSpan={monthDays.length + 1} style={{
+                        position: 'sticky', left: 0,
+                        background: 'rgba(245,158,11,0.08)',
+                        padding: '3px 10px', fontSize: 11, fontWeight: 800,
+                        color: '#f59e0b', letterSpacing: 1,
+                        borderBottom: '1px solid rgba(245,158,11,0.25)',
+                        borderTop: '2px solid rgba(245,158,11,0.2)',
+                      }}>
+                        {grp.name}
+                      </td>
+                    </tr>
+                  )
+                  const rIdx = rowIdx++
+                  const rowBg = rIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                  const stickyBg = rIdx % 2 === 0 ? '#171b26' : '#1b1f2c'
+                  return (
+                    <tr key={`group-row-${grp.id}`}>
                       <td style={{
                         position: 'sticky', left: 0, zIndex: 2,
                         background: stickyBg,
@@ -724,8 +728,9 @@ export default function MocvdScheduler() {
                         borderBottom: '1px solid rgba(245,158,11,0.1)',
                         borderRight: '2px solid rgba(245,158,11,0.25)',
                         whiteSpace: 'nowrap',
+                        lineHeight: 1.6,
                       }}>
-                        {formatMachineLabel(m.machine_no)}
+                        {grp.machine_nos.map(no => <div key={no}>{formatMachineLabel(no)}</div>)}
                       </td>
                       {monthDays.map(d => {
                         const dateStr = d.format('YYYY-MM-DD')
@@ -733,7 +738,7 @@ export default function MocvdScheduler() {
                         const isToday = dateStr === today.format('YYYY-MM-DD')
                         const isHoliday = !!holidays[dateStr]
                         const isSun = dow === 0, isSat = dow === 6
-                        const cellEvents = eventsByMachineDate[`${m.machine_no}:${dateStr}`] || []
+                        const cellEvents = grp.machine_nos.flatMap(no => eventsByMachineDate[`${no}:${dateStr}`] || [])
                         const spanEvents = cellEvents.filter(e => e.spanTotal > 1)
                         const singleEvents = cellEvents.filter(e => !e.spanTotal || e.spanTotal === 1)
                         const hasFromLeft = spanEvents.some(e => e.spanRole === 'mid' || e.spanRole === 'end')
@@ -741,7 +746,7 @@ export default function MocvdScheduler() {
                         const cellBg = isToday ? 'rgba(245,158,11,0.07)' : isHoliday || isSun ? 'rgba(248,113,113,0.03)' : isSat ? 'rgba(125,211,252,0.02)' : rowBg
                         return (
                           <td key={dateStr}
-                            onClick={() => cellEvents.length === 0 && openCreate(dateStr, m.machine_no)}
+                            onClick={() => cellEvents.length === 0 && openCreate(dateStr)}
                             style={{
                               padding: 0, background: cellBg,
                               borderBottom: '1px solid rgba(245,158,11,0.1)',
@@ -761,7 +766,7 @@ export default function MocvdScheduler() {
                               return (
                                 <div key={ev.id + ':' + role}
                                   onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
-                                  title={isStart ? `${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}` : undefined}
+                                  title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}` : undefined}
                                   style={{
                                     fontSize: 10, fontWeight: 700,
                                     borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
@@ -783,7 +788,7 @@ export default function MocvdScheduler() {
                               return (
                                 <div key={ev.id}
                                   onClick={e => { e.stopPropagation(); openEdit(ev) }}
-                                  title={`${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}`}
+                                  title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}`}
                                   style={{
                                     fontSize: 10, fontWeight: 700, borderRadius: 2,
                                     padding: '1px 3px', margin: '2px 2px 1px',
@@ -800,7 +805,117 @@ export default function MocvdScheduler() {
                       })}
                     </tr>
                   )
-                })
+                }
+
+                orderedGroups.forEach(grp => rows.push(renderGroupRow(grp)))
+
+                // ── 미배정 호기: 개별 행 ──
+                const ungrouped = activeMachines.filter(m => !processedNos.has(m.machine_no))
+                if (ungrouped.length > 0) {
+                  rows.push(
+                    <tr key="grp-unassigned">
+                      <td colSpan={monthDays.length + 1} style={{
+                        position: 'sticky', left: 0,
+                        background: 'rgba(245,158,11,0.08)',
+                        padding: '3px 10px', fontSize: 11, fontWeight: 800,
+                        color: '#f59e0b', letterSpacing: 1,
+                        borderBottom: '1px solid rgba(245,158,11,0.25)',
+                        borderTop: '2px solid rgba(245,158,11,0.2)',
+                      }}>미배정</td>
+                    </tr>
+                  )
+                  ungrouped.forEach(m => {
+                    const rIdx2 = rowIdx++
+                    const rowBg = rIdx2 % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'
+                    const stickyBg = rIdx2 % 2 === 0 ? '#171b26' : '#1b1f2c'
+                    rows.push(
+                      <tr key={m.machine_no}>
+                        <td style={{
+                          position: 'sticky', left: 0, zIndex: 2,
+                          background: stickyBg,
+                          padding: '4px 10px', fontSize: 12, fontWeight: 700, color: '#fbbf24',
+                          borderBottom: '1px solid rgba(245,158,11,0.1)',
+                          borderRight: '2px solid rgba(245,158,11,0.25)',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {formatMachineLabel(m.machine_no)}
+                        </td>
+                        {monthDays.map(d => {
+                          const dateStr = d.format('YYYY-MM-DD')
+                          const dow = d.day()
+                          const isToday = dateStr === today.format('YYYY-MM-DD')
+                          const isHoliday = !!holidays[dateStr]
+                          const isSun = dow === 0, isSat = dow === 6
+                          const cellEvents = eventsByMachineDate[`${m.machine_no}:${dateStr}`] || []
+                          const spanEvents = cellEvents.filter(e => e.spanTotal > 1)
+                          const singleEvents = cellEvents.filter(e => !e.spanTotal || e.spanTotal === 1)
+                          const hasFromLeft = spanEvents.some(e => e.spanRole === 'mid' || e.spanRole === 'end')
+                          const hasToRight = spanEvents.some(e => e.spanRole === 'start' || e.spanRole === 'mid')
+                          const cellBg = isToday ? 'rgba(245,158,11,0.07)' : isHoliday || isSun ? 'rgba(248,113,113,0.03)' : isSat ? 'rgba(125,211,252,0.02)' : rowBg
+                          return (
+                            <td key={dateStr}
+                              onClick={() => cellEvents.length === 0 && openCreate(dateStr, m.machine_no)}
+                              style={{
+                                padding: 0, background: cellBg,
+                                borderBottom: '1px solid rgba(245,158,11,0.1)',
+                                borderLeft: '1px solid rgba(245,158,11,0.1)',
+                                cursor: cellEvents.length === 0 ? 'pointer' : 'default',
+                                verticalAlign: 'top', height: 30,
+                                overflow: 'visible', position: 'relative',
+                              }}
+                              onMouseEnter={e => { if (cellEvents.length === 0) e.currentTarget.style.background = 'rgba(125,211,252,0.08)' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = cellBg }}
+                            >
+                              {spanEvents.map(ev => {
+                                const cfg = evtCfg(ev.event_type)
+                                const role = ev.spanRole
+                                const isStart = role === 'start', isEnd = role === 'end'
+                                const ml = hasFromLeft ? -1 : 2, mr = hasToRight ? -1 : 2
+                                return (
+                                  <div key={ev.id + ':' + role}
+                                    onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
+                                    title={isStart ? `${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}` : undefined}
+                                    style={{
+                                      fontSize: 10, fontWeight: 700,
+                                      borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
+                                      padding: '1px 3px',
+                                      marginLeft: ml, marginRight: mr, marginBottom: 1, marginTop: 2,
+                                      color: cfg.color, background: cfg.bg,
+                                      borderTop: `1px solid ${cfg.border}`,
+                                      borderBottom: `1px solid ${cfg.border}`,
+                                      borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
+                                      borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
+                                      cursor: isStart ? 'pointer' : 'default',
+                                      whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
+                                    }}
+                                  >{`${cfg.label} ${ev.spanDay}`}</div>
+                                )
+                              })}
+                              {singleEvents.map(ev => {
+                                const cfg = evtCfg(ev.event_type)
+                                return (
+                                  <div key={ev.id}
+                                    onClick={e => { e.stopPropagation(); openEdit(ev) }}
+                                    title={`${ev.title || cfg.label}${ev.actor ? ' / ' + ev.actor : ''}`}
+                                    style={{
+                                      fontSize: 10, fontWeight: 700, borderRadius: 2,
+                                      padding: '1px 3px', margin: '2px 2px 1px',
+                                      color: cfg.color, background: cfg.bg,
+                                      border: `1px solid ${cfg.border}`,
+                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                      overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
+                                    }}
+                                  >{cfg.label}</div>
+                                )
+                              })}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })
+                }
+
                 return rows
               })()}
             </tbody>
