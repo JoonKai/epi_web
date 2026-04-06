@@ -583,7 +583,7 @@ function MachineStatusCard({ row, thresholds = {} }) {
   const pmRemainingDays = calcRemainingDays(row.pm_base_count, row.chamber_count, row.run_per_day)
   const filterRemainingDays = calcRemainingDays(filterHalfBase, row.filter_count, row.run_per_day)
 
-  // ???섏걶 ?곹깭 湲곗??쇰줈 移대뱶 ?곹깭 寃곗젙
+  // 초기 상태를 기준으로 변경 상태 체크
   const pmSt = pmStatus(pmRemainingDays, thresholds)
   const filterSt = pmStatus(filterRemainingDays, thresholds)
   const cardSt = pmRemaining <= filterRemaining ? pmSt : filterSt
@@ -911,7 +911,8 @@ function PmCalendarBoard({ refreshKey }) {
           }}>{current.date()}</div>
           {items.length > 0 && (
             <div style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: 'rgba(148,163,184,0.6)', flexShrink: 0 }}>
-              {items.length}嫄?            </div>
+              {items.length}건
+            </div>
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

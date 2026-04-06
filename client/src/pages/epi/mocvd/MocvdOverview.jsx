@@ -764,6 +764,86 @@ function AttendanceCard() {
   )
 }
 
+function TodayScheduleCard() {
+  const navigate = useNavigate()
+  const today = dayjs().format('YYYY-MM-DD')
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    authFetch('/api/mocvd/equipment-history')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const todayEvents = (data || []).filter(ev => ev.occurred_at?.slice(0, 10) === today)
+        setEvents(todayEvents)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const EVENT_CFG = {
+    pm:            { label: 'PM',   color: '#7dd3fc', bg: 'rgba(125,211,252,0.12)', border: 'rgba(125,211,252,0.35)' },
+    filter:        { label: '필터', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.35)' },
+    bm:            { label: 'BM',   color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)' },
+    source_change: { label: '소스', color: '#a3e635', bg: 'rgba(163,230,53,0.12)',  border: 'rgba(163,230,53,0.35)'  },
+    other:         { label: '기타', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.35)'  },
+  }
+
+  const grouped = useMemo(() => {
+    const map = {}
+    events.forEach(ev => {
+      const key = ev.event_type || 'other'
+      if (!map[key]) map[key] = []
+      map[key].push(ev)
+    })
+    return map
+  }, [events])
+
+  return (
+    <SectionCard
+      title="오늘의 일정"
+      icon={<CalendarOutlined />}
+      extra={
+        <Space>
+          <Tag color="processing">{events.length}건</Tag>
+          <CardBtn onClick={() => navigate('/epi/mocvd/scheduler')}>스케줄러</CardBtn>
+        </Space>
+      }
+    >
+      {loading ? <Skeleton active paragraph={{ rows: 2 }} /> : events.length === 0 ? (
+        <Empty description="오늘 등록된 일정이 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {Object.entries(grouped).map(([type, evs]) => {
+            const cfg = EVENT_CFG[type] || EVENT_CFG.other
+            return (
+              <div key={type}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 6, padding: '1px 8px' }}>{cfg.label}</span>
+                  <span style={{ fontSize: 13, color: 'rgba(196,210,226,0.5)' }}>{evs.length}건</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {evs.map(ev => (
+                    <div key={ev.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: cfg.bg, border: `1px solid ${cfg.border}`,
+                      borderRadius: 8, padding: '4px 10px', fontSize: 13,
+                    }}>
+                      <span style={{ fontWeight: 700, color: cfg.color }}>{ev.machine_no ? `MO#${ev.machine_no}호기` : '-'}</span>
+                      {ev.title && <span style={{ color: 'rgba(196,210,226,0.7)' }}>{ev.title}</span>}
+                      {ev.actor && <span style={{ color: 'rgba(196,210,226,0.45)', fontSize: 12 }}>{ev.actor}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
 const SCHED_EVENT_CONFIG = {
   pm:            { label: 'PM',   color: '#7dd3fc', bg: 'rgba(125,211,252,0.12)', border: 'rgba(125,211,252,0.35)' },
   filter:        { label: '필터', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.35)' },
