@@ -379,19 +379,19 @@ function PmInputSheet({ rows, onChange, onColumnPaste }) {
 
   return (
     <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', position: 'relative' }}>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 1136, fontSize: 14 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 936, fontSize: 14 }}>
         <colgroup>
           <col style={{ width: 36, minWidth: 36 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
-          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
+          <col style={{ width: 90, minWidth: 90 }} />
         </colgroup>
         <thead>
           <tr>
@@ -413,7 +413,7 @@ function PmInputSheet({ rows, onChange, onColumnPaste }) {
                 left: 36,
                 zIndex: 12,
                 background: '#171b26',
-                width: 110,
+                width: 90,
                 color: 'rgba(196,210,226,0.6)',
               }}
             >
@@ -421,13 +421,13 @@ function PmInputSheet({ rows, onChange, onColumnPaste }) {
             </th>
             <th style={{ ...pmHeadBase, borderLeft: PM_GROUP_BORDER, color: '#7dd3fc', fontWeight: 700 }}>PM 기준 횟수</th>
             <th style={{ ...pmHeadBase, color: '#fcd34d', fontWeight: 700 }}>필터 교체 기준 횟수</th>
-            <th style={{ ...pmHeadBase, color: '#fed7aa', fontWeight: 700 }}>필터 중간 교체</th>
+            <th style={{ ...pmHeadBase, color: '#c084fc', fontWeight: 700 }}>필터 중간 교체</th>
             <th style={{ ...pmHeadBase, color: '#93c5fd', fontWeight: 700 }}>Run per day</th>
             <th style={{ ...pmHeadBase, color: '#38bdf8', fontWeight: 700 }}>챔버사용횟수</th>
             <th style={{ ...pmHeadBase, color: '#fbbf24', fontWeight: 700 }}>필터사용횟수</th>
             <th style={{ ...pmHeadBase, color: '#86efac', fontWeight: 700 }}>챔버 PM<br />예상일</th>
             <th style={{ ...pmHeadBase, color: '#bef264', fontWeight: 700 }}>필터 교체<br />예상일</th>
-            <th style={{ ...pmHeadBase, color: '#fcd34d', fontWeight: 700 }}>필터 중간 교체<br />예상일</th>
+            <th style={{ ...pmHeadBase, color: '#c084fc', fontWeight: 700 }}>필터 중간 교체<br />예상일</th>
           </tr>
         </thead>
         <tbody>
@@ -447,7 +447,7 @@ function PmInputSheet({ rows, onChange, onColumnPaste }) {
               >
                 {rowIndex + 1}
               </td>
-              <td style={{ ...pmLabelBase, left: 36, width: 110, background: '#171b26', color: '#fbbf24', borderRight: PM_GROUP_BORDER, textAlign: 'left', paddingLeft: 14 }}>
+              <td style={{ ...pmLabelBase, left: 36, width: 90, background: '#171b26', color: '#fbbf24', borderRight: PM_GROUP_BORDER, textAlign: 'left', paddingLeft: 14 }}>
                 {formatMachineLabel(row.machine_no)}
               </td>
               <td style={{ ...pmCellBase, borderLeft: PM_GROUP_BORDER, background: '#081019' }}>
@@ -548,9 +548,9 @@ function PmInputSheet({ rows, onChange, onColumnPaste }) {
                   const meta = calcExpectedMeta(halfBase, row.filter_count, row.run_per_day)
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.15 }}>
-                      <span style={{ color: meta.isOverdue ? '#f87171' : '#fcd34d' }}>{meta.dateText}</span>
+                      <span style={{ color: meta.isOverdue ? '#f87171' : '#c084fc' }}>{meta.dateText}</span>
                       {meta.overdueText ? (
-                        <span style={{ color: meta.isOverdue ? '#fda4af' : 'rgba(252,211,77,0.78)', fontSize: 14, marginTop: 2 }}>
+                        <span style={{ color: meta.isOverdue ? '#fda4af' : 'rgba(192,132,252,0.78)', fontSize: 14, marginTop: 2 }}>
                           {meta.overdueText}
                         </span>
                       ) : null}
