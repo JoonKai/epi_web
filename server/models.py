@@ -78,6 +78,7 @@ class MocvdPmCounter(Base):
     pm_base_count = Column(Float, default=0.0)
     filter_count = Column(Float, default=0.0)
     filter_base_count = Column(Float, default=0.0)
+    run_per_day = Column(Float, default=0.0)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 

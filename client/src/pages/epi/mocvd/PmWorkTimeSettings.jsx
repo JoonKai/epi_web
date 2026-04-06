@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, Checkbox, InputNumber, Select, message } from 'antd'
-import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined, SaveOutlined, ToolOutlined } from '@ant-design/icons'
+import { authFetch } from '../../../context/AuthContext'
 
 const STORAGE_KEY = 'pm_work_time_settings'
 
@@ -179,6 +180,18 @@ function GanttChart({ periods, durations }) {
 export default function PmWorkTimeSettings() {
   const [periods, setPeriods] = useState(() => usePmWorkTimeSettings().periods)
   const [durations, setDurations] = useState(() => usePmWorkTimeSettings().durations)
+  const [pmMembers, setPmMembers] = useState([])
+
+  useEffect(() => {
+    authFetch('/api/mocvd/pm-members')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPmMembers(data.filter((m) => m.is_active))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const setDur = (key, val) => setDurations(p => ({ ...p, [key]: val ?? 1 }))
   const setPeriod = (id, field, val) => setPeriods(ps => ps.map(p => p.id === id ? { ...p, [field]: val } : p))
@@ -205,6 +218,54 @@ export default function PmWorkTimeSettings() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4 }}>
+      <Card styles={{ body: { padding: '10px 14px' } }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
+          <ToolOutlined style={{ color: '#7dd3fc', fontSize: 14, flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.55)', whiteSpace: 'nowrap' }}>PM 투입 인원</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc', background: 'rgba(125,211,252,0.12)', padding: '1px 7px', borderRadius: 8 }}>
+            {pmMembers.length}명
+          </span>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', alignItems: 'center' }}>
+            {pmMembers.length === 0 ? (
+              <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.4)' }}>배정된 인원이 없습니다</span>
+            ) : pmMembers.map((m) => (
+              <div
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  background: 'rgba(125,211,252,0.07)',
+                  border: '1px solid rgba(125,211,252,0.2)',
+                  borderRadius: 20,
+                  padding: '2px 8px 2px 4px',
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    background: 'rgba(125,211,252,0.15)',
+                    border: '1.5px solid rgba(125,211,252,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: '#7dd3fc',
+                  }}
+                >
+                  {m.name?.[0] || '?'}
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--nowa-text)', whiteSpace: 'nowrap' }}>{m.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
       <Card styles={{ body: { padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 } }}>
 
         {/* ── 소요 시간 ── */}

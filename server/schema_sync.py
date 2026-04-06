@@ -65,6 +65,23 @@ def _ensure_table_columns(table_name: str, table, actions: list[str]) -> None:
             actions.append(statement)
 
 
+def _ensure_utf8mb4(actions: list[str]) -> None:
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            rows = conn.execute(
+                text("SELECT CCSA.character_set_name FROM information_schema.tables T"
+                     " JOIN information_schema.collation_character_set_applicability CCSA"
+                     " ON CCSA.collation_name = T.table_collation"
+                     " WHERE T.table_schema = DATABASE() AND T.table_name = :t"),
+                {"t": table.name},
+            ).fetchone()
+            if rows and rows[0] != "utf8mb4":
+                stmt = f"ALTER TABLE {table.name} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+                conn.execute(text(stmt))
+                actions.append(stmt)
+
+
 def sync_schema() -> list[str]:
     actions: list[str] = []
     Base.metadata.create_all(bind=engine)
@@ -77,6 +94,8 @@ def sync_schema() -> list[str]:
             actions.append(f"CREATE TABLE {table.name}")
             continue
         _ensure_table_columns(table.name, table, actions)
+
+    _ensure_utf8mb4(actions)
 
     return actions
 

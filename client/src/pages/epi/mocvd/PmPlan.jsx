@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
 import { Alert, Button, Calendar, Card, Col, Input, Modal, Row, Segmented, Select, Spin, Table, Tabs, Tag, TimePicker, message } from 'antd'
-import { AppstoreOutlined, BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, FolderOpenOutlined, FolderOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SyncOutlined, UnorderedListOutlined, UploadOutlined, WarningOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, FolderOpenOutlined, FolderOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SaveOutlined, SyncOutlined, UnorderedListOutlined, UploadOutlined, WarningOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { panelStyle, sectionTitleStyle } from '../../../theme/consoleTheme'
 import PageBanner from '../../../components/PageBanner'
 
 
-const PM_ROW_H = 34
-const PM_HEAD_H = 38
+const PM_ROW_H = 44
+const PM_HEAD_H = 52
 const PM_BORDER = '1px solid rgba(245,158,11,0.28)'
 const PM_GROUP_BORDER = '2px solid rgba(245,158,11,0.28)'
 
@@ -21,7 +21,8 @@ const pmHeadBase = {
   border: PM_BORDER,
   padding: '0 6px',
   textAlign: 'center',
-  whiteSpace: 'nowrap',
+  whiteSpace: 'normal',
+  lineHeight: 1.2,
   height: PM_HEAD_H,
   zIndex: 9,
 }
@@ -82,6 +83,130 @@ function toEditingText(value) {
   return String(value)
 }
 
+function roundToDecimal(value, decimalPlaces = 0) {
+  const num = Number(value ?? 0)
+  if (!Number.isFinite(num)) return 0
+  const factor = 10 ** decimalPlaces
+  return Math.round(num * factor) / factor
+}
+
+function calcExpectedDate(baseCount, usedCount, runPerDay) {
+  const days = calcRemainingDays(baseCount, usedCount, runPerDay)
+  if (days == null) return '-'
+  const safeDays = Math.max(0, days)
+  return dayjs().add(safeDays, 'day').format('YYYY-MM-DD')
+}
+
+function calcExpectedMeta(baseCount, usedCount, runPerDay) {
+  const days = calcRemainingDays(baseCount, usedCount, runPerDay)
+  if (days == null) return { dateText: '-', overdueText: '', isOverdue: false }
+  if (days < 0) {
+    return {
+      dateText: dayjs().format('YYYY-MM-DD'),
+      overdueText: `초과 ${Math.abs(days)}일`,
+      isOverdue: true,
+    }
+  }
+  if (days === 0) {
+    return {
+      dateText: dayjs().format('YYYY-MM-DD'),
+      overdueText: '오늘',
+      isOverdue: false,
+    }
+  }
+  return {
+    dateText: dayjs().add(days, 'day').format('YYYY-MM-DD'),
+    overdueText: '',
+    isOverdue: false,
+  }
+}
+
+function calcRemainingDays(baseCount, usedCount, runPerDay) {
+  const base = Number(baseCount ?? 0)
+  const used = Number(usedCount ?? 0)
+  const run = Number(runPerDay ?? 0)
+  if (!Number.isFinite(base) || !Number.isFinite(used) || !Number.isFinite(run) || run <= 0) return null
+  const remain = base - used
+  return Math.ceil(remain / run)
+}
+
+function calcFilterHalfBase(filterBaseCount) {
+  return Math.floor(Number(filterBaseCount ?? 0) / 2)
+}
+
+function formatRemainWithDays(remainCount, remainDays) {
+  const countText = remainCount > 0 ? `잔여 ${remainCount}` : `${Math.abs(remainCount)} 초과`
+  if (remainDays == null) return countText
+  if (remainDays > 0) return `${countText} / ${remainDays}일`
+  if (remainDays === 0) return `${countText} / 오늘`
+  return `${countText} / ${Math.abs(remainDays)}일 지남`
+}
+
+function buildPredictedPmEvents(counterRows) {
+  if (!Array.isArray(counterRows)) return []
+  const events = []
+  counterRows.forEach((row) => {
+    const machineNo = Number(row.machine_no)
+    if (!Number.isFinite(machineNo)) return
+
+    const chamberMeta = calcExpectedMeta(row.pm_base_count, row.chamber_count, row.run_per_day)
+    if (chamberMeta.dateText !== '-') {
+      const chamberOverdueDays = chamberMeta.isOverdue
+        ? Math.max(0, Number(String(chamberMeta.overdueText || '').replace(/[^\d]/g, '')) || 0)
+        : 0
+      events.push({
+        id: `pred-chamber-${machineNo}`,
+        machine_no: machineNo,
+        event_type: 'pm',
+        title: '챔버 PM 예상',
+        detail: chamberMeta.overdueText ? `PM주기 입력값 기준 자동 계산 · ${chamberMeta.overdueText}` : 'PM주기 입력값 기준 자동 계산',
+        occurred_at: chamberMeta.dateText,
+        actor: 'system',
+        overdue_days: chamberOverdueDays,
+        overdue_text: chamberMeta.overdueText || '',
+      })
+    }
+
+    const filterMeta = calcExpectedMeta(row.filter_base_count, row.filter_count, row.run_per_day)
+    if (filterMeta.dateText !== '-') {
+      const filterOverdueDays = filterMeta.isOverdue
+        ? Math.max(0, Number(String(filterMeta.overdueText || '').replace(/[^\d]/g, '')) || 0)
+        : 0
+      events.push({
+        id: `pred-filter-${machineNo}`,
+        machine_no: machineNo,
+        event_type: 'pm',
+        title: '필터 교체 예상',
+        detail: filterMeta.overdueText ? `PM주기 입력값 기준 자동 계산 · ${filterMeta.overdueText}` : 'PM주기 입력값 기준 자동 계산',
+        occurred_at: filterMeta.dateText,
+        actor: 'system',
+        overdue_days: filterOverdueDays,
+        overdue_text: filterMeta.overdueText || '',
+      })
+    }
+
+    const filterHalfBase = calcFilterHalfBase(row.filter_base_count)
+    const filterHalfMeta = calcExpectedMeta(filterHalfBase, row.filter_count, row.run_per_day)
+    if (filterHalfMeta.dateText !== '-') {
+      const filterHalfOverdueDays = filterHalfMeta.isOverdue
+        ? Math.max(0, Number(String(filterHalfMeta.overdueText || '').replace(/[^\d]/g, '')) || 0)
+        : 0
+      events.push({
+        id: `pred-filter-half-${machineNo}`,
+        machine_no: machineNo,
+        event_type: 'pm',
+        title: '필터 중간 교체 예상',
+        detail: filterHalfMeta.overdueText ? `PM주기 입력값 기준 자동 계산 · ${filterHalfMeta.overdueText}` : 'PM주기 입력값 기준 자동 계산',
+        occurred_at: filterHalfMeta.dateText,
+        actor: 'system',
+        overdue_days: filterHalfOverdueDays,
+        overdue_text: filterHalfMeta.overdueText || '',
+      })
+    }
+  })
+  return events
+}
+
 function SummaryCard({ label, value, suffix, sub, accent, gradient = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)', icon = <CalendarOutlined /> }) {
   const resolvedAccent = accent || gradient.match(/#[0-9a-fA-F]{6}/)?.[0] || '#aeb8c9'
   return (
@@ -129,7 +254,7 @@ function SummaryCard({ label, value, suffix, sub, accent, gradient = 'linear-gra
   )
 }
 
-function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, color, bg }) {
+function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, onColumnPaste, color, bg, decimalPlaces = 0 }) {
   const [editing, setEditing] = useState(false)
   const [local, setLocal] = useState(toEditingText(value))
   const inputRef = useRef(null)
@@ -156,7 +281,7 @@ function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, col
       return
     }
     const num = parseFloat(local)
-    if (!Number.isNaN(num)) onChange(num)
+    if (!Number.isNaN(num)) onChange(roundToDecimal(num, decimalPlaces))
     setEditing(false)
   }
 
@@ -167,6 +292,15 @@ function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, col
         value={local}
         onChange={(event) => setLocal(event.target.value)}
         onBlur={commit}
+        onPaste={(event) => {
+          if (!onColumnPaste) return
+          const text = event.clipboardData?.getData('text/plain') ?? ''
+          if (!text.includes('\n') && !text.includes('\r')) return
+          const handled = onColumnPaste(cellId, text)
+          if (!handled) return
+          event.preventDefault()
+          setEditing(false)
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') commit()
           if (event.key === 'Tab') {
@@ -213,15 +347,15 @@ function PmEditCell({ cellId, activeEditKey, value, onChange, onTabNavigate, col
         userSelect: 'none',
       }}
     >
-      {Number(value ?? 0).toFixed(0)}
+      {Number(value ?? 0).toFixed(decimalPlaces)}
     </div>
   )
 }
 
-function PmInputSheet({ rows, onChange }) {
+function PmInputSheet({ rows, onChange, onColumnPaste }) {
   const [activeEditKey, setActiveEditKey] = useState(null)
   const orderedEditKeys = useMemo(
-    () => rows.flatMap((row) => ['pm_base_count', 'filter_base_count', 'chamber_count', 'filter_count'].map((field) => `${field}:${row.key}`)),
+    () => rows.flatMap((row) => ['pm_base_count', 'filter_base_count', 'run_per_day', 'chamber_count', 'filter_count'].map((field) => `${field}:${row.key}`)),
     [rows],
   )
 
@@ -245,14 +379,19 @@ function PmInputSheet({ rows, onChange }) {
 
   return (
     <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 360px)', position: 'relative' }}>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 900, fontSize: 14 }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 1136, fontSize: 14 }}>
         <colgroup>
-          <col style={{ width: 160, minWidth: 160 }} />
-          <col style={{ width: 150, minWidth: 150 }} />
-          <col style={{ width: 170, minWidth: 170 }} />
-          <col style={{ width: 150, minWidth: 150 }} />
-          <col style={{ width: 150, minWidth: 150 }} />
-          <col style={{ width: 150, minWidth: 150 }} />
+          <col style={{ width: 36, minWidth: 36 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
+          <col style={{ width: 110, minWidth: 110 }} />
         </colgroup>
         <thead>
           <tr>
@@ -260,9 +399,21 @@ function PmInputSheet({ rows, onChange }) {
               style={{
                 ...pmHeadBase,
                 left: 0,
+                zIndex: 13,
+                background: '#171b26',
+                width: 36,
+                color: 'rgba(196,210,226,0.6)',
+              }}
+            >
+              No
+            </th>
+            <th
+              style={{
+                ...pmHeadBase,
+                left: 36,
                 zIndex: 12,
                 background: '#171b26',
-                width: 160,
+                width: 110,
                 color: 'rgba(196,210,226,0.6)',
               }}
             >
@@ -270,15 +421,33 @@ function PmInputSheet({ rows, onChange }) {
             </th>
             <th style={{ ...pmHeadBase, borderLeft: PM_GROUP_BORDER, color: '#7dd3fc', fontWeight: 700 }}>PM 기준 횟수</th>
             <th style={{ ...pmHeadBase, color: '#fcd34d', fontWeight: 700 }}>필터 교체 기준 횟수</th>
-            <th style={{ ...pmHeadBase, color: '#fb923c', fontWeight: 700 }}>필터 교체기준 Half</th>
+            <th style={{ ...pmHeadBase, color: '#fed7aa', fontWeight: 700 }}>필터 중간 교체</th>
+            <th style={{ ...pmHeadBase, color: '#93c5fd', fontWeight: 700 }}>Run per day</th>
             <th style={{ ...pmHeadBase, color: '#38bdf8', fontWeight: 700 }}>챔버사용횟수</th>
             <th style={{ ...pmHeadBase, color: '#fbbf24', fontWeight: 700 }}>필터사용횟수</th>
+            <th style={{ ...pmHeadBase, color: '#86efac', fontWeight: 700 }}>챔버 PM<br />예상일</th>
+            <th style={{ ...pmHeadBase, color: '#bef264', fontWeight: 700 }}>필터 교체<br />예상일</th>
+            <th style={{ ...pmHeadBase, color: '#fcd34d', fontWeight: 700 }}>필터 중간 교체<br />예상일</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row, rowIndex) => (
             <tr key={row.key}>
-              <td style={{ ...pmLabelBase, background: '#171b26', color: '#fbbf24', borderRight: PM_GROUP_BORDER, textAlign: 'left', paddingLeft: 14 }}>
+              <td
+                style={{
+                  ...pmLabelBase,
+                  left: 0,
+                  zIndex: 4,
+                  background: '#171b26',
+                  color: 'rgba(196,210,226,0.72)',
+                  width: 36,
+                  textAlign: 'center',
+                  padding: 0,
+                }}
+              >
+                {rowIndex + 1}
+              </td>
+              <td style={{ ...pmLabelBase, left: 36, width: 110, background: '#171b26', color: '#fbbf24', borderRight: PM_GROUP_BORDER, textAlign: 'left', paddingLeft: 14 }}>
                 {formatMachineLabel(row.machine_no)}
               </td>
               <td style={{ ...pmCellBase, borderLeft: PM_GROUP_BORDER, background: '#081019' }}>
@@ -289,6 +458,7 @@ function PmInputSheet({ rows, onChange }) {
                   color="#7dd3fc"
                   bg="#081019"
                   onTabNavigate={handleTabNavigate}
+                  onColumnPaste={onColumnPaste}
                   onChange={(value) => onChange(row.key, 'pm_base_count', value)}
                 />
               </td>
@@ -300,11 +470,25 @@ function PmInputSheet({ rows, onChange }) {
                   color="#fcd34d"
                   bg="#110d00"
                   onTabNavigate={handleTabNavigate}
+                  onColumnPaste={onColumnPaste}
                   onChange={(value) => onChange(row.key, 'filter_base_count', value)}
                 />
               </td>
               <td style={{ ...pmCellBase, background: '#1a1000', color: '#fed7aa', textAlign: 'right', paddingRight: 12, fontWeight: 700 }}>
                 {Math.floor((row.filter_base_count || 0) / 2)}
+              </td>
+              <td style={{ ...pmCellBase, background: '#0d1624' }}>
+                <PmEditCell
+                  cellId={`run_per_day:${row.key}`}
+                  activeEditKey={activeEditKey}
+                  value={row.run_per_day}
+                  color="#93c5fd"
+                  bg="#0d1624"
+                  decimalPlaces={1}
+                  onTabNavigate={handleTabNavigate}
+                  onColumnPaste={onColumnPaste}
+                  onChange={(value) => onChange(row.key, 'run_per_day', value)}
+                />
               </td>
               <td style={{ ...pmCellBase, background: '#0a1119' }}>
                 <PmEditCell
@@ -328,6 +512,52 @@ function PmInputSheet({ rows, onChange }) {
                   onChange={(value) => onChange(row.key, 'filter_count', value)}
                 />
               </td>
+              <td style={{ ...pmCellBase, background: '#0f1a12', textAlign: 'center', fontWeight: 700 }}>
+                {(() => {
+                  const meta = calcExpectedMeta(row.pm_base_count, row.chamber_count, row.run_per_day)
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.15 }}>
+                      <span style={{ color: meta.isOverdue ? '#f87171' : '#86efac' }}>{meta.dateText}</span>
+                      {meta.overdueText ? (
+                        <span style={{ color: meta.isOverdue ? '#fda4af' : 'rgba(134,239,172,0.75)', fontSize: 14, marginTop: 2 }}>
+                          {meta.overdueText}
+                        </span>
+                      ) : null}
+                    </div>
+                  )
+                })()}
+              </td>
+              <td style={{ ...pmCellBase, background: '#11170a', textAlign: 'center', fontWeight: 700 }}>
+                {(() => {
+                  const meta = calcExpectedMeta(row.filter_base_count, row.filter_count, row.run_per_day)
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.15 }}>
+                      <span style={{ color: meta.isOverdue ? '#f87171' : '#bef264' }}>{meta.dateText}</span>
+                      {meta.overdueText ? (
+                        <span style={{ color: meta.isOverdue ? '#fda4af' : 'rgba(190,242,100,0.75)', fontSize: 14, marginTop: 2 }}>
+                          {meta.overdueText}
+                        </span>
+                      ) : null}
+                    </div>
+                  )
+                })()}
+              </td>
+              <td style={{ ...pmCellBase, background: '#191302', textAlign: 'center', fontWeight: 700 }}>
+                {(() => {
+                  const halfBase = Math.floor(Number(row.filter_base_count ?? 0) / 2)
+                  const meta = calcExpectedMeta(halfBase, row.filter_count, row.run_per_day)
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.15 }}>
+                      <span style={{ color: meta.isOverdue ? '#f87171' : '#fcd34d' }}>{meta.dateText}</span>
+                      {meta.overdueText ? (
+                        <span style={{ color: meta.isOverdue ? '#fda4af' : 'rgba(252,211,77,0.78)', fontSize: 14, marginTop: 2 }}>
+                          {meta.overdueText}
+                        </span>
+                      ) : null}
+                    </div>
+                  )
+                })()}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -336,22 +566,26 @@ function PmInputSheet({ rows, onChange }) {
   )
 }
 
-function pmStatus(remaining, { critical = 5, urgent = 20 } = {}) {
-  if (remaining <= 0)        return { label: '교체필요', color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', glow: 'rgba(248,113,113,0.15)' }
-  if (remaining <= critical) return { label: '긴급',    color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', glow: 'rgba(248,113,113,0.15)' }
-  if (remaining <= urgent)   return { label: '임박',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)',   glow: 'rgba(251,191,36,0.08)' }
+function pmStatus(remainingDays, { critical = 5, urgent = 20 } = {}) {
+  if (remainingDays == null) return { label: '정상',    color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.25)',  glow: 'rgba(74,222,128,0.05)' }
+  if (remainingDays <= 0) return { label: '교체필요', color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', glow: 'rgba(248,113,113,0.15)' }
+  if (remainingDays <= critical) return { label: '긴급',    color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', glow: 'rgba(248,113,113,0.15)' }
+  if (remainingDays <= urgent)   return { label: '임박',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)',   glow: 'rgba(251,191,36,0.08)' }
   return                            { label: '정상',    color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.25)',  glow: 'rgba(74,222,128,0.05)' }
 }
 
 function MachineStatusCard({ row, thresholds = {} }) {
+  const filterHalfBase = calcFilterHalfBase(row.filter_base_count)
   const pmPct = Math.min(100, row.pm_base_count > 0 ? (row.chamber_count / row.pm_base_count) * 100 : 0)
-  const filterPct = Math.min(100, row.filter_base_count > 0 ? (row.filter_count / row.filter_base_count) * 100 : 0)
+  const filterPct = Math.min(100, filterHalfBase > 0 ? (row.filter_count / filterHalfBase) * 100 : 0)
   const pmRemaining = row.pm_base_count - row.chamber_count
-  const filterRemaining = row.filter_base_count - row.filter_count
+  const filterRemaining = filterHalfBase - row.filter_count
+  const pmRemainingDays = calcRemainingDays(row.pm_base_count, row.chamber_count, row.run_per_day)
+  const filterRemainingDays = calcRemainingDays(filterHalfBase, row.filter_count, row.run_per_day)
 
-  // 더 나쁜 상태 기준으로 카드 상태 결정
-  const pmSt = pmStatus(pmRemaining, thresholds)
-  const filterSt = pmStatus(filterRemaining, thresholds)
+  // ???섏걶 ?곹깭 湲곗??쇰줈 移대뱶 ?곹깭 寃곗젙
+  const pmSt = pmStatus(pmRemainingDays, thresholds)
+  const filterSt = pmStatus(filterRemainingDays, thresholds)
   const cardSt = pmRemaining <= filterRemaining ? pmSt : filterSt
 
   const pmBarColor = pmSt.color === '#4ade80' ? '#7dd3fc' : pmSt.color
@@ -367,7 +601,7 @@ function MachineStatusCard({ row, thresholds = {} }) {
     }}>
       <div style={{ height: 3, background: `linear-gradient(90deg, ${cardSt.color}, transparent)` }} />
       <div style={{ padding: '14px 16px' }}>
-        {/* 헤더 */}
+        {/* ?ㅻ뜑 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--nowa-text)', letterSpacing: -0.3 }}>
@@ -387,14 +621,14 @@ function MachineStatusCard({ row, thresholds = {} }) {
           </div>
         </div>
 
-        {/* PM 진행률 */}
+        {/* PM 吏꾪뻾瑜?*/}
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#7dd3fc' }}>Chamber Count</span>
             <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)' }}>
               {row.chamber_count} / {row.pm_base_count}
               <span style={{ color: pmBarColor, fontWeight: 700, marginLeft: 4 }}>
-                ({pmRemaining > 0 ? `잔여 ${pmRemaining}` : `${Math.abs(pmRemaining)} 초과`})
+                ({formatRemainWithDays(pmRemaining, pmRemainingDays)})
               </span>
             </span>
           </div>
@@ -407,14 +641,14 @@ function MachineStatusCard({ row, thresholds = {} }) {
           </div>
         </div>
 
-        {/* Filter 진행률 */}
+        {/* Filter 吏꾪뻾瑜?*/}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa' }}>Filter Count</span>
             <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.6)' }}>
-              {row.filter_count} / {row.filter_base_count}
+              {row.filter_count} / {filterHalfBase}
               <span style={{ color: filterBarColor, fontWeight: 700, marginLeft: 4 }}>
-                ({filterRemaining > 0 ? `잔여 ${filterRemaining}` : `${Math.abs(filterRemaining)} 초과`})
+                ({formatRemainWithDays(filterRemaining, filterRemainingDays)})
               </span>
             </span>
           </div>
@@ -450,6 +684,7 @@ function PmStatusBoard({ refreshKey, thresholds = {} }) {
           pm_base_count: Number(r.pm_base_count ?? 0),
           filter_count: Number(r.filter_count ?? 0),
           filter_base_count: Number(r.filter_base_count ?? 0),
+          run_per_day: Number(r.run_per_day ?? 0),
         })))
       }
     } finally {
@@ -461,29 +696,47 @@ function PmStatusBoard({ refreshKey, thresholds = {} }) {
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
-      const aRem = Math.min(a.pm_base_count - a.chamber_count, a.filter_base_count - a.filter_count)
-      const bRem = Math.min(b.pm_base_count - b.chamber_count, b.filter_base_count - b.filter_count)
+      const aPmDays = calcRemainingDays(a.pm_base_count, a.chamber_count, a.run_per_day)
+      const aFilterDays = calcRemainingDays(calcFilterHalfBase(a.filter_base_count), a.filter_count, a.run_per_day)
+      const bPmDays = calcRemainingDays(b.pm_base_count, b.chamber_count, b.run_per_day)
+      const bFilterDays = calcRemainingDays(calcFilterHalfBase(b.filter_base_count), b.filter_count, b.run_per_day)
+      const aRem = Math.min(aPmDays ?? Number.MAX_SAFE_INTEGER, aFilterDays ?? Number.MAX_SAFE_INTEGER)
+      const bRem = Math.min(bPmDays ?? Number.MAX_SAFE_INTEGER, bFilterDays ?? Number.MAX_SAFE_INTEGER)
       return aRem - bRem
     })
   }, [rows])
 
-  const needPm = rows.filter((r) => r.pm_base_count - r.chamber_count <= 0).length
-  const criticalPm = rows.filter((r) => { const rem = r.pm_base_count - r.chamber_count; return rem > 0 && rem <= critical }).length
-  const urgentPm = rows.filter((r) => { const rem = r.pm_base_count - r.chamber_count; return rem > critical && rem <= urgent }).length
-  const needFilter = rows.filter((r) => r.filter_count >= r.filter_base_count).length
+  const needPm = rows.filter((r) => {
+    const days = calcRemainingDays(r.pm_base_count, r.chamber_count, r.run_per_day)
+    return days != null && days <= 0
+  }).length
+  const criticalPm = rows.filter((r) => {
+    const rem = r.pm_base_count - r.chamber_count
+    const days = calcRemainingDays(r.pm_base_count, r.chamber_count, r.run_per_day)
+    return rem > 0 && days != null && days <= critical
+  }).length
+  const urgentPm = rows.filter((r) => {
+    const rem = r.pm_base_count - r.chamber_count
+    const days = calcRemainingDays(r.pm_base_count, r.chamber_count, r.run_per_day)
+    return rem > 0 && days != null && days > critical && days <= urgent
+  }).length
+  const needFilter = rows.filter((r) => {
+    const days = calcRemainingDays(calcFilterHalfBase(r.filter_base_count), r.filter_count, r.run_per_day)
+    return days != null && days <= 0
+  }).length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PageBanner
-        kicker="PM 주기 현황판"
+        kicker="PM주기 현황판"
         title="MOCVD PM 주기 현황"
-        desc="PM 기준 횟수 대비 현재 사용 횟수를 기준으로 교체 필요 설비를 확인합니다."
+        desc="PM 예상일 기준(남은 일수)으로 긴급/임박 상태를 확인합니다."
         extra={(
           <Button icon={<ReloadOutlined />} onClick={fetchRows} loading={loading}>새로고침</Button>
         )}
       />
 
-      {/* KPI 카드 */}
+      {/* KPI 移대뱶 */}
       <Row gutter={[14, 14]}>
         <Col xs={24} sm={12} xl={5}>
           <SummaryCard label="전체 설비" value={rows.length} suffix="대" sub="PM 관리 대상"
@@ -494,20 +747,20 @@ function PmStatusBoard({ refreshKey, thresholds = {} }) {
             gradient="linear-gradient(135deg,#f43f5e 0%,#ec4899 100%)" icon={<WarningOutlined />} />
         </Col>
         <Col xs={24} sm={12} xl={5}>
-          <SummaryCard label="긴급" value={criticalPm} suffix="대" sub={`잔여 ${critical}런 이하`}
+          <SummaryCard label="긴급" value={criticalPm} suffix="대" sub={`잔여 ${critical}일 이하`}
             gradient="linear-gradient(135deg,#f43f5e 0%,#f87171 100%)" icon={<WarningOutlined />} />
         </Col>
         <Col xs={24} sm={12} xl={5}>
-          <SummaryCard label="임박" value={urgentPm} suffix="대" sub={`잔여 ${urgent}런 이하`}
+          <SummaryCard label="임박" value={urgentPm} suffix="대" sub={`잔여 ${urgent}일 이하`}
             gradient="linear-gradient(135deg,#f59e0b 0%,#eab308 100%)" icon={<ClockCircleOutlined />} />
         </Col>
         <Col xs={24} sm={12} xl={4}>
-          <SummaryCard label="Filter 교체 필요" value={needFilter} suffix="대" sub="기준 횟수 도달"
-            gradient="linear-gradient(135deg,#14b8a6 0%,#0ea5e9 100%)" icon={<CheckCircleOutlined />} />
+            <SummaryCard label="Filter 중간 교체 필요" value={needFilter} suffix="대" sub="중간 교체 기준 도달"
+              gradient="linear-gradient(135deg,#14b8a6 0%,#0ea5e9 100%)" icon={<CheckCircleOutlined />} />
         </Col>
       </Row>
 
-      {/* PM 캘린더 */}
+      {/* PM 罹섎┛??*/}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderLeft: '3px solid rgba(125,211,252,0.6)', paddingLeft: 12, marginTop: 4 }}>
         <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--nowa-text)' }}>PM 일정 캘린더</span>
       </div>
@@ -532,9 +785,15 @@ function PmCalendarBoard({ refreshKey }) {
   const fetchEvents = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await authFetch('/api/mocvd/equipment-history')
-      const json = await res.json().catch(() => [])
-      if (Array.isArray(json)) setEvents(json.filter(e => e.event_type === 'pm'))
+      const [historyRes, countersRes] = await Promise.all([
+        authFetch('/api/mocvd/equipment-history'),
+        authFetch('/api/mocvd/pm-counters'),
+      ])
+      const historyJson = await historyRes.json().catch(() => [])
+      const countersJson = await countersRes.json().catch(() => [])
+      const manualPmEvents = Array.isArray(historyJson) ? historyJson.filter((e) => e.event_type === 'pm') : []
+      const predictedPmEvents = buildPredictedPmEvents(countersJson)
+      setEvents([...manualPmEvents, ...predictedPmEvents])
     } finally { setLoading(false) }
   }, [])
 
@@ -573,6 +832,44 @@ function PmCalendarBoard({ refreshKey }) {
   , [selectedDate, eventsByDate])
 
   const isTodaySelected = selectedDate.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')
+  const isFilterHalfEvent = (event) => String(event?.title || '').includes('중간')
+  const isFilterEvent = (event) => String(event?.title || '').includes('필터') && !isFilterHalfEvent(event)
+  const getEventPalette = (event) => {
+    if (isFilterHalfEvent(event)) {
+      return {
+        text: '#fb923c',
+        bg: 'rgba(251,146,60,0.12)',
+        border: 'rgba(251,146,60,0.45)',
+        chipBg: 'rgba(251,146,60,0.16)',
+        chipText: '#fb923c',
+        chipBorder: 'rgba(251,146,60,0.45)',
+        shadow: 'inset 3px 0 0 #fb923c',
+        label: 'HALF',
+      }
+    }
+    if (isFilterEvent(event)) {
+      return {
+        text: '#facc15',
+        bg: 'rgba(250,204,21,0.12)',
+        border: 'rgba(250,204,21,0.45)',
+        chipBg: 'rgba(250,204,21,0.16)',
+        chipText: '#facc15',
+        chipBorder: 'rgba(250,204,21,0.45)',
+        shadow: 'inset 3px 0 0 #facc15',
+        label: 'FILTER',
+      }
+    }
+    return {
+      text: '#7dd3fc',
+      bg: 'rgba(125,211,252,0.1)',
+      border: 'rgba(125,211,252,0.45)',
+      chipBg: 'rgba(125,211,252,0.14)',
+      chipText: '#7dd3fc',
+      chipBorder: 'rgba(125,211,252,0.45)',
+      shadow: 'inset 3px 0 0 #7dd3fc',
+      label: 'PM',
+    }
+  }
 
   const renderDateCell = (current) => {
     const dateStr = current.format('YYYY-MM-DD')
@@ -614,22 +911,44 @@ function PmCalendarBoard({ refreshKey }) {
           }}>{current.date()}</div>
           {items.length > 0 && (
             <div style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: 'rgba(148,163,184,0.6)', flexShrink: 0 }}>
-              {items.length}건
-            </div>
+              {items.length}嫄?            </div>
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {items.slice(0, 3).map(e => (
-            <div key={e.id} style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '3px 7px 3px 5px', borderRadius: 6,
-              background: 'rgba(125,211,252,0.1)', borderLeft: '3px solid #7dd3fc',
-              color: '#7dd3fc', fontSize: 14, fontWeight: 700,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              {formatMachineLabel(e.machine_no)}
-            </div>
-          ))}
+                {items.slice(0, 3).map(e => {
+                  const palette = getEventPalette(e)
+                  const overdueDays = Number(e?.overdue_days ?? 0)
+                  return (
+                <div key={e.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                padding: '3px 7px 3px 5px', borderRadius: 6,
+                background: palette.bg, borderLeft: `3px solid ${palette.text}`,
+                color: palette.text, fontSize: 14, fontWeight: 700,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  <span style={{
+                    fontSize: 10,
+                  fontWeight: 800,
+                  padding: '1px 4px',
+                  borderRadius: 999,
+                  background: palette.chipBg,
+                  color: palette.chipText,
+                  border: `1px solid ${palette.chipBorder}`,
+                  flexShrink: 0,
+                  }}>
+                    {palette.label}
+                  </span>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {formatMachineLabel(e.machine_no)}
+                  </span>
+                  {overdueDays > 0 && (
+                    <span style={{ marginLeft: 'auto', color: '#fb7185', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
+                      +{overdueDays}일
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           {items.length > 3 && (
             <div style={{
               padding: '2px 7px', fontSize: 14, fontWeight: 600,
@@ -656,7 +975,7 @@ function PmCalendarBoard({ refreshKey }) {
   }
 
   const handleAddPm = async () => {
-    if (!addForm.machine_no) { message.warning('설비를 선택하세요'); return }
+    if (!addForm.machine_no) { message.warning('설비를 선택해주세요.'); return }
     setAddSaving(true)
     try {
       const res = await authFetch('/api/mocvd/equipment-history', {
@@ -672,7 +991,7 @@ function PmCalendarBoard({ refreshKey }) {
         }),
       })
       if (!res.ok) throw new Error('저장 실패')
-      message.success('PM 이력이 등록되었습니다.')
+      message.success('PM 이력을 등록했습니다.')
       setShowAdd(false)
       setAddForm({ machine_no: null, title: '', detail: '', actor: '' })
       fetchEvents()
@@ -685,13 +1004,13 @@ function PmCalendarBoard({ refreshKey }) {
     try {
       const res = await authFetch(`/api/mocvd/equipment-history/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('삭제 실패')
-      message.success('삭제되었습니다.')
+      message.success('삭제했습니다.')
       fetchEvents()
     } catch (e) { message.error(e.message) }
     finally { setDeleting(null) }
   }
 
-  // 달력 행 수 계산 (5행이면 마지막 행 숨김)
+  // ?щ젰 ????怨꾩궛 (5?됱씠硫?留덉?留????④?)
   const offset = selectedDate.startOf('month').day()
   const rowsNeeded = Math.ceil((offset + selectedDate.daysInMonth()) / 7)
 
@@ -710,7 +1029,7 @@ function PmCalendarBoard({ refreshKey }) {
       `}</style>
 
       <div style={{ position: 'relative' }}>
-        {/* 왼쪽: 캘린더 (오른쪽 패널 너비만큼 margin) */}
+        {/* ?쇱そ: 罹섎┛??(?ㅻⅨ履??⑤꼸 ?덈퉬留뚰겮 margin) */}
         <div style={{ marginRight: 'calc((100% - 16px) * 7 / 24 + 16px)' }}>
           <Card className="nowa-card" styles={{ body: { padding: '20px 24px' } }}>
             <Spin spinning={loading}>
@@ -738,7 +1057,7 @@ function PmCalendarBoard({ refreshKey }) {
                   headerRender={({ value, onChange, onTypeChange }) => {
                     const yearOptions = Array.from({ length: 9 }, (_, i) => {
                       const y = dayjs().year() - 4 + i
-                      return { value: y, label: `${y}년` }
+                      return { value: y, label: String(y) + '년' }
                     })
                     const goPrev = () => { const n = viewMode === 'month' ? value.subtract(1, 'month') : value.subtract(1, 'year'); onChange(n); setSelectedDate(n) }
                     const goNext = () => { const n = viewMode === 'month' ? value.add(1, 'month') : value.add(1, 'year'); onChange(n); setSelectedDate(n) }
@@ -776,7 +1095,7 @@ function PmCalendarBoard({ refreshKey }) {
           </Card>
         </div>
 
-        {/* 오른쪽: 선택 날짜 상세 (절대위치) */}
+        {/* ?ㅻⅨ履? ?좏깮 ?좎쭨 ?곸꽭 (?덈??꾩튂) */}
         <div style={{
           position: 'absolute', top: 0, right: 0, bottom: 0,
           width: 'calc((100% - 16px) * 7 / 24)',
@@ -807,30 +1126,47 @@ function PmCalendarBoard({ refreshKey }) {
               </div>
             ) : (
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 4 }}>
-                {selectedDateEvents.map(e => (
+                {selectedDateEvents.map(e => {
+                  const palette = getEventPalette(e)
+                  const overdueDays = Number(e?.overdue_days ?? 0)
+                  return (
                   <div key={e.id} style={{
                     display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10,
                     padding: '10px 14px', borderRadius: 12,
-                    background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.18)',
-                    boxShadow: 'inset 3px 0 0 #7dd3fc',
+                    background: palette.bg, border: `1px solid ${palette.border}`,
+                    boxShadow: palette.shadow,
                   }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ color: '#7dd3fc', fontWeight: 800, fontSize: 14 }}>{formatMachineLabel(e.machine_no)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ color: palette.text, fontWeight: 800, fontSize: 14 }}>{formatMachineLabel(e.machine_no)}</div>
+                        <span style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          padding: '2px 6px',
+                          borderRadius: 999,
+                          background: palette.chipBg,
+                          color: palette.chipText,
+                          border: `1px solid ${palette.chipBorder}`,
+                        }}>
+                          {palette.label}
+                        </span>
+                      </div>
                       <div style={{ color: 'var(--nowa-text)', fontSize: 14, marginTop: 2 }}>{e.title}</div>
+                      {overdueDays > 0 && <div style={{ color: '#fb7185', fontSize: 14, marginTop: 2, fontWeight: 700 }}>초과 {overdueDays}일</div>}
                       {e.detail && <div style={{ color: 'var(--nowa-text-muted)', fontSize: 14, marginTop: 2 }}>{e.detail}</div>}
                       {e.actor && <div style={{ color: 'rgba(196,210,226,0.68)', fontSize: 14, marginTop: 2 }}>담당: {e.actor}</div>}
                     </div>
                     <Button size="small" type="text" danger icon={<DeleteOutlined />}
                       loading={deleting === e.id} onClick={() => handleDelete(e.id)} style={{ flexShrink: 0 }} />
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </Card>
         </div>
       </div>
 
-      {/* PM 등록 모달 */}
+      {/* PM ?깅줉 紐⑤떖 */}
       {showAdd && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1050,
@@ -842,8 +1178,8 @@ function PmCalendarBoard({ refreshKey }) {
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(245,158,11,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: 15 }}>PM 이력 등록 — {selectedDate.format('YYYY-MM-DD')}</span>
-              <Button size="small" type="text" onClick={() => setShowAdd(false)}>✕</Button>
+              <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: 15 }}>PM 이력 등록 · {selectedDate.format('YYYY-MM-DD')}</span>
+                <Button size="small" type="text" onClick={() => setShowAdd(false)}>닫기</Button>
             </div>
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
@@ -856,7 +1192,7 @@ function PmCalendarBoard({ refreshKey }) {
               </div>
               <div>
                 <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>제목</div>
-                <Input placeholder="예: Chamber PM 수행" value={addForm.title} onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))} />
+                <Input placeholder="예) Chamber PM 수행" value={addForm.title} onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))} />
               </div>
               <div>
                 <div style={{ fontSize: 14, color: 'var(--nowa-text-muted)', marginBottom: 5 }}>상세</div>
@@ -898,6 +1234,7 @@ function PmMachineBoard({ refreshKey, thresholds = {} }) {
           pm_base_count: Number(r.pm_base_count ?? 0),
           filter_count: Number(r.filter_count ?? 0),
           filter_base_count: Number(r.filter_base_count ?? 0),
+          run_per_day: Number(r.run_per_day ?? 0),
         })))
       }
     } finally {
@@ -910,8 +1247,12 @@ function PmMachineBoard({ refreshKey, thresholds = {} }) {
   const rows = useMemo(() => {
     const filtered = allRows.filter((r) => String(r.machine_no).includes(search.trim()) || r.description.toLowerCase().includes(search.toLowerCase().trim()))
     return [...filtered].sort((a, b) => {
-      const aRem = Math.min(a.pm_base_count - a.chamber_count, a.filter_base_count - a.filter_count)
-      const bRem = Math.min(b.pm_base_count - b.chamber_count, b.filter_base_count - b.filter_count)
+      const aPmDays = calcRemainingDays(a.pm_base_count, a.chamber_count, a.run_per_day)
+      const aFilterDays = calcRemainingDays(calcFilterHalfBase(a.filter_base_count), a.filter_count, a.run_per_day)
+      const bPmDays = calcRemainingDays(b.pm_base_count, b.chamber_count, b.run_per_day)
+      const bFilterDays = calcRemainingDays(calcFilterHalfBase(b.filter_base_count), b.filter_count, b.run_per_day)
+      const aRem = Math.min(aPmDays ?? Number.MAX_SAFE_INTEGER, aFilterDays ?? Number.MAX_SAFE_INTEGER)
+      const bRem = Math.min(bPmDays ?? Number.MAX_SAFE_INTEGER, bFilterDays ?? Number.MAX_SAFE_INTEGER)
       return aRem - bRem
     })
   }, [allRows, search])
@@ -920,7 +1261,7 @@ function PmMachineBoard({ refreshKey, thresholds = {} }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="호기 검색" style={{ width: 220 }} allowClear />
-        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>{rows.length}대 표시</span>
+        <span style={{ color: 'var(--nowa-text-muted)', fontSize: 14 }}>{rows.length}개 표시</span>
       </div>
       <Spin spinning={loading}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
@@ -934,6 +1275,7 @@ function PmMachineBoard({ refreshKey, thresholds = {} }) {
 function usePmCycleGlobal(onApplied) {
   const [pmBase, setPmBase]         = useState('')
   const [filterBase, setFilterBase] = useState('')
+  const [runPerDayBase, setRunPerDayBase] = useState('')
   const [fetched, setFetched]       = useState(false)
   const [saving, setSaving]         = useState(false)
 
@@ -944,6 +1286,7 @@ function usePmCycleGlobal(onApplied) {
         if (Array.isArray(data) && data.length > 0) {
           setPmBase(String(data[0].pm_base_count ?? ''))
           setFilterBase(String(data[0].filter_base_count ?? ''))
+          setRunPerDayBase(String(roundToDecimal(data[0].run_per_day ?? 0, 1)))
         }
         setFetched(true)
       })
@@ -953,7 +1296,11 @@ function usePmCycleGlobal(onApplied) {
   const handleApply = async () => {
     const pb = Number(pmBase)
     const fb = Number(filterBase)
-    if (isNaN(pb) || isNaN(fb) || pb < 0 || fb < 0) { message.warning('올바른 숫자를 입력하세요.'); return }
+    const rb = roundToDecimal(Number(runPerDayBase), 1)
+    if (!Number.isFinite(pb) || !Number.isFinite(fb) || !Number.isFinite(rb) || pb < 0 || fb < 0 || rb < 0) {
+      message.warning('올바른 숫자를 입력해주세요.')
+      return
+    }
     setSaving(true)
     try {
       const listRes = await authFetch('/api/mocvd/pm-counters')
@@ -965,130 +1312,98 @@ function usePmCycleGlobal(onApplied) {
         pm_base_count: pb,
         filter_count: m.filter_count,
         filter_base_count: fb,
+        run_per_day: rb,
       }))
       const res = await authFetch('/api/mocvd/pm-counters', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(items),
       })
-      if (!res.ok) throw new Error('저장 실패')
-      message.success(`전체 ${list.length}개 기기에 PM 주기 적용 완료`)
+      if (!res.ok) throw new Error('저장에 실패했습니다.')
+      message.success('전체 ' + list.length + '개 설비 PM 주기 적용 완료')
       onApplied?.()
     } catch (e) {
-      message.error(e.message || '저장 실패')
+      message.error(e.message || '저장에 실패했습니다.')
     } finally {
       setSaving(false)
     }
   }
 
-  return { pmBase, filterBase, setPmBase, setFilterBase, saving, handleApply, fetched }
+  return {
+    pmBase,
+    filterBase,
+    runPerDayBase,
+    setPmBase,
+    setFilterBase,
+    setRunPerDayBase,
+    saving,
+    handleApply,
+    fetched,
+  }
 }
 
 function PmSyncCard({ onSynced }) {
-  const [loading, setLoading]         = useState(false)
-  const [result, setResult]           = useState(null)
-  const [paths, setPaths]             = useState(['', '', ''])
-  const [pathSaving, setPathSaving]   = useState(false)
-  const [schedule, setSchedule]       = useState(['07:00', '19:00'])
-  const [schedSaving, setSchedSaving] = useState(false)
-  const [logs, setLogs]               = useState([])
-  const pollRef = useRef(null)
-  const [browseOpen, setBrowseOpen]   = useState(false)
-  const [browseIdx, setBrowseIdx]     = useState(null)
-  const [browsePath, setBrowsePath]   = useState('')
-  const [browseDirs, setBrowseDirs]   = useState([])
-  const [browseFiles, setBrowseFiles] = useState([])
-  const [browseParent, setBrowseParent] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [pathSaving, setPathSaving] = useState(false)
+  const [logs, setLogs] = useState([])
+  const [result, setResult] = useState(null)
+  const [paths, setPaths] = useState(['', '', ''])
+  const [schedule, setSchedule] = useState(['08:00', '20:00'])
+  const [browseOpen, setBrowseOpen] = useState(false)
   const [browseLoading, setBrowseLoading] = useState(false)
+  const [browseTargetIndex, setBrowseTargetIndex] = useState(-1)
+  const [browsePath, setBrowsePath] = useState('')
+  const [browseParent, setBrowseParent] = useState('')
+  const [browseDirs, setBrowseDirs] = useState([])
+  const [browseFiles, setBrowseFiles] = useState([])
 
   const fetchLogs = useCallback(() => {
     authFetch('/api/admin/sync-pm-counter/logs')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setLogs(data) })
+      .then((r) => r.json())
+      .then((data) => setLogs(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
+  const fetchPaths = useCallback(() => {
+    authFetch('/api/admin/sync-pm-counter/paths')
+      .then((r) => r.json())
+      .then((data) => {
+        const source = Array.isArray(data) ? data : Array.isArray(data?.paths) ? data.paths : []
+        const next = [source[0] || '', source[1] || '', source[2] || '']
+        setPaths(next)
+      })
+      .catch(() => {})
+  }, [])
+
+  const fetchSchedule = useCallback(() => {
+    authFetch('/api/admin/sync-pm-counter/schedule')
+      .then((r) => r.json())
+      .then((data) => {
+        const source = Array.isArray(data) ? data : Array.isArray(data?.times) ? data.times : []
+        const next = [source[0] || '08:00', source[1] || '20:00']
+        setSchedule(next)
+      })
       .catch(() => {})
   }, [])
 
   useEffect(() => {
-    authFetch('/api/admin/sync-pm-counter/paths')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setPaths(data) })
-      .catch(() => {})
-    authFetch('/api/admin/sync-pm-counter/schedule')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setSchedule(data) })
-      .catch(() => {})
     fetchLogs()
-    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
-  }, [fetchLogs])
+    fetchPaths()
+    fetchSchedule()
+  }, [fetchLogs, fetchPaths, fetchSchedule])
 
   const handleSaveSchedule = async () => {
-    setSchedSaving(true)
     try {
       const res = await authFetch('/api/admin/sync-pm-counter/schedule', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(schedule),
+        body: JSON.stringify({ times: schedule.filter(Boolean) }),
       })
-      if (!res.ok) throw new Error('저장 실패')
+      if (!res.ok) throw new Error('스케줄 저장 실패')
       message.success('스케줄 저장 완료')
-    } catch (e) { message.error(e.message) }
-    finally { setSchedSaving(false) }
-  }
-
-  const stopPolling = () => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
-  }
-
-  const startPolling = () => {
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await authFetch('/api/admin/sync-pm-counter/status')
-        const json = await res.json().catch(() => ({}))
-        if (!json.running) {
-          stopPolling()
-          setLoading(false)
-          if (json.result) {
-            setResult(json.result)
-            if (json.result.error_count === 0) {
-              message.success(`동기화 완료 — ${json.result.updated_count}개 호기 업데이트`)
-            } else {
-              message.warning(`동기화 완료 (경고 ${json.result.error_count}건)`)
-            }
-            onSynced?.()
-            fetchLogs()
-          }
-        }
-      } catch {
-        stopPolling(); setLoading(false); message.error('상태 확인 실패')
-      }
-    }, 2000)
-  }
-
-  const openBrowse = async (idx) => {
-    setBrowseIdx(idx)
-    setBrowseOpen(true)
-    await loadBrowse('')
-  }
-
-  const loadBrowse = async (path) => {
-    setBrowseLoading(true)
-    try {
-      const res = await authFetch(`/api/admin/file-browse?path=${encodeURIComponent(path)}`)
-      if (!res.ok) { message.error('접근할 수 없는 경로입니다.'); return }
-      const data = await res.json()
-      setBrowsePath(data.path)
-      setBrowseParent(data.parent)
-      setBrowseDirs(data.dirs)
-      setBrowseFiles(data.files)
-    } catch { message.error('파일 탐색 실패') }
-    finally { setBrowseLoading(false) }
-  }
-
-  const handleBrowseSelectFile = (fileName) => {
-    const sep = browsePath.endsWith('\\') || browsePath.endsWith('/') ? '' : '\\'
-    const fullPath = browsePath + sep + fileName
-    setPaths(prev => prev.map((v, idx) => idx === browseIdx ? fullPath : v))
-    setBrowseOpen(false)
+    } catch (e) {
+      message.error(e.message || '스케줄 저장 실패')
+    }
   }
 
   const handleSavePaths = async () => {
@@ -1097,23 +1412,82 @@ function PmSyncCard({ onSynced }) {
       const res = await authFetch('/api/admin/sync-pm-counter/paths', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paths),
+        body: JSON.stringify([paths[0] || '', paths[1] || '', paths[2] || '']),
       })
-      if (!res.ok) throw new Error('저장 실패')
+      if (!res.ok) throw new Error('경로 저장 실패')
       message.success('경로 저장 완료')
-    } catch (e) { message.error(e.message) }
-    finally { setPathSaving(false) }
+    } catch (e) {
+      message.error(e.message || '경로 저장 실패')
+    } finally {
+      setPathSaving(false)
+    }
+  }
+
+  const joinWindowsPath = (basePath, childName) => {
+    if (!basePath) return childName
+    const trimmed = basePath.endsWith('\\') || basePath.endsWith('/') ? basePath.slice(0, -1) : basePath
+    return trimmed + '\\' + childName
+  }
+
+  const loadBrowse = async (nextPath = '') => {
+    setBrowseLoading(true)
+    try {
+      const query = nextPath ? '?' + new URLSearchParams({ path: nextPath }).toString() : ''
+      const res = await authFetch('/api/admin/file-browse' + query)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || '파일 목록 조회 실패')
+      setBrowsePath(String(data.path || ''))
+      setBrowseParent(data.parent ?? '')
+      setBrowseDirs(Array.isArray(data.dirs) ? data.dirs : [])
+      setBrowseFiles(Array.isArray(data.files) ? data.files : [])
+    } catch (e) {
+      message.error(e.message || '파일 목록 조회 실패')
+    } finally {
+      setBrowseLoading(false)
+    }
+  }
+
+  const openBrowse = (targetIndex) => {
+    setBrowseTargetIndex(targetIndex)
+    setBrowseOpen(true)
+    const current = String(paths[targetIndex] || '').trim()
+    if (!current) {
+      loadBrowse('')
+      return
+    }
+    const slashIndex = Math.max(current.lastIndexOf('\\'), current.lastIndexOf('/'))
+    const base = slashIndex > 0 ? current.slice(0, slashIndex) : ''
+    loadBrowse(base)
   }
 
   const handleSync = async () => {
-    setLoading(true); setResult(null)
+    setLoading(true)
+    setResult(null)
     try {
       const res = await authFetch('/api/admin/sync-pm-counter', { method: 'POST' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.detail || '동기화 시작 실패')
-      if (json.status === 'running') message.info('이미 동기화가 진행 중입니다.')
-      startPolling()
-    } catch (e) { setLoading(false); message.error(e.message) }
+
+      const statusRes = await authFetch('/api/admin/sync-pm-counter/status')
+      const status = await statusRes.json().catch(() => ({}))
+      if (status?.result) {
+        setResult(status.result)
+        if ((status.result.error_count ?? 0) === 0) {
+          message.success('동기화 완료: ' + String(status.result.updated_count ?? 0) + '개 호기 업데이트')
+        } else {
+          message.warning('동기화 완료 (경고 ' + String(status.result.error_count ?? 0) + '건)')
+        }
+      } else {
+        message.info('동기화를 시작했습니다. 잠시 후 상태를 확인하세요.')
+      }
+
+      fetchLogs()
+      onSynced?.()
+    } catch (e) {
+      message.error(e.message || '동기화 실패')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -1123,19 +1497,26 @@ function PmSyncCard({ onSynced }) {
       style={{ marginBottom: 16 }}
       styles={{ body: { padding: '16px 20px' } }}
     >
-      {/* 경로 설정 */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>엑셀 파일 경로</div>
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>감시 파일 경로</div>
         {paths.map((p, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span style={{ width: 40, opacity: 0.5, fontSize: 14, flexShrink: 0 }}>파일 {i + 1}</span>
+            <span style={{ width: 46, color: 'rgba(226,232,240,0.9)', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>파일 {i + 1}</span>
             <Input
               value={p}
-              onChange={e => setPaths(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
-              placeholder={`예: \\\\서버\\공유폴더\\파일${i + 1}.xlsm`}
-              style={{ fontFamily: 'monospace', fontSize: 14 }}
+              onChange={(e) => setPaths((prev) => prev.map((v, idx) => (idx === i ? e.target.value : v)))}
+              placeholder={'파일 경로 ' + String(i + 1)}
+              style={{
+                fontFamily: 'monospace',
+                fontSize: 14,
+                background: 'rgba(15,23,42,0.92)',
+                color: '#e2e8f0',
+                border: '1px solid rgba(245,158,11,0.35)',
+              }}
             />
-            <Button icon={<FolderOpenOutlined />} onClick={() => openBrowse(i)} title="파일 열기" />
+            <Button icon={<FolderOpenOutlined />} onClick={() => openBrowse(i)}>
+              파일 선택
+            </Button>
           </div>
         ))}
         <Button size="small" onClick={handleSavePaths} loading={pathSaving} style={{ marginTop: 4 }}>
@@ -1143,191 +1524,153 @@ function PmSyncCard({ onSynced }) {
         </Button>
       </div>
 
-      {/* 파일 탐색 모달 */}
-      <Modal
-        title={<span><FolderOpenOutlined style={{ marginRight: 6 }} />파일 선택</span>}
-        open={browseOpen}
-        onCancel={() => setBrowseOpen(false)}
-        footer={null}
-        width={560}
-      >
-        <div style={{ marginBottom: 8, fontFamily: 'monospace', fontSize: 12, color: 'rgba(255,255,255,0.45)', wordBreak: 'break-all' }}>
-          {browsePath || '드라이브 선택'}
-        </div>
-        <Spin spinning={browseLoading}>
-          <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: 4 }}>
-            {browseParent !== null && (
-              <div
-                onClick={() => loadBrowse(browseParent)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderRadius: 6, color: 'rgba(255,255,255,0.55)' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <LeftOutlined style={{ fontSize: 11 }} /> 상위 폴더
-              </div>
-            )}
-            {browseDirs.map(d => (
-              <div
-                key={d}
-                onClick={() => loadBrowse((browsePath ? (browsePath.endsWith('\\') ? browsePath : browsePath + '\\') : '') + d)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderRadius: 6 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <FolderOutlined style={{ color: '#f59e0b' }} />
-                <span>{d}</span>
-              </div>
-            ))}
-            {browseFiles.map(f => (
-              <div
-                key={f}
-                onClick={() => handleBrowseSelectFile(f)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderRadius: 6 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.1)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <SaveOutlined style={{ color: '#4ade80' }} />
-                <span style={{ color: '#4ade80' }}>{f}</span>
-              </div>
-            ))}
-            {browseDirs.length === 0 && browseFiles.length === 0 && !browseLoading && (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
-                엑셀 파일이 없습니다
-              </div>
-            )}
-          </div>
-        </Spin>
-      </Modal>
-
-      {/* 자동 실행 시간 설정 */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>자동 실행 시간</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>자동 동기화 시각</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {schedule.map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <TimePicker
-                value={t ? dayjs(`2000-01-01T${t}:00`) : null}
+                value={t ? dayjs('2000-01-01T' + t + ':00') : null}
                 format="HH:mm"
                 size="small"
-                minuteStep={10}
-                onChange={(_, str) => setSchedule(prev => prev.map((v, idx) => idx === i ? str : v))}
-                style={{ width: 90 }}
+                onChange={(v) => {
+                  const hhmm = v ? v.format('HH:mm') : ''
+                  setSchedule((prev) => prev.map((x, idx) => (idx === i ? hhmm : x)))
+                }}
               />
-              {schedule.length > 1 && (
-                <Button
-                  size="small" type="text" danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => setSchedule(prev => prev.filter((_, idx) => idx !== i))}
-                />
-              )}
             </div>
           ))}
-          {schedule.length < 6 && (
-            <Button
-              size="small" icon={<PlusOutlined />}
-              onClick={() => setSchedule(prev => [...prev, '12:00'])}
-            >
-              추가
-            </Button>
-          )}
-          <Button
-            size="small" icon={<ClockCircleOutlined />}
-            loading={schedSaving} onClick={handleSaveSchedule}
-            type="primary" style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
-          >
-            시간 저장
-          </Button>
+          <Button size="small" onClick={handleSaveSchedule}>스케줄 저장</Button>
         </div>
       </div>
 
-      {/* 동기화 버튼 */}
-      <div style={{ marginBottom: result ? 16 : 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Button type="primary" icon={<SyncOutlined spin={loading} />} loading={loading} onClick={handleSync}
-          style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <Button type="primary" icon={<SyncOutlined />} loading={loading} onClick={handleSync} style={{ background: '#f59e0b', borderColor: '#f59e0b' }}>
           지금 동기화
         </Button>
-        <span style={{ fontSize: 14, opacity: 0.55 }}>
-          매일 {schedule.join(' / ')} 자동 실행 · 네트워크 드라이브 업무일지 → PM 카운터 DB 업데이트
-        </span>
+        <Button icon={<ReloadOutlined />} onClick={fetchLogs}>로그 새로고침</Button>
       </div>
 
       {result && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ opacity: 0.6, fontSize: 14 }}>마지막 동기화: {result.synced_at}</div>
-          {result.updated_count > 0 && (
-            <Alert type="success" icon={<CheckCircleOutlined />} showIcon
-              message={`${result.updated_count}개 호기 업데이트 완료`}
-              description={
-                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {result.updated.map((r) => (
-                    <Tag key={r.machine_no} color="green">{r.machine_no}호기 — PM: {r.chamber_count} / Filter: {r.filter_count}</Tag>
-                  ))}
-                </div>
-              }
-            />
+        <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {(result.updated_count ?? 0) > 0 && (
+            <Alert type="success" showIcon message={String(result.updated_count) + '개 호기 업데이트 완료'} />
           )}
-          {result.error_count > 0 && (
-            <Alert type="warning" icon={<WarningOutlined />} showIcon
-              message={`${result.error_count}건 경고`}
-              description={<ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
-                {result.errors.map((e, i) => <li key={i} style={{ fontSize: 14 }}>{e}</li>)}
-              </ul>}
-            />
-          )}
-          {result.updated_count === 0 && result.error_count === 0 && (
-            <Alert type="info" message="업데이트할 데이터가 없습니다." showIcon />
+          {(result.error_count ?? 0) > 0 && (
+            <Alert type="warning" showIcon message={String(result.error_count) + '건 경고'} />
           )}
         </div>
       )}
 
-      {/* 동기화 실행 로그 */}
-      {logs.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>실행 로그</div>
-          <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {logs.map((log) => {
-              const isOk = log.error_count === 0
-              return (
-                <div key={log.id} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 8,
-                  padding: '6px 10px', borderRadius: 6, fontSize: 14,
-                  background: isOk ? 'rgba(34,197,94,0.07)' : 'rgba(248,113,113,0.08)',
-                  border: `1px solid ${isOk ? 'rgba(34,197,94,0.18)' : 'rgba(248,113,113,0.2)'}`,
-                }}>
-                  <span style={{ color: isOk ? '#4ade80' : '#f87171', flexShrink: 0, fontSize: 14 }}>
-                    {isOk ? '✓' : '!'}
-                  </span>
-                  <span style={{ color: 'rgba(196,210,226,0.75)', flexShrink: 0 }}>{log.synced_at}</span>
-                  <span style={{
-                    flexShrink: 0, fontSize: 14, padding: '1px 6px', borderRadius: 10,
-                    background: log.triggered_by === 'auto' ? 'rgba(125,211,252,0.15)' : 'rgba(245,158,11,0.15)',
-                    color: log.triggered_by === 'auto' ? '#7dd3fc' : '#f59e0b',
-                  }}>
-                    {log.triggered_by === 'auto' ? '자동' : '수동'}
-                  </span>
-                  <span style={{ color: isOk ? '#86efac' : '#fca5a5' }}>
-                    {isOk
-                      ? `${log.updated_count}개 호기 업데이트`
-                      : `${log.updated_count}개 업데이트, 경고 ${log.error_count}건`}
-                  </span>
-                  {log.errors.length > 0 && (
-                    <span style={{ color: '#f87171', opacity: 0.75 }}>— {log.errors[0]}</span>
-                  )}
-                </div>
-              )
-            })}
+      <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {logs.map((log) => {
+          const isOk = (log.error_count ?? 0) === 0
+          return (
+            <div
+              key={log.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                padding: '6px 10px',
+                borderRadius: 6,
+                fontSize: 14,
+                background: isOk ? 'rgba(34,197,94,0.07)' : 'rgba(248,113,113,0.08)',
+                border: isOk ? '1px solid rgba(34,197,94,0.18)' : '1px solid rgba(248,113,113,0.2)',
+              }}
+            >
+              <span style={{ color: isOk ? '#86efac' : '#fca5a5' }}>
+                {(log.updated_count ?? 0) + '개 업데이트, 경고 ' + (log.error_count ?? 0) + '건'}
+              </span>
+              <span style={{ color: 'rgba(196,210,226,0.55)', fontSize: 12 }}>
+                {log.created_at ? dayjs(log.created_at).format('MM-DD HH:mm:ss') : '-'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      <Modal
+        title="파일 선택"
+        open={browseOpen}
+        onCancel={() => setBrowseOpen(false)}
+        footer={null}
+        width={720}
+      >
+        <Spin spinning={browseLoading}>
+          <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Button size="small" onClick={() => loadBrowse('')}>드라이브</Button>
+            <Button size="small" disabled={!browsePath} onClick={() => loadBrowse(browsePath)}>새로고침</Button>
+            <Button size="small" disabled={browseParent === null || browseParent === undefined} onClick={() => loadBrowse(String(browseParent || ''))}>상위 폴더</Button>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.75)' }}>{browsePath || '(드라이브 목록)'}</span>
           </div>
-        </div>
-      )}
+
+          <div style={{ border: '1px solid var(--nowa-border)', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ maxHeight: 340, overflowY: 'auto', background: 'rgba(15,23,42,0.6)' }}>
+              {!browseLoading && browseDirs.length === 0 && browseFiles.length === 0 && (
+                <div style={{ padding: 12, color: 'rgba(196,210,226,0.6)', fontSize: 14 }}>표시할 항목이 없습니다.</div>
+              )}
+
+              {browseDirs.map((dir) => (
+                <button
+                  key={'d:' + dir}
+                  type="button"
+                  onClick={() => loadBrowse(browsePath ? joinWindowsPath(browsePath, dir) : dir)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '9px 12px',
+                    border: 0,
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    background: 'transparent',
+                    color: '#cbd5e1',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  [DIR] {dir}
+                </button>
+              ))}
+
+              {browseFiles.map((file) => (
+                <button
+                  key={'f:' + file}
+                  type="button"
+                  onClick={() => {
+                    if (browseTargetIndex < 0) return
+                    const selected = browsePath ? joinWindowsPath(browsePath, file) : file
+                    setPaths((prev) => prev.map((v, idx) => (idx === browseTargetIndex ? selected : v)))
+                    setBrowseOpen(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '9px 12px',
+                    border: 0,
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    background: 'transparent',
+                    color: '#fde68a',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 700,
+                  }}
+                >
+                  [FILE] {file}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Spin>
+      </Modal>
     </Card>
   )
 }
-
 function PmSettingsCard({ onApplied, thresholds = {}, onChange }) {
-  // PM 주기 일괄 설정
-  const { pmBase, filterBase, setPmBase, setFilterBase, saving, handleApply, fetched } = usePmCycleGlobal(onApplied)
+  // PM 二쇨린 ?쇨큵 ?ㅼ젙
+  const { pmBase, filterBase, runPerDayBase, setPmBase, setFilterBase, setRunPerDayBase, saving, handleApply, fetched } = usePmCycleGlobal(onApplied)
 
-  // 상태 기준 설정
+  // ?곹깭 湲곗? ?ㅼ젙
   const { critical = 5, urgent = 20 } = thresholds
   const [localCritical, setLocalCritical] = useState(String(critical))
   const [localUrgent, setLocalUrgent] = useState(String(urgent))
@@ -1337,7 +1680,7 @@ function PmSettingsCard({ onApplied, thresholds = {}, onChange }) {
   const handleSaveThreshold = () => {
     const c = Number(localCritical)
     const u = Number(localUrgent)
-    if (!Number.isFinite(c) || c < 1 || !Number.isFinite(u) || u < 1) { message.warning('1 이상의 숫자를 입력하세요.'); return }
+    if (!Number.isFinite(c) || c < 1 || !Number.isFinite(u) || u < 1) { message.warning('1 이상의 숫자를 입력해주세요.'); return }
     if (c >= u) { message.warning('긴급 기준은 임박 기준보다 작아야 합니다.'); return }
     onChange({ critical: c, urgent: u })
     message.success('상태 기준이 저장되었습니다.')
@@ -1353,11 +1696,20 @@ function PmSettingsCard({ onApplied, thresholds = {}, onChange }) {
           <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b', whiteSpace: 'nowrap' }}>PM 주기 일괄 설정</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>PM 주기</span>
-            <Input value={pmBase} onChange={e => setPmBase(e.target.value)} style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+            <Input value={pmBase} onChange={e => setPmBase(e.target.value)} style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>건</span>} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>필터 주기</span>
-            <Input value={filterBase} onChange={e => setFilterBase(e.target.value)} style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+            <Input value={filterBase} onChange={e => setFilterBase(e.target.value)} style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>건</span>} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, color: 'rgba(196,210,226,0.7)', whiteSpace: 'nowrap' }}>Run per day</span>
+            <Input
+              value={runPerDayBase}
+              onChange={e => setRunPerDayBase(e.target.value)}
+              style={{ width: 110, fontFamily: 'monospace', fontWeight: 700 }}
+              suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>회/일</span>}
+            />
           </div>
           <Button type="primary" loading={saving} onClick={handleApply} style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}>전체 적용</Button>
         </div>
@@ -1369,11 +1721,11 @@ function PmSettingsCard({ onApplied, thresholds = {}, onChange }) {
           <span style={{ fontWeight: 700, fontSize: 14, color: '#818cf8', whiteSpace: 'nowrap' }}>상태 기준 설정</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 14, color: '#f87171', whiteSpace: 'nowrap', fontWeight: 600 }}>긴급 기준</span>
-            <Input value={localCritical} onChange={e => setLocalCritical(e.target.value)} onPressEnter={handleSaveThreshold} style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+            <Input value={localCritical} onChange={e => setLocalCritical(e.target.value)} onPressEnter={handleSaveThreshold} style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>일</span>} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 14, color: '#fbbf24', whiteSpace: 'nowrap', fontWeight: 600 }}>임박 기준</span>
-            <Input value={localUrgent} onChange={e => setLocalUrgent(e.target.value)} onPressEnter={handleSaveThreshold} style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>런</span>} />
+            <Input value={localUrgent} onChange={e => setLocalUrgent(e.target.value)} onPressEnter={handleSaveThreshold} style={{ width: 100, fontFamily: 'monospace', fontWeight: 700 }} suffix={<span style={{ fontSize: 14, opacity: 0.5 }}>일</span>} />
           </div>
           <Button onClick={handleSaveThreshold} style={{ background: '#6366f1', borderColor: '#6366f1', color: '#fff', fontWeight: 700 }}>기준 저장</Button>
         </div>
@@ -1403,6 +1755,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
             pm_base_count: Number(row.pm_base_count ?? 0),
             filter_count: Number(row.filter_count ?? 0),
             filter_base_count: Number(row.filter_base_count ?? 0),
+            run_per_day: Number(row.run_per_day ?? 0),
           }))
         : []
       setRows(nextRows)
@@ -1425,15 +1778,66 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
           row.chamber_count !== initial.chamber_count ||
           row.pm_base_count !== initial.pm_base_count ||
           row.filter_count !== initial.filter_count ||
-          row.filter_base_count !== initial.filter_base_count
+          row.filter_base_count !== initial.filter_base_count ||
+          Number(row.run_per_day ?? 0) !== Number(initial.run_per_day ?? 0)
         )
       }).length,
     [initialRows, rows],
   )
 
   const updateCount = useCallback((key, field, value) => {
-    setRows((prev) => prev.map((row) => (row.key === key ? { ...row, [field]: Number(value ?? 0) } : row)))
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.key !== key) return row
+        const nextValue =
+          field === 'run_per_day'
+            ? roundToDecimal(value, 1)
+            : Number(value ?? 0)
+        return { ...row, [field]: nextValue }
+      }),
+    )
   }, [])
+
+  const handleColumnPaste = useCallback((cellId, pastedText) => {
+    const [field, rowKey] = String(cellId ?? '').split(':')
+    if (!['pm_base_count', 'filter_base_count', 'run_per_day'].includes(field)) return false
+    const startIndex = rows.findIndex((row) => String(row.key) === String(rowKey))
+    if (startIndex < 0) return false
+
+    const values = String(pastedText ?? '')
+      .replace(/\r/g, '')
+      .split('\n')
+      .map((line) => line.split('\t')[0]?.trim() ?? '')
+      .filter((v) => v !== '')
+      .map((v) => Number(v.replace(/,/g, '')))
+
+    if (values.length === 0) return false
+
+    let applied = 0
+    setRows((prev) =>
+      prev.map((row, idx) => {
+        const valueIndex = idx - startIndex
+        if (valueIndex < 0 || valueIndex >= values.length) return row
+        const nextValueRaw = values[valueIndex]
+        const nextValue = field === 'run_per_day' ? roundToDecimal(nextValueRaw, 1) : nextValueRaw
+        if (!Number.isFinite(nextValue)) return row
+        applied += 1
+        return { ...row, [field]: nextValue }
+      }),
+    )
+
+      if (applied > 0) {
+        const label =
+          field === 'pm_base_count'
+            ? 'PM 기준 횟수'
+            : field === 'filter_base_count'
+              ? '필터 교체 기준 횟수'
+              : '하루 Run 가능 횟수'
+        message.success(label + ' ' + applied + '개 행에 붙여넣기 적용')
+        return true
+      }
+    return false
+  }, [rows])
 
   const chartRows = useMemo(
     () =>
@@ -1451,6 +1855,43 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
     setRows(initialRows.map((row) => ({ ...row })))
   }, [initialRows])
 
+  const handleCsvExport = useCallback(() => {
+    const header = ['호기', 'PM 기준 횟수', '필터 교체 기준 횟수', '필터 중간 교체', 'Run per day', '챔버사용횟수', '필터사용횟수', '챔버 PM 예상일', '필터 교체 예상일', '필터 중간 교체 예상일']
+    const lines = rows.map((row) => {
+      const machineLabel = formatMachineLabel(row.machine_no)
+      const pmBase = Number(row.pm_base_count ?? 0).toFixed(0)
+      const filterBase = Number(row.filter_base_count ?? 0).toFixed(0)
+      const filterHalf = Math.floor(Number(row.filter_base_count ?? 0) / 2).toFixed(0)
+      const runPerDay = Number(row.run_per_day ?? 0).toFixed(1)
+      const chamber = Number(row.chamber_count ?? 0).toFixed(0)
+      const filter = Number(row.filter_count ?? 0).toFixed(0)
+      const pmExpected = calcExpectedDate(row.pm_base_count, row.chamber_count, row.run_per_day)
+      const filterExpected = calcExpectedDate(row.filter_base_count, row.filter_count, row.run_per_day)
+      const filterHalfExpected = calcExpectedDate(Math.floor(Number(row.filter_base_count ?? 0) / 2), row.filter_count, row.run_per_day)
+      return [machineLabel, pmBase, filterBase, filterHalf, runPerDay, chamber, filter, pmExpected, filterExpected, filterHalfExpected]
+    })
+
+    const escapeCsv = (value) => {
+      const text = String(value ?? '')
+      if (text.includes('"') || text.includes(',') || text.includes('\n')) {
+        return '"' + text.replace(/"/g, '""') + '"'
+      }
+      return text
+    }
+
+    const csv = [header, ...lines].map((cols) => cols.map(escapeCsv).join(',')).join('\r\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'pm-input-' + dayjs().format('YYYYMMDD-HHmmss') + '.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    message.success('CSV 저장 완료')
+  }, [rows])
+
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
@@ -1460,6 +1901,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
         pm_base_count: Number(row.pm_base_count ?? 0),
         filter_count: Number(row.filter_count ?? 0),
         filter_base_count: Number(row.filter_base_count ?? 0),
+        run_per_day: roundToDecimal(row.run_per_day ?? 0, 1),
       }))
       const res = await authFetch('/api/mocvd/pm-counters', {
         method: 'PUT',
@@ -1468,13 +1910,13 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || 'PM 카운트 저장에 실패했습니다.')
+        throw new Error(err.detail || 'PM 카운터 저장에 실패했습니다.')
       }
-      message.success('PM 카운트를 저장했습니다.')
+      message.success('PM 카운터를 저장했습니다.')
       onSaved?.()
       fetchRows()
     } catch (error) {
-      message.error(error.message || 'PM 카운트 저장 중 오류가 발생했습니다.')
+      message.error(error.message || 'PM 카운터 저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }
@@ -1526,12 +1968,12 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
             return { ...row, ...imported }
           }),
         )
-        message.success(`CSV 반영 완료: ${updatedCount}대`)
+        message.success('CSV 반영 완료: ' + updatedCount + '대')
       } catch (error) {
         message.error(error.message || 'CSV 불러오기에 실패했습니다.')
       }
     }
-    reader.onerror = () => message.error('CSV 파일을 읽지 못했습니다.')
+    reader.onerror = () => message.error('CSV 파일을 읽을 수 없습니다.')
     reader.readAsText(file)
   }, [])
 
@@ -1549,11 +1991,12 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
               extra={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Button size="small" onClick={handleReset} disabled={loading || saving}>초기화</Button>
+                  <Button size="small" icon={<DownloadOutlined />} onClick={handleCsvExport} disabled={loading || rows.length === 0}>CSV 저장</Button>
                   <Button size="small" type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={loading}>저장</Button>
                 </div>
               }
             >
-              <PmInputSheet rows={rows} onChange={updateCount} />
+              <PmInputSheet rows={rows} onChange={updateCount} onColumnPaste={handleColumnPaste} />
             </Card>
           </Col>
           <Col xs={24} xl={6}>
@@ -1588,9 +2031,9 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                         const pmRate = row.pmBase > 0 ? (row.pm / row.pmBase) * 100 : 0
                         const filterRate = row.filterBase > 0 ? (row.filter / row.filterBase) * 100 : 0
                         return [
-                          `<span style="font-weight:800;color:#f59e0b">${row.label}</span>`,
-                          `<span style="color:#7dd3fc">■</span> 챔버사용횟수: <b>${row.pm}</b> / ${row.pmBase} <span style="color:#7dd3fc">(${pmRate.toFixed(1)}%)</span>`,
-                          `<span style="color:#fcd34d">■</span> 필터사용횟수: <b>${row.filter}</b> / ${row.filterBase} <span style="color:#fcd34d">(${filterRate.toFixed(1)}%)</span>`,
+                          '<span style="font-weight:800;color:#f59e0b">' + row.label + '</span>',
+                          '<span style="color:#7dd3fc">●</span> 챔버사용횟수: <b>' + row.pm + '</b> / ' + row.pmBase + ' <span style="color:#7dd3fc">(' + pmRate.toFixed(1) + '%)</span>',
+                          '<span style="color:#fcd34d">●</span> 필터사용횟수: <b>' + row.filter + '</b> / ' + row.filterBase + ' <span style="color:#fcd34d">(' + filterRate.toFixed(1) + '%)</span>',
                         ].join('<br/>')
                       },
                     },
@@ -1636,7 +2079,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                           formatter: ({ dataIndex, value }) => {
                             const row = chartRows[dataIndex]
                             const rate = row?.pmBase > 0 ? (Number(value) / row.pmBase) * 100 : 0
-                            return `${value} / ${row?.pmBase ?? 0} (${rate.toFixed(0)}%)`
+                            return String(value) + ' / ' + String(row?.pmBase ?? 0) + ' (' + rate.toFixed(0) + '%)'
                           },
                         },
                       },
@@ -1656,7 +2099,7 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
                           formatter: ({ dataIndex, value }) => {
                             const row = chartRows[dataIndex]
                             const rate = row?.filterBase > 0 ? (Number(value) / row.filterBase) * 100 : 0
-                            return `${value} / ${row?.filterBase ?? 0} (${rate.toFixed(0)}%)`
+                            return String(value) + ' / ' + String(row?.filterBase ?? 0) + ' (' + rate.toFixed(0) + '%)'
                           },
                         },
                       },
@@ -1706,13 +2149,16 @@ export default function PmPlan() {
   return (
     <Tabs
       activeKey={activeTab}
-      onChange={(key) => navigate(`/epi/mocvd/pm-plan?tab=${key}`)}
+        onChange={(key) => navigate('/epi/mocvd/pm-plan?tab=' + key)}
       tabBarStyle={tabBarStyle}
       items={[
-        { key: 'status',  label: <span><BarChartOutlined />  PM주기 현황판</span>,  children: <PmStatusBoard refreshKey={refreshKey} thresholds={thresholds} /> },
-        { key: 'machine', label: <span><AppstoreOutlined />  설비별 PM현황</span>,  children: <PmMachineBoard refreshKey={refreshKey} thresholds={thresholds} /> },
-        { key: 'input',   label: <span><EditOutlined />      PM주기 입력</span>,    children: <PmInputTab onSaved={handleSaved} thresholds={thresholds} onThresholdChange={handleThresholdChange} /> },
+        { key: 'status',  label: <span><BarChartOutlined /> PM주기 현황판</span>, children: <PmStatusBoard refreshKey={refreshKey} thresholds={thresholds} /> },
+        { key: 'machine', label: <span><AppstoreOutlined /> 설비별 PM현황</span>, children: <PmMachineBoard refreshKey={refreshKey} thresholds={thresholds} /> },
+        { key: 'input',   label: <span><EditOutlined /> PM주기 입력</span>, children: <PmInputTab onSaved={handleSaved} thresholds={thresholds} onThresholdChange={handleThresholdChange} /> },
       ]}
     />
   )
 }
+
+
+

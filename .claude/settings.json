@@ -26,7 +26,12 @@
       "Bash(find /c/Users/thstj/source/repos/EPIHome -type f \\\\\\(-name *.map -o -name *.sum -o -name *.csv \\\\\\))",
       "Bash(xargs ls:*)",
       "Read(//c/Users/thstj/.claude/projects/c--epi-web/memory/**)",
-      "WebFetch(domain:react.spruko.com)"
+      "WebFetch(domain:react.spruko.com)",
+      "Bash(.venv/Scripts/python.exe -c ':*)",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/auth/login\" -d \"username=admin&password=admin1234\" -H \"Content-Type: application/x-www-form-urlencoded\")",
+      "Bash(.venv/Scripts/python.exe -m uvicorn main:app --port 8000 --timeout-keep-alive 5)",
+      "Bash(curl -s http://localhost:8000/api/health)",
+      "Bash(curl -s -H 'Authorization: Bearer __TRACKED_VAR__' http://localhost:8000/api/mocvd/equipment-history)"
     ]
   }
 }

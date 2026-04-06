@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 
 from database import SessionLocal
-from models import CostItem, CostVendor, MocvdMachine, MocvdPmCounter, PurchaseRequest, RepairStatus, ShiftType, SourceType, SystemSetting, User
+from models import MocvdMachine, MocvdPmCounter, PersonnelMember, PersonnelVendor, ShiftType, SourceType, SystemSetting, User
 from auth import hash_password
 from schema_sync import print_sync_summary, sync_schema
 from source_status import DEFAULT_OVERDUE_DAYS, DEFAULT_URGENT_DAYS
@@ -20,13 +20,45 @@ from source_status import DEFAULT_OVERDUE_DAYS, DEFAULT_URGENT_DAYS
 DEFAULT_ADMIN_USERNAME = os.getenv("INIT_ADMIN_USERNAME", "admin")
 DEFAULT_ADMIN_PASSWORD = os.getenv("INIT_ADMIN_PASSWORD", "admin1234")
 
-DEFAULT_MACHINES = range(101, 237)
-DEFAULT_SOURCE_TYPES = ["TMGa", "TMIn", "TMAl", "NH3", "CP2Mg", "SiH4"]
+DEFAULT_MACHINES = [
+    101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
+    111, 112, 113, 114, 115, 116, 117, 118, 121, 122,
+    123, 124, 125, 126, 127, 128,
+    201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
+    211, 212, 213, 214, 215, 216, 217, 218, 219, 220,
+    221, 222, 223, 224, 225, 226, 227, 228, 229, 230,
+    231, 232, 233, 234, 235, 236,
+]
+DEFAULT_SOURCE_TYPES = [
+    {"name": "TMIn#1", "order_idx": 0, "is_active": True},
+    {"name": "TMin#2", "order_idx": 1, "is_active": True},
+    {"name": "CP2Mg",  "order_idx": 2, "is_active": True},
+    {"name": "TMGa#1", "order_idx": 3, "is_active": True},
+    {"name": "TMGa#2", "order_idx": 4, "is_active": True},
+    {"name": "TEGa",   "order_idx": 5, "is_active": True},
+    {"name": "TMAl#1", "order_idx": 6, "is_active": True},
+    {"name": "TMAI#2", "order_idx": 7, "is_active": True},
+]
 DEFAULT_SETTINGS = {
     "session_expire_minutes": "60",
     "source_status_overdue_days": str(DEFAULT_OVERDUE_DAYS),
     "source_status_urgent_days": str(DEFAULT_URGENT_DAYS),
 }
+DEFAULT_PERSONNEL_VENDORS = [
+    {"name": "미래엔지니어링", "contact_name": "목흥수", "contact_phone": "", "note": "", "is_active": True},
+    {"name": "서울바이오시스", "contact_name": "이광수", "contact_phone": "", "note": "", "is_active": True},
+]
+# vendor_name 기준으로 매핑 (init 시 vendor id를 동적으로 조회)
+DEFAULT_PERSONNEL_MEMBERS = [
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래1", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래2", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래3", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래4", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래5", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래6", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래7", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+    {"vendor_name": "미래엔지니어링", "employee_no": "", "name": "미래8", "department": "", "position": "", "phone": "", "shift": "", "training_due_date": "", "note": "", "is_active": True},
+]
 DEFAULT_SHIFT_TYPES = [
     {"name": "1",     "label": "주간",   "color": "#fbbf24", "bg_color": "rgba(245,158,11,0.18)",  "border_color": "rgba(245,158,11,0.4)",   "order_idx": 0},
     {"name": "2",     "label": "야간",   "color": "#4ade80", "bg_color": "rgba(34,197,94,0.22)",   "border_color": "rgba(34,197,94,0.4)",    "order_idx": 1},
@@ -37,32 +69,6 @@ DEFAULT_SHIFT_TYPES = [
     {"name": "반반차B","label": "반반차B","color": "#c4b5fd", "bg_color": "rgba(99,102,241,0.26)",  "border_color": "rgba(99,102,241,0.4)",   "order_idx": 6},
     {"name": "오후",  "label": "오후",   "color": "#e9d5ff", "bg_color": "rgba(168,85,247,0.26)",  "border_color": "rgba(168,85,247,0.4)",   "order_idx": 7},
     {"name": "교육",  "label": "교육",   "color": "#6ee7b7", "bg_color": "rgba(20,184,166,0.26)",  "border_color": "rgba(20,184,166,0.4)",   "order_idx": 8},
-]
-
-DEFAULT_COST_ITEMS = [
-    {"category": "소모품", "code": "MAT-001", "name": "MOCVD 필라멘트", "unit": "EA", "is_active": True},
-    {"category": "부품", "code": "PART-014", "name": "측정 장비 부품", "unit": "SET", "is_active": True},
-    {"category": "PM 자재", "code": "PM-003", "name": "정기 교체 자재", "unit": "BOX", "is_active": False},
-]
-DEFAULT_COST_VENDORS = [
-    {"vendor_code": "V-001", "vendor_name": "에코텍", "business_type": "MOCVD 부품", "manager": "김대리", "contact": "010-1111-2222", "is_active": True},
-    {"vendor_code": "V-002", "vendor_name": "한국씰", "business_type": "오링/씰", "manager": "박과장", "contact": "010-3333-4444", "is_active": True},
-    {"vendor_code": "V-003", "vendor_name": "진공소재", "business_type": "진공자재", "manager": "이차장", "contact": "010-5555-6666", "is_active": False},
-]
-DEFAULT_PURCHASE_REQUESTS = [
-    {"request_date": "2026-01-05", "material_code": "9520909", "item_name": "PAR ECO INNER FILAMENT", "quantity": 2, "vendor_name": "에코텍", "requester": "이정욱", "actual_draft_count": 0, "purchase_reason": "재고 부족으로 인한 구매", "approval_status": "기안 전", "draft_date": "", "receipt_date": "", "note": ""},
-    {"request_date": "2026-01-16", "material_code": "9520139", "item_name": "PAR ECO WIRE FILAMENT SUPPORT MIDDLE E46", "quantity": 100, "vendor_name": "에코텍", "requester": "이정욱", "actual_draft_count": 1, "purchase_reason": "재고 부족으로 인한 구매", "approval_status": "기안 완료", "draft_date": "2026-01-16", "receipt_date": "", "note": "발주진행중"},
-    {"request_date": "2026-01-16", "material_code": "9520166", "item_name": "PAR ECO O-RING AFLAS #2-217", "quantity": 100, "vendor_name": "에코텍", "requester": "이정욱", "actual_draft_count": 1, "purchase_reason": "재고 부족으로 인한 구매", "approval_status": "기안 완료", "draft_date": "2026-01-16", "receipt_date": "", "note": "발주진행중"},
-    {"request_date": "2026-02-10", "material_code": "9520689", "item_name": "PAR ECO O-RING NW80 (#340)", "quantity": 30, "vendor_name": "한국씰", "requester": "이정욱", "actual_draft_count": 1, "purchase_reason": "정전대비 PUMP 오링 구매", "approval_status": "기안 완료", "draft_date": "2026-02-19", "receipt_date": "", "note": ""},
-    {"request_date": "2026-03-05", "material_code": "9520327", "item_name": "PAR ECO GASKET VCR NI 3/4 IN", "quantity": 50, "vendor_name": "에코텍", "requester": "이정욱", "actual_draft_count": 0, "purchase_reason": "재고 부족으로 인한 구매", "approval_status": "기안 전", "draft_date": "", "receipt_date": "", "note": "발주 문의 필요"},
-]
-DEFAULT_REPAIR_STATUS = [
-    {"receipt_type": "수리중", "repair_status": "진행", "outbound_date": "2024-05-29", "inbound_date": "", "equipment_name": "재수리", "location": "ETCH", "chamber": "37", "material_code": "DHL00280", "material_name": "REP_EBARA PUMP_ESA25XW 기본O/H", "spec": "DHL00280", "vendor_name": "한국에바라", "vendor_code": "V-EBR-01", "repair_reason": "motor temp high alarm 발생"},
-    {"receipt_type": "수리중", "repair_status": "진행", "outbound_date": "2024-06-03", "inbound_date": "", "equipment_name": "재수리", "location": "ETCH", "chamber": "40", "material_code": "DHB00267", "material_name": "REP_EBARA PUMP_ESA25D_기본O/H", "spec": "DHB00267", "vendor_name": "한국에바라", "vendor_code": "V-EBR-01", "repair_reason": "motor temp high alarm 발생"},
-    {"receipt_type": "완료", "repair_status": "완료", "outbound_date": "2024-06-12", "inbound_date": "2024-08-19", "equipment_name": "POWER SUPPLY", "location": "MOCVD", "chamber": "128", "material_code": "", "material_name": "POWER SUPPLY", "spec": "S/N: 1017A08677", "vendor_name": "와이텍", "vendor_code": "V-WIT-02", "repair_reason": "온도컨트롤 불량"},
-    {"receipt_type": "완료", "repair_status": "완료", "outbound_date": "2024-06-18", "inbound_date": "2024-07-12", "equipment_name": "PRESSURE CONTROLLER (PC)", "location": "MOCVD", "chamber": "78", "material_code": "", "material_name": "PRESSURE CONTROLLER (PC)", "spec": "S/N 016669024", "vendor_name": "써미그린", "vendor_code": "V-SMG-04", "repair_reason": "통신불량"},
-    {"receipt_type": "수리중", "repair_status": "무상수리", "outbound_date": "2024-06-18", "inbound_date": "", "equipment_name": "수리_ASM 192 T2D Detector", "location": "검사실", "chamber": "", "material_code": "", "material_name": "수리_ASM 192 T2D Detector", "spec": "HLD1403709", "vendor_name": "(주)투엔에스테크놀러지", "vendor_code": "V-TNS-07", "repair_reason": "진공 못잡음"},
-    {"receipt_type": "입고예정", "repair_status": "개발 박치훈", "outbound_date": "2024-06-28", "inbound_date": "2025-03-17", "equipment_name": "ACP15PUMP", "location": "개발", "chamber": "117", "material_code": "AC700314", "material_name": "ACP15PUMP", "spec": "AC700314", "vendor_name": "파이퍼베큠 코리아(유)", "vendor_code": "V-PFE-09", "repair_reason": "개발용 예비품 수리"},
 ]
 
 
@@ -101,8 +107,8 @@ def ensure_source_types(db) -> None:
         print(f"[skip] source types preserved: {len(existing_rows)} existing rows")
         return
 
-    for order_idx, name in enumerate(DEFAULT_SOURCE_TYPES):
-        db.add(SourceType(name=name, order_idx=order_idx, is_active=True))
+    for item in DEFAULT_SOURCE_TYPES:
+        db.add(SourceType(**item))
 
     print(f"[ok] source types ensured: +{len(DEFAULT_SOURCE_TYPES)} / total target {len(DEFAULT_SOURCE_TYPES)}")
 
@@ -153,6 +159,7 @@ def ensure_pm_counters(db) -> None:
                 pm_base_count=0.0,
                 filter_count=0.0,
                 filter_base_count=0.0,
+                run_per_day=0.0,
             )
         )
         added += 1
@@ -160,41 +167,28 @@ def ensure_pm_counters(db) -> None:
     print(f"[ok] pm counters ensured: +{added} / total active machines {len(active_machine_nos)}")
 
 
-def ensure_cost_items(db) -> None:
-    existing = {row.code: row for row in db.query(CostItem).all()}
+
+def ensure_personnel(db) -> None:
+    existing_vendors = {row.name: row for row in db.query(PersonnelVendor).all()}
+    for item in DEFAULT_PERSONNEL_VENDORS:
+        if item["name"] not in existing_vendors:
+            vendor = PersonnelVendor(**item)
+            db.add(vendor)
+            db.flush()
+            existing_vendors[item["name"]] = vendor
+    print(f"[ok] personnel vendors ensured / total target {len(DEFAULT_PERSONNEL_VENDORS)}")
+
+    existing_members = {(row.vendor_id, row.name) for row in db.query(PersonnelMember).all()}
     added = 0
-    for item in DEFAULT_COST_ITEMS:
-        row = existing.get(item["code"])
-        if row is None:
-            db.add(CostItem(**item))
-            added += 1
-    print(f"[ok] cost items ensured: +{added} / total target {len(DEFAULT_COST_ITEMS)}")
-
-
-def ensure_cost_vendors(db) -> None:
-    existing = {row.vendor_code: row for row in db.query(CostVendor).all()}
-    added = 0
-    for item in DEFAULT_COST_VENDORS:
-        row = existing.get(item["vendor_code"])
-        if row is None:
-            db.add(CostVendor(**item))
-            added += 1
-    print(f"[ok] cost vendors ensured: +{added} / total target {len(DEFAULT_COST_VENDORS)}")
-
-
-def ensure_purchase_requests(db) -> None:
-    existing = {
-        (row.request_date, row.material_code, row.item_name): row
-        for row in db.query(PurchaseRequest).all()
-    }
-    added = 0
-    for item in DEFAULT_PURCHASE_REQUESTS:
-        key = (item["request_date"], item["material_code"], item["item_name"])
-        if key in existing:
+    for item in DEFAULT_PERSONNEL_MEMBERS:
+        vendor = existing_vendors.get(item["vendor_name"])
+        if not vendor:
             continue
-        db.add(PurchaseRequest(**item))
-        added += 1
-    print(f"[ok] purchase requests ensured: +{added} / total target {len(DEFAULT_PURCHASE_REQUESTS)}")
+        if (vendor.id, item["name"]) not in existing_members:
+            data = {k: v for k, v in item.items() if k != "vendor_name"}
+            db.add(PersonnelMember(vendor_id=vendor.id, **data))
+            added += 1
+    print(f"[ok] personnel members ensured: +{added} / total target {len(DEFAULT_PERSONNEL_MEMBERS)}")
 
 
 def ensure_shift_types(db) -> None:
@@ -206,20 +200,6 @@ def ensure_shift_types(db) -> None:
             added += 1
     print(f"[ok] shift types ensured: +{added} / total target {len(DEFAULT_SHIFT_TYPES)}")
 
-
-def ensure_repair_status(db) -> None:
-    existing = {
-        (row.outbound_date, row.material_code, row.material_name, row.chamber): row
-        for row in db.query(RepairStatus).all()
-    }
-    added = 0
-    for item in DEFAULT_REPAIR_STATUS:
-        key = (item["outbound_date"], item["material_code"], item["material_name"], item["chamber"])
-        if key in existing:
-            continue
-        db.add(RepairStatus(**item))
-        added += 1
-    print(f"[ok] repair status ensured: +{added} / total target {len(DEFAULT_REPAIR_STATUS)}")
 
 
 def main() -> None:
@@ -233,10 +213,7 @@ def main() -> None:
         ensure_source_types(db)
         ensure_system_settings(db)
         ensure_pm_counters(db)
-        ensure_cost_items(db)
-        ensure_cost_vendors(db)
-        ensure_purchase_requests(db)
-        ensure_repair_status(db)
+        ensure_personnel(db)
         ensure_shift_types(db)
         db.commit()
         print("[done] initial data setup completed")

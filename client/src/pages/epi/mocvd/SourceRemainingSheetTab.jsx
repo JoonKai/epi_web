@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Switch } from 'antd'
-import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import { DownloadOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -387,6 +387,53 @@ export default function SourceRemainingSheetTab() {
     }
   }
 
+  const handleCsvExport = useCallback(() => {
+    const header = ['구분', ...columns.map(({ machineNo, sourceName }) => `${formatMachineLabel(machineNo)} ${sourceName}`)]
+    const rows = []
+
+    EDITABLE_ROWS.forEach(([label, field]) => {
+      rows.push([
+        label,
+        ...columns.map(({ machineNo, sourceName }) => {
+          const key = `${machineNo}:${sourceName}`
+          return cellData[key]?.[field] ?? 0
+        }),
+      ])
+    })
+
+    dateRows.forEach(({ label, daysAhead }) => {
+      rows.push([
+        label,
+        ...columns.map(({ machineNo, sourceName }) => {
+          const key = `${machineNo}:${sourceName}`
+          const cell = cellData[key] ?? {}
+          const remaining = Number(cell.remaining ?? 0)
+          const dailyUsage = Number(cell.daily_usage ?? 0)
+          if (dailyUsage === 0) return '-'
+          return Math.max(0, remaining - daysAhead * dailyUsage)
+        }),
+      ])
+    })
+
+    const escapeCsv = (value) => {
+      const text = String(value ?? '')
+      if (text.includes('"') || text.includes(',') || text.includes('\n')) return `"${text.replace(/"/g, '""')}"`
+      return text
+    }
+
+    const csv = [header, ...rows].map((line) => line.map(escapeCsv).join(',')).join('\r\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `source-remaining-${dayjs().format('YYYYMMDD-HHmmss')}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    message.success('CSV 저장 완료')
+  }, [cellData, columns, dateRows])
+
   const getTodayMinScrollTop = useCallback(() => {
     const row = todayRowRef.current
     if (!row) return 0
@@ -459,6 +506,7 @@ export default function SourceRemainingSheetTab() {
               <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[30, 60, 90, 120, 150, 180].map((value) => ({ value, label: `${value}일` }))} />
             </div>
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
+            <Button icon={<DownloadOutlined />} onClick={handleCsvExport} disabled={columns.length === 0}>CSV 저장</Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
           </Space>
         </div>
