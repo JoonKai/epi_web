@@ -572,7 +572,7 @@ export default function MocvdScheduler() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(196,210,226,0.5)', whiteSpace: 'nowrap' }}>그룹</span>
             <label onClick={() => setFilterGroupIds(null)} style={{ fontSize: 14, fontWeight: 700, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', userSelect: 'none', transition: 'all 0.15s', color: filterGroupIds === null ? '#f59e0b' : 'rgba(196,210,226,0.45)', background: filterGroupIds === null ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${filterGroupIds === null ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.08)'}` }}>전체</label>
-            {groups.filter(g => g.level >= 2).map(g => {
+            {groups.filter(g => g.level >= 1).map(g => {
               const active = filterGroupIds?.has(g.id)
               return (
                 <label key={g.id} onClick={() => setFilterGroupIds(prev => { const next = new Set(prev ?? []); if (next.has(g.id)) { next.delete(g.id); return next.size === 0 ? null : next } next.add(g.id); return next })}
@@ -697,7 +697,7 @@ export default function MocvdScheduler() {
                   .sort((a, b) => String(a.machine_no).localeCompare(String(b.machine_no), undefined, { numeric: true }))
 
                 const midGroupMap = {}
-                groups.filter(g => g.level >= 2).forEach(g => {
+                groups.filter(g => g.level >= 1).forEach(g => {
                   g.machine_nos.forEach(no => { midGroupMap[no] = g })
                 })
 
@@ -823,7 +823,7 @@ export default function MocvdScheduler() {
                 }
 
                 const ungrouped = activeMachines.filter(m => !midGroupMap[m.machine_no])
-                if (showUnassigned && ungrouped.length > 0) {
+                if (showUnassigned && ungrouped.length > 0 && filterGroupIds === null) {
                   rows.push(
                     <tr key="grp-unassigned">
                       <td colSpan={monthDays.length + 1} style={{
