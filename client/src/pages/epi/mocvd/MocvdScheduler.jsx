@@ -61,14 +61,11 @@ function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays = 
   }
 
   if (config.includePm) {
-    const sourceMap = {}
-    ;(sourceStatus?.events || []).forEach(ev => {
-      if (ev.source_label === 'NH3' && ev.daily_usage > 0) sourceMap[ev.machine_no] = ev.daily_usage
-    })
     pmCounters.forEach(row => {
       const pmRem = (row.pm_base_count || 0) - (row.chamber_count || 0)
-      const dailyRate = sourceMap[row.machine_no] || 1
-      const daysLeft = Math.ceil(pmRem / dailyRate)
+      const runPerDay = Number(row.run_per_day || 0)
+      if (runPerDay <= 0) return
+      const daysLeft = Math.ceil(pmRem / runPerDay)
       const dateStr = today.add(Math.max(0, daysLeft), 'day').format('YYYY-MM-DD')
       schedule.push({
         event_type: 'pm', machine_no: row.machine_no, title: 'PM 정비',
@@ -79,18 +76,15 @@ function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays = 
   }
 
   if (config.includeFilter) {
-    const sourceMap = {}
-    ;(sourceStatus?.events || []).forEach(ev => {
-      if (ev.source_label === 'NH3' && ev.daily_usage > 0) sourceMap[ev.machine_no] = ev.daily_usage
-    })
     pmCounters.forEach(row => {
       const filterBase = Number(row.filter_base_count || 0)
       const filterCount = Number(row.filter_count || 0)
       const filterHalfBase = Math.floor(filterBase / 2)
-      const dailyRate = sourceMap[row.machine_no] || 1
+      const runPerDay = Number(row.run_per_day || 0)
+      if (runPerDay <= 0) return
 
       const fullRem = filterBase - filterCount
-      const fullDaysLeft = Math.ceil(fullRem / dailyRate)
+      const fullDaysLeft = Math.ceil(fullRem / runPerDay)
       const fullDateStr = today.add(Math.max(0, fullDaysLeft), 'day').format('YYYY-MM-DD')
       schedule.push({
         event_type: 'filter', machine_no: row.machine_no, title: '필터 교체',
@@ -100,7 +94,7 @@ function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays = 
 
       if (filterHalfBase > 0 && filterHalfBase !== filterBase) {
         const halfRem = filterHalfBase - filterCount
-        const halfDaysLeft = Math.ceil(halfRem / dailyRate)
+        const halfDaysLeft = Math.ceil(halfRem / runPerDay)
         const halfDateStr = today.add(Math.max(0, halfDaysLeft), 'day').format('YYYY-MM-DD')
         schedule.push({
           event_type: 'filter', machine_no: row.machine_no, title: 'Half',

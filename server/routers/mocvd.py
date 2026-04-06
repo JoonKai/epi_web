@@ -118,6 +118,7 @@ class PmCounterUpdateItem(BaseModel):
     pm_base_count: float = 0.0
     filter_count: float = 0.0
     filter_base_count: float = 0.0
+    run_per_day: float = 0.0
 
 
 def _can_manage_handover_note(current_user, row: MocvdHandoverNote) -> bool:
@@ -176,6 +177,7 @@ def get_pm_counters(db: Session = Depends(get_db), _=Depends(get_current_user)):
                 "pm_base_count": row.pm_base_count if row and row.pm_base_count is not None else 0.0,
                 "filter_count": row.filter_count if row and row.filter_count is not None else 0.0,
                 "filter_base_count": row.filter_base_count if row and row.filter_base_count is not None else 0.0,
+                "run_per_day": row.run_per_day if row and row.run_per_day is not None else 0.0,
                 "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M") if row and row.updated_at else None,
             }
         )
@@ -204,6 +206,7 @@ def update_pm_counters(items: list[PmCounterUpdateItem], db: Session = Depends(g
             row.pm_base_count = item.pm_base_count
             row.filter_count = item.filter_count
             row.filter_base_count = item.filter_base_count
+            row.run_per_day = item.run_per_day
         else:
             db.add(
                 MocvdPmCounter(
@@ -212,6 +215,7 @@ def update_pm_counters(items: list[PmCounterUpdateItem], db: Session = Depends(g
                     pm_base_count=item.pm_base_count,
                     filter_count=item.filter_count,
                     filter_base_count=item.filter_base_count,
+                    run_per_day=item.run_per_day,
                 )
             )
         updated += 1
