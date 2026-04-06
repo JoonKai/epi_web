@@ -279,6 +279,8 @@ export default function MocvdScheduler() {
   const [autoGenOpen, setAutoGenOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [applyGroup, setApplyGroup] = useState(false)
+  const [draggedEvent, setDraggedEvent] = useState(null)
+  const [dragOverCell, setDragOverCell] = useState(null) // 'machineNo:dateStr'
 
   // ?꾪꽣 議곌굔
   const [filterTypes, setFilterTypes] = useState(Object.keys(EVENT_CONFIG).reduce((acc, k) => ({ ...acc, [k]: true }), {}))
@@ -408,7 +410,7 @@ export default function MocvdScheduler() {
 
   const saveGeneratedEvents = async () => {
     if (generatedEvents.length === 0) {
-      message.warning('적용된 자동 생성 일정이 없습니다.')
+      message.info('자동 생성 일정이 없습니다. 먼저 자동 생성을 실행해주세요.')
       return
     }
     setSavingGenerated(true)
@@ -479,9 +481,9 @@ export default function MocvdScheduler() {
           body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error()
-        message.success('?섏젙?덉뒿?덈떎.')
+        message.success('수정했습니다.')
       } else {
-        // 洹몃９ ?꾩껜 ?곸슜: 媛숈? 洹몃９??紐⑤뱺 ?멸린???숈씪 ?대깽???앹꽦
+        // 그룹 일괄 적용: 선택한 그룹의 모든 호기에 일정 생성
         const group = applyGroup && values.machine_no ? machineGroupMap[values.machine_no] : null
         const targetMachineNos = group ? group.machine_nos : [values.machine_no]
         for (const no of targetMachineNos) {
@@ -491,20 +493,38 @@ export default function MocvdScheduler() {
           })
           if (!res.ok) throw new Error()
         }
-        message.success(group ? `洹몃９ ${group.machine_nos.length}????쇱젙??異붽??덉뒿?덈떎.` : '?쇱젙??異붽??덉뒿?덈떎.')
+        message.success(group ? `그룹 ${group.machine_nos.length}대에 일정을 추가했습니다.` : '일정을 추가했습니다.')
       }
       setManualOpen(false)
       setApplyGroup(false)
       fetchAll()
-    } catch { message.error('??μ뿉 ?ㅽ뙣?덉뒿?덈떎.') }
+    } catch { message.error('저장에 실패했습니다.') }
   }
 
   const handleDelete = async (id) => {
     try {
       await authFetch(`/api/mocvd/equipment-history/${id}`, { method: 'DELETE' })
-      message.success('??젣?덉뒿?덈떎.')
+      message.success('삭제했습니다.')
       fetchAll()
-    } catch { message.error('??젣???ㅽ뙣?덉뒿?덈떎.') }
+    } catch { message.error('삭제에 실패했습니다.') }
+  }
+
+  const handleDrop = async (machineNo, dateStr) => {
+    setDragOverCell(null)
+    if (!draggedEvent) return
+    const ev = draggedEvent
+    setDraggedEvent(null)
+    const newDate = dateStr
+    const oldDate = ev.occurred_at?.slice(0, 10)
+    if (newDate === oldDate && machineNo === ev.machine_no) return
+    try {
+      const res = await authFetch(`/api/mocvd/equipment-history/${ev.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...ev, machine_no: machineNo, occurred_at: newDate + 'T00:00:00' }),
+      })
+      if (!res.ok) throw new Error()
+      fetchAll()
+    } catch { message.error('이동에 실패했습니다.') }
   }
 
   const machineOptions = machines.filter(m => m.is_active).map(m => ({ label: formatMachineLabel(m.machine_no), value: m.machine_no }))
@@ -602,8 +622,8 @@ export default function MocvdScheduler() {
             ><RobotOutlined /> 자동 생성</button>
             <button
               onClick={saveGeneratedEvents}
-              disabled={generatedEvents.length === 0 || savingGenerated}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: generatedEvents.length === 0 || savingGenerated ? 'default' : 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(74,222,128,0.45)', background: 'rgba(74,222,128,0.12)', color: generatedEvents.length === 0 || savingGenerated ? 'rgba(74,222,128,0.35)' : '#4ade80' }}
+              disabled={savingGenerated}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: savingGenerated ? 'default' : 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(74,222,128,0.45)', background: 'rgba(74,222,128,0.12)', color: savingGenerated ? 'rgba(74,222,128,0.35)' : '#4ade80' }}
             >
               {savingGenerated ? '저장 중...' : `전체 저장${generatedEvents.length > 0 ? `(${generatedEvents.length})` : ''}`}
             </button>
@@ -667,14 +687,16 @@ export default function MocvdScheduler() {
                   const isHoliday = !!holidays[dateStr]
                   const isSun = dow === 0
                   const isSat = dow === 6
+                  const isDragCol = dragOverCell?.endsWith(`:${dateStr}`)
                   return (
                     <th key={dateStr} style={{
                       position: 'sticky', top: 0, zIndex: 10,
-                      background: isToday ? 'rgba(245,158,11,0.22)' : isHoliday ? 'rgba(248,113,113,0.13)' : isSun ? 'rgba(248,113,113,0.08)' : isSat ? 'rgba(125,211,252,0.08)' : '#1a1f2c',
+                      background: isDragCol ? 'rgba(74,222,128,0.2)' : isToday ? 'rgba(245,158,11,0.22)' : isHoliday ? 'rgba(248,113,113,0.13)' : isSun ? 'rgba(248,113,113,0.08)' : isSat ? 'rgba(125,211,252,0.08)' : '#1a1f2c',
                       padding: '5px 2px', textAlign: 'center',
-                      borderBottom: '2px solid rgba(245,158,11,0.45)',
+                      borderBottom: isDragCol ? '2px solid rgba(74,222,128,0.8)' : '2px solid rgba(245,158,11,0.45)',
                       borderLeft: '1px solid rgba(245,158,11,0.26)',
-                      color: isToday ? '#f59e0b' : isSun || isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,226,0.6)',
+                      color: isDragCol ? '#4ade80' : isToday ? '#f59e0b' : isSun || isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,226,0.6)',
+                      transition: 'background 0.1s',
                     }}>
                       <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>{d.date()}</div>
                       <div style={{ fontSize: 14, opacity: 0.8 }}>{WEEK_DAYS[dow]}</div>
@@ -734,11 +756,13 @@ export default function MocvdScheduler() {
                       <tr key={`grp-${grp.id}-${machineNo}`}>
                         <td style={{
                           position: 'sticky', left: 0, zIndex: 2,
-                          background: stickyBg,
-                          padding: '4px 10px', fontSize: 14, fontWeight: 700, color: '#fbbf24',
+                          background: dragOverCell?.startsWith(`${machineNo}:`) ? 'rgba(74,222,128,0.15)' : stickyBg,
+                          padding: '4px 10px', fontSize: 14, fontWeight: 700,
+                          color: dragOverCell?.startsWith(`${machineNo}:`) ? '#4ade80' : '#fbbf24',
                           borderBottom: '1px solid rgba(245,158,11,0.42)',
                           borderRight: '2px solid rgba(245,158,11,0.4)',
                           whiteSpace: 'nowrap',
+                          transition: 'background 0.1s, color 0.1s',
                         }}>
                           {formatMachineLabel(machineNo)}
                         </td>
@@ -753,17 +777,24 @@ export default function MocvdScheduler() {
                           const singleEvents = cellEvents.filter(e => !e.spanTotal || e.spanTotal === 1)
                           const hasFromLeft = spanEvents.some(e => e.spanRole === 'mid' || e.spanRole === 'end')
                           const hasToRight = spanEvents.some(e => e.spanRole === 'start' || e.spanRole === 'mid')
-                          const cellBg = isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.05)' : rowBg
+                          const cellKey = `${machineNo}:${dateStr}`
+                          const isDragOver = dragOverCell === cellKey
+                          const cellBg = isDragOver ? 'rgba(74,222,128,0.15)' : isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.05)' : rowBg
                           return (
                             <td key={dateStr}
                               style={{
                                 padding: 0, background: cellBg,
                                 borderBottom: '1px solid rgba(245,158,11,0.42)',
                                 borderLeft: '1px solid rgba(245,158,11,0.22)',
+                                outline: isDragOver ? '2px solid rgba(74,222,128,0.7)' : 'none',
                                 cursor: 'default',
                                 verticalAlign: 'top', height: 30,
                                 overflow: 'visible', position: 'relative',
+                                transition: 'background 0.1s',
                               }}
+                              onDragOver={e => { e.preventDefault(); setDragOverCell(cellKey) }}
+                              onDragLeave={() => setDragOverCell(null)}
+                              onDrop={() => handleDrop(machineNo, dateStr)}
                               onMouseLeave={e => { e.currentTarget.style.background = cellBg }}
                             >
                               {spanEvents.map(ev => {
@@ -773,8 +804,11 @@ export default function MocvdScheduler() {
                                 const ml = hasFromLeft ? -1 : 2, mr = hasToRight ? -1 : 2
                                 return (
                                   <div key={ev.id + ':' + role}
+                                    draggable={isStart && !!ev.id && !String(ev.id).startsWith('draft')}
+                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
+                                    onDragEnd={() => setDragOverCell(null)}
                                     onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
-                                    title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}` : undefined}
+                                    title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}` : undefined}
                                     style={{
                                       fontSize: 14, fontWeight: 700,
                                       borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
@@ -785,7 +819,7 @@ export default function MocvdScheduler() {
                                       borderBottom: `1px solid ${cfg.border}`,
                                       borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
                                       borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
-                                      cursor: isStart ? 'pointer' : 'default',
+                                      cursor: isStart ? 'grab' : 'default',
                                       whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
                                     }}
                                   >{`${cfg.label} ${ev.spanDay}`}</div>
@@ -793,16 +827,20 @@ export default function MocvdScheduler() {
                               })}
                               {singleEvents.map(ev => {
                                 const cfg = evtCfg(ev)
+                                const isDraft = String(ev.id).startsWith('draft')
                                 return (
                                   <div key={ev.id}
+                                    draggable={!isDraft}
+                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
+                                    onDragEnd={() => setDragOverCell(null)}
                                     onClick={e => { e.stopPropagation(); openEdit(ev) }}
-                                    title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}`}
+                                    title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}`}
                                     style={{
                                       fontSize: 14, fontWeight: 700, borderRadius: 2,
                                       padding: '1px 3px', margin: '2px 2px 1px',
                                       color: cfg.color, background: cfg.bg,
                                       border: `1px solid ${cfg.border}`,
-                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                      cursor: isDraft ? 'pointer' : 'grab', whiteSpace: 'nowrap',
                                       overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
                                     }}
                                   >{cfg.label}</div>
@@ -837,11 +875,13 @@ export default function MocvdScheduler() {
                       <tr key={m.machine_no}>
                         <td style={{
                           position: 'sticky', left: 0, zIndex: 2,
-                          background: stickyBg,
-                          padding: '4px 10px', fontSize: 14, fontWeight: 700, color: '#fbbf24',
+                          background: dragOverCell?.startsWith(`${m.machine_no}:`) ? 'rgba(74,222,128,0.15)' : stickyBg,
+                          padding: '4px 10px', fontSize: 14, fontWeight: 700,
+                          color: dragOverCell?.startsWith(`${m.machine_no}:`) ? '#4ade80' : '#fbbf24',
                           borderBottom: '1px solid rgba(245,158,11,0.42)',
                           borderRight: '2px solid rgba(245,158,11,0.4)',
                           whiteSpace: 'nowrap',
+                          transition: 'background 0.1s, color 0.1s',
                         }}>
                           {formatMachineLabel(m.machine_no)}
                         </td>
@@ -856,17 +896,25 @@ export default function MocvdScheduler() {
                           const singleEvents = cellEvents.filter(e => !e.spanTotal || e.spanTotal === 1)
                           const hasFromLeft = spanEvents.some(e => e.spanRole === 'mid' || e.spanRole === 'end')
                           const hasToRight = spanEvents.some(e => e.spanRole === 'start' || e.spanRole === 'mid')
-                          const cellBg = isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.05)' : rowBg
+                          const machineNo = m.machine_no
+                          const cellKey = `${machineNo}:${dateStr}`
+                          const isDragOver = dragOverCell === cellKey
+                          const cellBg = isDragOver ? 'rgba(74,222,128,0.15)' : isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.05)' : rowBg
                           return (
                             <td key={dateStr}
                               style={{
                                 padding: 0, background: cellBg,
                                 borderBottom: '1px solid rgba(245,158,11,0.42)',
                                 borderLeft: '1px solid rgba(245,158,11,0.22)',
+                                outline: isDragOver ? '2px solid rgba(74,222,128,0.7)' : 'none',
                                 cursor: 'default',
                                 verticalAlign: 'top', height: 30,
                                 overflow: 'visible', position: 'relative',
+                                transition: 'background 0.1s',
                               }}
+                              onDragOver={e => { e.preventDefault(); setDragOverCell(cellKey) }}
+                              onDragLeave={() => setDragOverCell(null)}
+                              onDrop={() => handleDrop(machineNo, dateStr)}
                               onMouseLeave={e => { e.currentTarget.style.background = cellBg }}
                             >
                               {spanEvents.map(ev => {
@@ -876,8 +924,11 @@ export default function MocvdScheduler() {
                                 const ml = hasFromLeft ? -1 : 2, mr = hasToRight ? -1 : 2
                                 return (
                                   <div key={ev.id + ':' + role}
+                                    draggable={isStart && !!ev.id && !String(ev.id).startsWith('draft')}
+                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
+                                    onDragEnd={() => setDragOverCell(null)}
                                     onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
-                                    title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}` : undefined}
+                                    title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}` : undefined}
                                     style={{
                                       fontSize: 14, fontWeight: 700,
                                       borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
@@ -888,7 +939,7 @@ export default function MocvdScheduler() {
                                       borderBottom: `1px solid ${cfg.border}`,
                                       borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
                                       borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
-                                      cursor: isStart ? 'pointer' : 'default',
+                                      cursor: isStart ? 'grab' : 'default',
                                       whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
                                     }}
                                   >{`${cfg.label} ${ev.spanDay}`}</div>
@@ -896,16 +947,20 @@ export default function MocvdScheduler() {
                               })}
                               {singleEvents.map(ev => {
                                 const cfg = evtCfg(ev)
+                                const isDraft = String(ev.id).startsWith('draft')
                                 return (
                                   <div key={ev.id}
+                                    draggable={!isDraft}
+                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
+                                    onDragEnd={() => setDragOverCell(null)}
                                     onClick={e => { e.stopPropagation(); openEdit(ev) }}
-                                    title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}`}
+                                    title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}`}
                                     style={{
                                       fontSize: 14, fontWeight: 700, borderRadius: 2,
                                       padding: '1px 3px', margin: '2px 2px 1px',
                                       color: cfg.color, background: cfg.bg,
                                       border: `1px solid ${cfg.border}`,
-                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                      cursor: isDraft ? 'pointer' : 'grab', whiteSpace: 'nowrap',
                                       overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
                                     }}
                                   >{cfg.label}</div>
@@ -937,6 +992,16 @@ export default function MocvdScheduler() {
         onOk={() => form.submit()}
         okText={editingEvent ? '저장' : '추가'}
         cancelText="취소"
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div>
+              {editingEvent && (
+                <button onClick={() => { handleDelete(editingEvent.id); setManualOpen(false) }} style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 6, padding: '5px 16px', cursor: 'pointer', color: '#f87171', fontSize: 14, fontWeight: 700 }}>삭제</button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}><CancelBtn /><OkBtn /></div>
+          </div>
+        )}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 16 }}>
           <Form.Item name="occurred_at" label="날짜" rules={[{ required: true, message: '날짜를 선택해주세요.' }]}>
