@@ -665,7 +665,7 @@ export default function MocvdScheduler() {
   }))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
       {/* ?? ?곷떒 ?뺣낫 諛??? */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
@@ -697,7 +697,7 @@ export default function MocvdScheduler() {
       </div>
 
       {/* ?? 硫붿씤: 媛꾪듃 李⑦듃 ?? */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
         {/* ?꾪꽣 議곌굔 移대뱶 */}
         <div style={{ background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -809,7 +809,7 @@ export default function MocvdScheduler() {
         )}
 
         {/* 媛꾪듃 李⑦듃 蹂몄껜 */}
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, maxHeight: 'calc(100vh - 320px)', background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12 }}>
+        <div style={{ overflowX: 'auto', background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12 }}>
           <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
             <colgroup>
               <col style={{ width: 104 }} />
@@ -818,7 +818,7 @@ export default function MocvdScheduler() {
             <thead>
               <tr>
                 <th style={{
-                  position: 'sticky', left: 0, top: 0, zIndex: 11,
+                  position: 'sticky', left: 0, top: 64, zIndex: 11,
                   background: '#171b26', padding: '8px 10px',
                   textAlign: 'left', fontSize: 14, color: 'rgba(196,210,226,0.5)',
                   borderBottom: '2px solid rgba(245,158,11,0.45)',
@@ -834,8 +834,8 @@ export default function MocvdScheduler() {
                   const isDragCol = dragOverCell?.endsWith(`:${dateStr}`)
                   return (
                     <th key={dateStr} style={{
-                      position: 'sticky', top: 0, zIndex: 10,
-                      background: isDragCol ? 'rgba(74,222,128,0.2)' : isToday ? 'rgba(245,158,11,0.22)' : isHoliday ? 'rgba(248,113,113,0.13)' : isSun ? 'rgba(248,113,113,0.22)' : isSat ? 'rgba(125,211,252,0.18)' : '#1a1f2c',
+                      position: 'sticky', top: 64, zIndex: 10,
+                      background: isDragCol ? 'linear-gradient(rgba(74,222,128,0.25),rgba(74,222,128,0.25)),#1a1f2c' : isToday ? 'linear-gradient(rgba(245,158,11,0.3),rgba(245,158,11,0.3)),#1a1f2c' : isHoliday ? 'linear-gradient(rgba(248,113,113,0.18),rgba(248,113,113,0.18)),#1a1f2c' : isSun ? 'linear-gradient(rgba(248,113,113,0.28),rgba(248,113,113,0.28)),#1a1f2c' : isSat ? 'linear-gradient(rgba(125,211,252,0.22),rgba(125,211,252,0.22)),#1a1f2c' : '#1a1f2c',
                       padding: '5px 2px', textAlign: 'center',
                       borderBottom: isDragCol ? '2px solid rgba(74,222,128,0.8)' : '2px solid rgba(245,158,11,0.45)',
                       borderLeft: '1px solid rgba(245,158,11,0.26)',
