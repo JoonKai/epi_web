@@ -1,5 +1,5 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, Input, Modal, Space, Spin } from 'antd'
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Button, Card, Input, Modal, Space, Spin, Tooltip } from 'antd'
 import { ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -83,6 +83,33 @@ function navigateCell(row, col, dRow, dCol) {
   if (el.tagName === 'INPUT') el.select()
 }
 
+const MEMO_TOOLTIP_PROPS = {
+  color: '#3b4f86',
+  overlayInnerStyle: { borderRadius: 10 },
+  mouseEnterDelay: 0.2,
+}
+
+function renderMemoTooltip(text) {
+  if (!text) return null
+  return (
+    <div style={{ minWidth: 160, maxWidth: 320, whiteSpace: 'pre-wrap', fontSize: 13, color: '#e2e8f0', lineHeight: 1.6 }}>
+      {text}
+    </div>
+  )
+}
+
+const MEMO_FIELDS = ['initial', 'daily', 'remaining', 'ratio', 'threshold', 'date']
+
+// Tooltip을 메모가 있을 때만 렌더 — 없으면 Tooltip 인스턴스 자체를 생성하지 않음
+function withMemoTooltip(key, memoText, child) {
+  if (!memoText) return React.cloneElement(child, { key })
+  return (
+    <Tooltip key={key} title={renderMemoTooltip(memoText)} {...MEMO_TOOLTIP_PROPS}>
+      {child}
+    </Tooltip>
+  )
+}
+
 function buildDerivedCell(cell) {
   if (cell?.is_disabled) {
     return { thresholdAmount: null, replacementDate: '-' }
@@ -126,12 +153,13 @@ function ToggleBadge({ active, onClick }) {
   )
 }
 
-function EditField({ value, color, bg, onChange, pending, disabled = false, readOnly = false, gridRow, gridCol }) {
+const EditField = React.memo(function EditField({ value, color, bg, onChange, disabled = false, readOnly = false, gridRow, gridCol }) {
   const [local, setLocal] = useState(value ?? '')
-  const [focused, setFocused] = useState(false)
+  const focusedRef = useRef(false)
 
+  // 외부에서 value가 바뀔 때(일괄 적용 등) 포커스 중이 아니면 동기화
   useEffect(() => {
-    setLocal(value ?? '')
+    if (!focusedRef.current) setLocal(value === 0 ? '' : String(value ?? ''))
   }, [value])
 
   const handleKeyDown = (e) => {
@@ -159,13 +187,11 @@ function EditField({ value, color, bg, onChange, pending, disabled = false, read
       readOnly={readOnly}
       data-grid-row={gridRow}
       data-grid-col={gridCol}
-      onChange={(event) => {
-        setLocal(event.target.value)
-      }}
+      onChange={(event) => { setLocal(event.target.value) }}
       onKeyDown={handleKeyDown}
-      onFocus={(e) => { setFocused(true); e.target.select() }}
+      onFocus={(e) => { focusedRef.current = true; setLocal(value === 0 ? '' : String(value ?? '')); e.target.select() }}
       onBlur={(event) => {
-        setFocused(false)
+        focusedRef.current = false
         const next = event.target.value
         onChange(next === '' ? 0 : Number(next))
       }}
@@ -185,7 +211,92 @@ function EditField({ value, color, bg, onChange, pending, disabled = false, read
       }}
     />
   )
-}
+})
+
+const SourceRow = React.memo(function SourceRow({
+  machine, sourceNames, cellData, cellMemos, rowIndex,
+  onCellChange, onContextMenu, onCellKeyDown, machineGroupMap,
+}) {
+  const grpName = machineGroupMap[machine.machine_no]
+  const rowBg = rowIndex % 2 === 0 ? '#1e2235' : '#191d28'
+  const gc = getGroupColor(grpName)
+  const labelBg = gc ? `linear-gradient(${gc.row}, ${gc.row}), ${rowBg}` : rowBg
+  return (
+    <tr className="src-row" style={{ background: rowBg }}>
+      <td className="src-row-label" style={{ ...tdLabelBase, left: 0, background: labelBg, color: '#fbbf24', borderRight: BORDER, borderLeft: gc ? `2px solid ${gc.border}` : undefined }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <span>{formatMachineLabel(machine.machine_no)}</span>
+          {grpName && gc && (
+            <span style={{ fontSize: 11, fontWeight: 600, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 3, padding: '0 5px', lineHeight: '15px' }}>
+              {grpName}
+            </span>
+          )}
+        </div>
+      </td>
+      {sourceNames.flatMap((sourceName, sourceIndex) => {
+        const key = `${machine.machine_no}:${sourceName}`
+        const cell = cellData[key] ?? {}
+        const derived = buildDerivedCell(cell)
+        const disabled = Boolean(cell.is_disabled)
+        const col = sourceIndex * 6
+        const mk = (field) => `${key}:${field}`
+        const dot = (field) => cellMemos[mk(field)]
+          ? <span style={{ position: 'absolute', top: 2, right: 3, color: '#fbbf24', fontSize: 8, lineHeight: 1, pointerEvents: 'none' }}>●</span>
+          : null
+        return [
+          withMemoTooltip(`${key}:initial`, cellMemos[mk('initial')],
+            <td className={disabled ? undefined : 'input-cell'} onContextMenu={(e) => onContextMenu(e, mk('initial'))} style={{ ...tdCellBase, borderLeft: GROUP_BORDER, background: disabled ? getHatchBackground('#1a2535') : '#1a2535', outline: 'none', position: 'relative' }}
+              tabIndex={disabled ? 0 : undefined} data-grid-row={disabled ? rowIndex : undefined} data-grid-col={disabled ? col + 0 : undefined} onKeyDown={disabled ? onCellKeyDown : undefined}>
+              {dot('initial')}
+              {!disabled && <EditField value={cell.initial_amount ?? 0} color="#38bdf8" bg="#1a2535" gridRow={rowIndex} gridCol={col + 0} onChange={(value) => onCellChange(machine.machine_no, sourceName, 'initial_amount', value)} />}
+            </td>
+          ),
+          withMemoTooltip(`${key}:daily`, cellMemos[mk('daily')],
+            <td tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 1} onKeyDown={onCellKeyDown} onContextMenu={(e) => onContextMenu(e, mk('daily'))} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201c08') : '#201c08', color: disabled ? 'rgba(196,210,226,0.5)' : '#fbbf24', textAlign: 'right', paddingRight: 6, outline: 'none', position: 'relative' }}>
+              {dot('daily')}{disabled ? '' : fmtOrBlank(cell.daily_usage ?? 0)}
+            </td>
+          ),
+          withMemoTooltip(`${key}:remaining`, cellMemos[mk('remaining')],
+            <td tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 2} onKeyDown={onCellKeyDown} onContextMenu={(e) => onContextMenu(e, mk('remaining'))} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#0f200f') : '#0f200f', color: disabled ? 'rgba(196,210,226,0.5)' : '#86efac', textAlign: 'right', paddingRight: 6, outline: 'none', position: 'relative' }}>
+              {dot('remaining')}{disabled ? '' : fmtOrBlank(cell.remaining ?? 0)}
+            </td>
+          ),
+          withMemoTooltip(`${key}:ratio`, cellMemos[mk('ratio')],
+            <td className={disabled ? undefined : 'input-cell'} onContextMenu={(e) => onContextMenu(e, mk('ratio'))} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201c08') : '#201c08', color: disabled ? 'rgba(196,210,226,0.5)' : undefined, textAlign: disabled ? 'right' : undefined, paddingRight: disabled ? 6 : undefined, outline: 'none', position: 'relative' }}
+              tabIndex={disabled ? 0 : undefined} data-grid-row={disabled ? rowIndex : undefined} data-grid-col={disabled ? col + 3 : undefined} onKeyDown={disabled ? onCellKeyDown : undefined}>
+              {dot('ratio')}{disabled ? '-' : <EditField value={cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO} color="#f59e0b" bg="#201c08" gridRow={rowIndex} gridCol={col + 3} onChange={(value) => onCellChange(machine.machine_no, sourceName, 'threshold_ratio', value)} />}
+            </td>
+          ),
+          withMemoTooltip(`${key}:threshold`, cellMemos[mk('threshold')],
+            <td tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 4} onKeyDown={onCellKeyDown} onContextMenu={(e) => onContextMenu(e, mk('threshold'))} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201408') : '#201408', color: disabled ? 'rgba(196,210,226,0.5)' : '#f97316', textAlign: 'right', paddingRight: 6, fontWeight: 700, outline: 'none', position: 'relative' }}>
+              {dot('threshold')}{disabled ? '-' : fmt(derived.thresholdAmount)}
+            </td>
+          ),
+          withMemoTooltip(`${key}:date`, cellMemos[mk('date')],
+            <td tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 5} onKeyDown={onCellKeyDown} onContextMenu={(e) => onContextMenu(e, mk('date'))} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#0f1e2e') : '#0f1e2e', color: disabled ? 'rgba(196,210,226,0.5)' : '#60a5fa', textAlign: 'center', fontWeight: 700, outline: 'none', position: 'relative' }}>
+              {dot('date')}{disabled ? '-' : derived.replacementDate}
+            </td>
+          ),
+        ]
+      })}
+    </tr>
+  )
+}, (prevProps, nextProps) => {
+  // true → 재렌더 생략, false → 재렌더
+  if (prevProps.machine !== nextProps.machine) return false
+  if (prevProps.rowIndex !== nextProps.rowIndex) return false
+  if (prevProps.machineGroupMap !== nextProps.machineGroupMap) return false
+  const no = nextProps.machine.machine_no
+  const cellSame = nextProps.sourceNames.every(src => {
+    const k = `${no}:${src}`
+    return prevProps.cellData[k] === nextProps.cellData[k]
+  })
+  if (!cellSame) return false
+  return nextProps.sourceNames.every(src => {
+    const k = `${no}:${src}`
+    return MEMO_FIELDS.every(f => prevProps.cellMemos[`${k}:${f}`] === nextProps.cellMemos[`${k}:${f}`])
+  })
+})
 
 export default function SourceTableSheetTab() {
   const [loading, setLoading] = useState(true)
@@ -198,7 +309,6 @@ export default function SourceTableSheetTab() {
   const [quickFilter, setQuickFilter] = useState('')
   const [machineGroupMap, setMachineGroupMap] = useState({})
   const [cellMemos, setCellMemos] = useState({})
-  const [focusedCell, setFocusedCell] = useState(null)
   const [contextMenu, setContextMenu] = useState(null)
   const [memoEdit, setMemoEdit] = useState(null)
   const [memoText, setMemoText] = useState('')
@@ -267,11 +377,11 @@ export default function SourceTableSheetTab() {
     )
   }, [machines, quickFilter])
 
-  const handleChange = (machineNo, sourceName, field, value) => {
+  const handleChange = useCallback((machineNo, sourceName, field, value) => {
     const key = `${machineNo}:${sourceName}`
     setCellData((prev) => ({ ...prev, [key]: { ...prev[key], [field]: Number(value ?? 0) } }))
     setPendingKeys((prev) => new Set([...prev, key]))
-  }
+  }, [])
 
   const handleSave = async () => {
     if (pendingKeys.size === 0) return
@@ -386,7 +496,12 @@ export default function SourceTableSheetTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <style>{`td[data-grid-row]:focus{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;} .input-cell:focus-within{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;} .ctx-item:hover{background:rgba(245,158,11,0.08)}`}</style>
+      <style>{`
+        td[data-grid-row]:focus{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;}
+        .input-cell:focus-within{outline:2px solid rgba(59,130,246,0.75)!important;outline-offset:-2px;}
+        .ctx-item:hover{background:rgba(245,158,11,0.08)}
+        tr.src-row:focus-within .src-row-label{background:#1a3a42!important;color:#22d3ee!important;}
+      `}</style>
       {error ? <Alert type="error" message={error} /> : null}
 
       <Card
@@ -410,15 +525,6 @@ export default function SourceTableSheetTab() {
           <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 320px)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.14)' }}>
             <table
               style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: 'max-content', fontSize: 14 }}
-              onFocus={(e) => {
-                const el = e.target.closest('[data-grid-row]') ?? (e.target.dataset.gridRow != null ? e.target : null)
-                const row = el?.dataset.gridRow
-                const col = el?.dataset.gridCol
-                if (row != null && col != null) setFocusedCell({ row: Number(row), col: Number(col) })
-              }}
-              onBlur={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) setFocusedCell(null)
-              }}
             >
               <colgroup>
                 <col style={{ width: 108 }} />
@@ -434,85 +540,38 @@ export default function SourceTableSheetTab() {
               <thead>
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', top: 0, left: 0, zIndex: 4, background: '#171b26', color: 'rgba(196,210,226,0.7)', border: BORDER, height: 36 }}>MO</th>
-                  {sourceNames.map((sourceName, si) => {
-                    const activeInGroup = focusedCell != null && Math.floor(focusedCell.col / 6) === si
-                    return (
-                      <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14, background: activeInGroup ? `linear-gradient(rgba(34,211,238,0.15),rgba(34,211,238,0.15)),${th1Base.background}` : th1Base.background }}>
-                        {sourceName}
-                      </th>
-                    )
-                  })}
+                  {sourceNames.map((sourceName) => (
+                    <th key={`group:${sourceName}`} colSpan={6} style={{ ...th1Base, borderLeft: GROUP_BORDER, color: '#fbbf24', fontWeight: 700, fontSize: 14 }}>
+                      {sourceName}
+                    </th>
+                  ))}
                 </tr>
                 <tr>
-                  {sourceNames.flatMap((sourceName, si) => {
-                    const baseCol = si * 6
-                    const hl = (fi) => focusedCell?.col === baseCol + fi ? { background: `linear-gradient(rgba(34,211,238,0.25),rgba(34,211,238,0.25)),${th2Base.background}`, color: '#22d3ee' } : {}
-                    return [
-                      <th key={`${sourceName}:head-initial`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#38bdf8', ...hl(0) }}>초기량</th>,
-                      <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24', ...hl(1) }}>일사용량</th>,
-                      <th key={`${sourceName}:head-remaining`} style={{ ...th2Base, color: '#86efac', ...hl(2) }}>잔량</th>,
-                      <th key={`${sourceName}:head-ratio`} style={{ ...th2Base, color: '#f59e0b', ...hl(3) }}>교체기준(%)</th>,
-                      <th key={`${sourceName}:head-threshold`} style={{ ...th2Base, color: '#f97316', ...hl(4) }}>교체 기준량</th>,
-                      <th key={`${sourceName}:head-date`} style={{ ...th2Base, color: '#60a5fa', ...hl(5) }}>예상 교체일</th>,
-                    ]
-                  })}
+                  {sourceNames.flatMap((sourceName) => [
+                    <th key={`${sourceName}:head-initial`} style={{ ...th2Base, borderLeft: GROUP_BORDER, color: '#38bdf8' }}>초기량</th>,
+                    <th key={`${sourceName}:head-daily`} style={{ ...th2Base, color: '#fbbf24' }}>일사용량</th>,
+                    <th key={`${sourceName}:head-remaining`} style={{ ...th2Base, color: '#86efac' }}>잔량</th>,
+                    <th key={`${sourceName}:head-ratio`} style={{ ...th2Base, color: '#f59e0b' }}>교체기준(%)</th>,
+                    <th key={`${sourceName}:head-threshold`} style={{ ...th2Base, color: '#f97316' }}>교체 기준량</th>,
+                    <th key={`${sourceName}:head-date`} style={{ ...th2Base, color: '#60a5fa' }}>예상 교체일</th>,
+                  ])}
                 </tr>
               </thead>
               <tbody>
-                {filteredMachines.map((machine, rowIndex) => {
-                  const grpName = machineGroupMap[machine.machine_no]
-                  const rowBg = rowIndex % 2 === 0 ? '#1e2235' : '#191d28'
-                  const gc = getGroupColor(grpName)
-                  const labelBg = gc ? `linear-gradient(${gc.row}, ${gc.row}), ${rowBg}` : rowBg
-                  return (
-                  <tr key={`row:${machine.machine_no}`} style={{ background: rowBg }}>
-                    <td style={{ ...tdLabelBase, left: 0, background: focusedCell?.row === rowIndex ? '#1a3a42' : labelBg, color: focusedCell?.row === rowIndex ? '#22d3ee' : '#fbbf24', borderRight: BORDER, borderLeft: gc ? `2px solid ${gc.border}` : undefined }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <span>{formatMachineLabel(machine.machine_no)}</span>
-                        {grpName && gc && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: gc.text, background: gc.bg, border: `1px solid ${gc.border}`, borderRadius: 3, padding: '0 5px', lineHeight: '15px' }}>
-                            {grpName}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    {sourceNames.flatMap((sourceName, sourceIndex) => {
-                      const key = `${machine.machine_no}:${sourceName}`
-                      const cell = cellData[key] ?? {}
-                      const derived = buildDerivedCell(cell)
-                      const disabled = Boolean(cell.is_disabled)
-                      const col = sourceIndex * 6
-                      const mk = (field) => `${key}:${field}`
-                      const dot = (field) => cellMemos[mk(field)]
-                        ? <span style={{ position: 'absolute', top: 2, right: 3, color: '#fbbf24', fontSize: 8, lineHeight: 1, pointerEvents: 'none' }}>●</span>
-                        : null
-                      return [
-                        <td key={`${key}:initial`} className={disabled ? undefined : 'input-cell'} onContextMenu={(e) => handleContextMenu(e, mk('initial'))} title={cellMemos[mk('initial')] || undefined} style={{ ...tdCellBase, borderLeft: GROUP_BORDER, background: disabled ? getHatchBackground('#1a2535') : '#1a2535', outline: 'none', position: 'relative' }}
-                          tabIndex={disabled ? 0 : undefined} data-grid-row={disabled ? rowIndex : undefined} data-grid-col={disabled ? col + 0 : undefined} onKeyDown={disabled ? handleCellKeyDown : undefined}>
-                          {dot('initial')}
-                          {!disabled && <EditField value={cell.initial_amount ?? 0} color="#38bdf8" bg="#1a2535" pending={pendingKeys.has(key)} disabled={false} gridRow={rowIndex} gridCol={col + 0} onChange={(value) => handleChange(machine.machine_no, sourceName, 'initial_amount', value)} />}
-                        </td>,
-                        <td key={`${key}:daily`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 1} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('daily'))} title={cellMemos[mk('daily')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201c08') : '#201c08', color: disabled ? 'rgba(196,210,226,0.5)' : '#fbbf24', textAlign: 'right', paddingRight: 6, outline: 'none', position: 'relative' }}>
-                          {dot('daily')}{disabled ? '' : fmtOrBlank(cell.daily_usage ?? 0)}
-                        </td>,
-                        <td key={`${key}:remaining`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 2} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('remaining'))} title={cellMemos[mk('remaining')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#0f200f') : '#0f200f', color: disabled ? 'rgba(196,210,226,0.5)' : '#86efac', textAlign: 'right', paddingRight: 6, outline: 'none', position: 'relative' }}>
-                          {dot('remaining')}{disabled ? '' : fmtOrBlank(cell.remaining ?? 0)}
-                        </td>,
-                        <td key={`${key}:ratio`} className={disabled ? undefined : 'input-cell'} onContextMenu={(e) => handleContextMenu(e, mk('ratio'))} title={cellMemos[mk('ratio')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201c08') : '#201c08', color: disabled ? 'rgba(196,210,226,0.5)' : undefined, textAlign: disabled ? 'right' : undefined, paddingRight: disabled ? 6 : undefined, outline: 'none', position: 'relative' }}
-                          tabIndex={disabled ? 0 : undefined} data-grid-row={disabled ? rowIndex : undefined} data-grid-col={disabled ? col + 3 : undefined} onKeyDown={disabled ? handleCellKeyDown : undefined}>
-                          {dot('ratio')}{disabled ? '-' : <EditField value={cell.threshold_ratio ?? DEFAULT_THRESHOLD_RATIO} color="#f59e0b" bg="#201c08" pending={pendingKeys.has(key)} disabled={false} gridRow={rowIndex} gridCol={col + 3} onChange={(value) => handleChange(machine.machine_no, sourceName, 'threshold_ratio', value)} />}
-                        </td>,
-                        <td key={`${key}:threshold`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 4} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('threshold'))} title={cellMemos[mk('threshold')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#201408') : '#201408', color: disabled ? 'rgba(196,210,226,0.5)' : '#f97316', textAlign: 'right', paddingRight: 6, fontWeight: 700, outline: 'none', position: 'relative' }}>
-                          {dot('threshold')}{disabled ? '-' : fmt(derived.thresholdAmount)}
-                        </td>,
-                        <td key={`${key}:date`} tabIndex={0} data-grid-row={rowIndex} data-grid-col={col + 5} onKeyDown={handleCellKeyDown} onContextMenu={(e) => handleContextMenu(e, mk('date'))} title={cellMemos[mk('date')] || undefined} style={{ ...tdCellBase, background: disabled ? getHatchBackground('#0f1e2e') : '#0f1e2e', color: disabled ? 'rgba(196,210,226,0.5)' : '#60a5fa', textAlign: 'center', fontWeight: 700, outline: 'none', position: 'relative' }}>
-                          {dot('date')}{disabled ? '-' : derived.replacementDate}
-                        </td>,
-                      ]
-                    })}
-                  </tr>
-                  )
-                })}
+                {filteredMachines.map((machine, rowIndex) => (
+                  <SourceRow
+                    key={`row:${machine.machine_no}`}
+                    machine={machine}
+                    sourceNames={sourceNames}
+                    cellData={cellData}
+                    cellMemos={cellMemos}
+                    rowIndex={rowIndex}
+                    onCellChange={handleChange}
+                    onContextMenu={handleContextMenu}
+                    onCellKeyDown={handleCellKeyDown}
+                    machineGroupMap={machineGroupMap}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
