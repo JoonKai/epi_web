@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Switch } from 'antd'
-import { DownloadOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import { Alert, Button, Card, Input, InputNumber, Select, Space, Spin, Switch, message } from 'antd'
+import { DownloadOutlined, ReloadOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
@@ -188,6 +188,7 @@ export default function SourceRemainingSheetTab() {
   const [todayPinned, setTodayPinned] = useState(false)
   const scrollWrapRef = useRef(null)
   const todayRowRef = useRef(null)
+  const csvImportRef = useRef(null)
   const [focusedCell, setFocusedCell] = useState(null)
 
   useEffect(() => {
@@ -434,6 +435,77 @@ export default function SourceRemainingSheetTab() {
     message.success('CSV 저장 완료')
   }, [cellData, columns, dateRows])
 
+  const handleCsvImport = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target.result.replace(/^\uFEFF/, '')
+        const lines = text.split(/\r?\n/).filter((l) => l.trim() !== '')
+        if (lines.length < 2) throw new Error('CSV 데이터가 부족합니다.')
+
+        const parseRow = (line) => {
+          const result = []
+          let inQuote = false
+          let cur = ''
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i]
+            if (ch === '"') {
+              if (inQuote && line[i + 1] === '"') { cur += '"'; i++ }
+              else inQuote = !inQuote
+            } else if (ch === ',' && !inQuote) {
+              result.push(cur); cur = ''
+            } else {
+              cur += ch
+            }
+          }
+          result.push(cur)
+          return result
+        }
+
+        const header = parseRow(lines[0]).slice(1)
+        const columnMap = {}
+        header.forEach((label, i) => { columnMap[label.trim()] = i })
+
+        let matched = 0
+        const nextCellData = { ...cellData }
+        const newPending = new Set(pendingKeys)
+
+        for (let li = 1; li < lines.length; li++) {
+          const cols = parseRow(lines[li])
+          const rowLabel = cols[0]?.trim()
+          const editableRow = EDITABLE_ROWS.find(([label]) => label === rowLabel)
+          if (!editableRow) continue
+          const field = editableRow[1]
+
+          columns.forEach(({ machineNo, sourceName }) => {
+            const colLabel = `${formatMachineLabel(machineNo)} ${sourceName}`
+            const headerIdx = columnMap[colLabel]
+            if (headerIdx == null) return
+            const raw = cols[headerIdx + 1]?.replace(/,/g, '').trim()
+            const num = parseFloat(raw)
+            if (!Number.isFinite(num)) return
+            const key = `${machineNo}:${sourceName}`
+            nextCellData[key] = { ...nextCellData[key], [field]: num }
+            newPending.add(key)
+            matched++
+          })
+        }
+
+        if (matched === 0) throw new Error('가져올 수 있는 데이터가 없습니다. 헤더가 일치하는지 확인하세요.')
+        setCellData(nextCellData)
+        setPendingKeys(newPending)
+        message.success(`CSV 불러오기 완료 (${matched}개 셀 업데이트)`)
+      } catch (err) {
+        message.error(err.message || 'CSV 불러오기에 실패했습니다.')
+      }
+    }
+    reader.readAsText(file, 'utf-8')
+  }, [cellData, columns, pendingKeys])
+
   const getTodayMinScrollTop = useCallback(() => {
     const row = todayRowRef.current
     if (!row) return 0
@@ -506,6 +578,8 @@ export default function SourceRemainingSheetTab() {
               <Select value={forecastDays} onChange={setForecastDays} style={{ width: 90 }} options={[30, 60, 90, 120, 150, 180].map((value) => ({ value, label: `${value}일` }))} />
             </div>
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>새로고침</Button>
+            <input ref={csvImportRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleCsvImport} />
+            <Button icon={<UploadOutlined />} onClick={() => csvImportRef.current?.click()} disabled={columns.length === 0}>CSV 불러오기</Button>
             <Button icon={<DownloadOutlined />} onClick={handleCsvExport} disabled={columns.length === 0}>CSV 저장</Button>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={pendingKeys.size === 0}>전체 저장</Button>
           </Space>

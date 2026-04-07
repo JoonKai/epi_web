@@ -29,12 +29,7 @@ export default function SourceMachineConfigTab() {
         const names = json.source_names ?? []
         const newMachines = rows.map((row) => ({ machine_no: row.machine_no, description: row.description }))
         setMachines(newMachines)
-        setMachineOrder((prev) => {
-          const newNos = newMachines.map((m) => m.machine_no)
-          const preserved = prev.filter((no) => newNos.includes(no))
-          const added = newNos.filter((no) => !prev.includes(no))
-          return [...preserved, ...added]
-        })
+        setMachineOrder(rows.map((row) => row.machine_no))
         setSourceNames(names)
         const nextCellData = {}
         rows.forEach((row) => {
@@ -98,6 +93,15 @@ export default function SourceMachineConfigTab() {
     setSaving(true)
     setError(null)
     try {
+      const orderPayload = machineOrder.map((machine_no, order_idx) => ({ machine_no, order_idx }))
+      const orderRes = await authFetch('/api/mocvd/machines/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      })
+      const orderJson = await orderRes.json().catch(() => ({}))
+      if (!orderRes.ok) throw new Error(orderJson.detail || '설비 순서 저장에 실패했습니다.')
+
       const changes = Object.entries(cellData).map(([key, cell]) => {
         const colonIndex = key.indexOf(':')
         const machine_no = Number(key.slice(0, colonIndex))
@@ -266,4 +270,3 @@ export default function SourceMachineConfigTab() {
     </div>
   )
 }
-

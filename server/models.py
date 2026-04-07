@@ -21,6 +21,7 @@ class MocvdMachine(Base):
     machine_no = Column(Integer, nullable=False, comment="호기 번호")
     machine_type = Column(String(20), default="mocvd", nullable=False)
     description = Column(String(100), default="")
+    order_idx = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
 
 
@@ -163,6 +164,18 @@ class MocvdNotice(Base):
     content = Column(String(2000), nullable=False)
     color = Column(String(20), default="#c4cdd8")
     is_active = Column(Boolean, default=True, index=True)
+    author = Column(String(50), default="")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class MocvdTodoItem(Base):
+    __tablename__ = "mocvd_todo_item"
+
+    id = Column(Integer, primary_key=True, index=True)
+    todo_date = Column(String(20), nullable=False, index=True)
+    content = Column(String(500), nullable=False)
+    is_done = Column(Boolean, default=False)
     author = Column(String(50), default="")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

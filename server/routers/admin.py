@@ -43,6 +43,7 @@ class MachineCreate(BaseModel):
     machine_no: int
     description: str = ""
     machine_type: str = "mocvd"
+    order_idx: int = 0
 
 
 class SourceCreate(BaseModel):
@@ -153,13 +154,19 @@ def reset_password(user_id: int, body: dict, db: Session = Depends(get_db), _=De
 
 @router.get("/machines")
 def list_machines(machine_type: str = "mocvd", db: Session = Depends(get_db), _=Depends(require_admin)):
-    rows = db.query(MocvdMachine).filter(MocvdMachine.machine_type == machine_type).order_by(MocvdMachine.machine_no).all()
+    rows = (
+        db.query(MocvdMachine)
+        .filter(MocvdMachine.machine_type == machine_type)
+        .order_by(MocvdMachine.order_idx, MocvdMachine.machine_no)
+        .all()
+    )
     return [
         {
             "id": row.id,
             "machine_no": row.machine_no,
             "machine_type": row.machine_type,
             "description": row.description,
+            "order_idx": row.order_idx if row.order_idx is not None else 0,
             "is_active": row.is_active,
         }
         for row in rows
@@ -170,7 +177,14 @@ def list_machines(machine_type: str = "mocvd", db: Session = Depends(get_db), _=
 def create_machine(body: MachineCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     if db.query(MocvdMachine).filter(MocvdMachine.machine_no == body.machine_no, MocvdMachine.machine_type == body.machine_type).first():
         raise HTTPException(status_code=400, detail="이미 존재하는 호기 번호입니다.")
-    db.add(MocvdMachine(machine_no=body.machine_no, description=body.description, machine_type=body.machine_type))
+    db.add(
+        MocvdMachine(
+            machine_no=body.machine_no,
+            description=body.description,
+            machine_type=body.machine_type,
+            order_idx=body.order_idx,
+        )
+    )
     db.commit()
     return {"result": "ok"}
 
@@ -191,6 +205,7 @@ def update_machine(machine_id: int, body: dict, db: Session = Depends(get_db), _
 
     machine.machine_no = next_machine_no
     machine.description = body.get("description", machine.description)
+    machine.order_idx = body.get("order_idx", machine.order_idx)
     machine.is_active = body.get("is_active", machine.is_active)
     db.commit()
     return {"result": "ok"}

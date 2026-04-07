@@ -33,7 +33,8 @@
       "Bash(curl -s http://localhost:8000/api/health)",
       "Bash(curl -s -H 'Authorization: Bearer __TRACKED_VAR__' http://localhost:8000/api/mocvd/equipment-history)",
       "Bash(python3 -c ':*)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(grep -r \"/api/mocvd\" /c/web/epi_web/client/src/pages/epi/mocvd/*.jsx)"
     ]
   }
 }

@@ -27,9 +27,11 @@ import {
   EditOutlined,
   FileTextOutlined,
   NodeIndexOutlined,
+  PlusOutlined,
   TeamOutlined,
   SwapOutlined,
   ToolOutlined,
+  UnorderedListOutlined,
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -1032,6 +1034,185 @@ function SchedulerMiniCalCard() {
   )
 }
 
+function TodayTodoCard() {
+  const { user } = useAuth()
+  const today = dayjs().format('YYYY-MM-DD')
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [inputValue, setInputValue] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editValue, setEditValue] = useState('')
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await authFetch(`/api/mocvd/todo-items?todo_date=${today}`)
+      if (res.ok) setItems(await res.json())
+    } finally {
+      setLoading(false)
+    }
+  }, [today])
+
+  useEffect(() => { fetchItems() }, [fetchItems])
+
+  const handleAdd = async () => {
+    const content = inputValue.trim()
+    if (!content) return
+    setAdding(true)
+    try {
+      const res = await authFetch('/api/mocvd/todo-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ todo_date: today, content }),
+      })
+      if (res.ok) { setInputValue(''); fetchItems() }
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const toggleDone = async (item) => {
+    await authFetch(`/api/mocvd/todo-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_done: !item.is_done }),
+    })
+    fetchItems()
+  }
+
+  const handleDelete = async (id) => {
+    await authFetch(`/api/mocvd/todo-items/${id}`, { method: 'DELETE' })
+    fetchItems()
+  }
+
+  const startEdit = (item) => { setEditingId(item.id); setEditValue(item.content) }
+
+  const handleEditSave = async (id) => {
+    const content = editValue.trim()
+    if (!content) return
+    await authFetch(`/api/mocvd/todo-items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+    setEditingId(null)
+    fetchItems()
+  }
+
+  const doneCount = items.filter((i) => i.is_done).length
+
+  return (
+    <SectionCard
+      title="오늘의 할일"
+      icon={<UnorderedListOutlined />}
+      extra={
+        <Space size={8}>
+          <span style={{ fontSize: 13, color: doneCount === items.length && items.length > 0 ? '#4ade80' : 'var(--nowa-text-muted)' }}>
+            {doneCount} / {items.length} 완료
+          </span>
+        </Space>
+      }
+    >
+      {/* 입력 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <Input
+          placeholder="할일을 입력하세요..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onPressEnter={handleAdd}
+          maxLength={200}
+          style={{ flex: 1 }}
+        />
+        <Button icon={<PlusOutlined />} type="primary" onClick={handleAdd} loading={adding}>추가</Button>
+      </div>
+
+      {/* 목록 */}
+      {loading ? (
+        <Skeleton active paragraph={{ rows: 3 }} />
+      ) : items.length === 0 ? (
+        <Empty description="오늘의 할일이 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {items.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: item.is_done ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${item.is_done ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {/* 체크박스 */}
+              <button
+                onClick={() => toggleDone(item)}
+                style={{
+                  flexShrink: 0,
+                  width: 20, height: 20,
+                  borderRadius: 4,
+                  border: `2px solid ${item.is_done ? '#4ade80' : 'rgba(196,210,226,0.35)'}`,
+                  background: item.is_done ? 'rgba(74,222,128,0.2)' : 'transparent',
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 0, outline: 'none',
+                }}
+              >
+                {item.is_done && <CheckCircleOutlined style={{ fontSize: 12, color: '#4ade80' }} />}
+              </button>
+
+              {/* 내용 */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {editingId === item.id ? (
+                  <Input
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onPressEnter={() => handleEditSave(item.id)}
+                    onBlur={() => handleEditSave(item.id)}
+                    autoFocus
+                    size="small"
+                    maxLength={200}
+                  />
+                ) : (
+                  <span style={{
+                    fontSize: 14,
+                    color: item.is_done ? 'var(--nowa-text-muted)' : 'var(--nowa-text)',
+                    textDecoration: item.is_done ? 'line-through' : 'none',
+                  }}>
+                    {item.content}
+                  </span>
+                )}
+              </div>
+
+              {/* 작성자 */}
+              <span style={{ fontSize: 12, color: 'var(--nowa-text-muted)', flexShrink: 0 }}>{item.author}</span>
+
+              {/* 액션 버튼 */}
+              <Space size={4}>
+                {editingId !== item.id && (
+                  <Button
+                    type="text" size="small" icon={<EditOutlined />}
+                    onClick={() => startEdit(item)}
+                    style={{ color: 'var(--nowa-text-muted)' }}
+                  />
+                )}
+                <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDelete(item.id)} okText="삭제" cancelText="취소">
+                  <Button type="text" size="small" icon={<DeleteOutlined />} danger />
+                </Popconfirm>
+              </Space>
+            </div>
+          ))}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
+
 function HandoverBoard() {
   const { user } = useAuth()
   const [form] = Form.useForm()
@@ -1520,6 +1701,8 @@ export default function MocvdOverview() {
       </Row>
 
       <HandoverBoard />
+
+      <TodayTodoCard />
 
       <AttendanceCard />
 

@@ -98,7 +98,7 @@ function AppRoutes({ isDark, onThemeToggle }) {
           <Route path="/epi/mocvd/shift-schedule" element={<ShiftSchedule />} />
           <Route path="/epi/mocvd/scheduler" element={<PmTabs />} />
           <Route path="/epi/mocvd/scrubber" element={<ScrubberManagement />} />
-          <Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
+<Route path="/epi/mocvd/personnel" element={<PersonnelManagement />} />
           {user.role === 'admin' && <Route path="/epi/mocvd/master-data" element={<MocvdMasterData />} />}
           <Route path="/epi/measurement" element={<Measurement />} />
           <Route path="/epi/simulator" element={<Simulator />} />

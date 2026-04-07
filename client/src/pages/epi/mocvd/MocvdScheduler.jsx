@@ -1,14 +1,15 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Checkbox, Form, Input, Modal, Popconfirm, Select, message } from 'antd'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Checkbox, Form, Input, Modal, Popconfirm, Select, Tooltip, message } from 'antd'
 import {
   DeleteOutlined, EditOutlined, LeftOutlined, PlusOutlined,
   RightOutlined, RobotOutlined, UserOutlined,
+  UndoOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import { authFetch } from '../../../context/AuthContext'
 import { formatMachineLabel } from './machineLabel'
-import { getWorkTimePerDay } from './PmWorkTimeSettings'
+import { getAutoScheduleSettings } from './PmWorkTimeSettings'
 
 dayjs.locale('ko')
 
@@ -42,11 +43,44 @@ const navBtnStyle = {
   cursor: 'pointer', color: 'var(--nowa-text)', fontSize: 14,
 }
 
+function renderEventTooltip(ev, cfg) {
+  const dateText = ev.original_date ?? ev.occurred_at?.slice(0, 10) ?? '-'
+  return (
+    <div style={{ minWidth: 220, maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0' }}>{dayjs(dateText).isValid() ? dayjs(dateText).format('YYYY-MM-DD (dd)') : dateText}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: cfg.color }}>
+        {formatMachineLabel(ev.machine_no)} / {ev.title || cfg.label}
+      </div>
+      {ev.actor ? (
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#22d3ee' }}>담당: {ev.actor}</div>
+      ) : (
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#94a3b8' }}>담당: -</div>
+      )}
+    </div>
+  )
+}
+
 /* ?? ?먮룞 ?쇱젙 ?앹꽦 ?뚭퀬由ъ쬁 ?????????????????????????????????? */
 // ?덉긽 援먯껜?쇱씠 ?대떦 ?붿뿉 ?대떦?섎뒗 ??ぉ??洹??좎쭨??吏곸젒 諛곗튂
-function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays = {} }) {
+function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, existingEvents = [] }) {
   const { pmPersonCount = 2, sourcePersonCount = 1 } = config
   const today = dayjs()
+  const useRule1DailyCapacityLimit = !!config.rule1DailyCapacityLimit
+  const dailyMax = config.dailyMax || {}
+  const dayTypeCountMap = {
+    pm: new Map(),
+    filter: new Map(),
+    source_change: new Map(),
+  }
+  existingEvents.forEach((ev) => {
+    if (!ev || ev.detail === '자동 생성 (예상일 기준)') return
+    const eventType = ev.event_type
+    if (!dayTypeCountMap[eventType]) return
+    const date = ev.occurred_at?.slice(0, 10)
+    if (!date) return
+    const used = dayTypeCountMap[eventType].get(date) || 0
+    dayTypeCountMap[eventType].set(date, used + 1)
+  })
 
   const schedule = []
   let memberCursor = 0
@@ -60,92 +94,145 @@ function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays = 
     return names.join(', ')
   }
 
-  if (config.includePm) {
-    pmCounters.forEach(row => {
-      const pmRem = (row.pm_base_count || 0) - (row.chamber_count || 0)
-      const runPerDay = Number(row.run_per_day || 0)
-      if (runPerDay <= 0) return
-      const daysLeft = Math.ceil(pmRem / runPerDay)
-      const dateStr = today.add(Math.max(0, daysLeft), 'day').format('YYYY-MM-DD')
-      schedule.push({
-        event_type: 'pm', machine_no: row.machine_no, title: 'PM 정비',
-        occurred_at: dateStr + 'T00:00:00', date: dateStr,
-        actor: assignActors(pmPersonCount), badge: '예정',
-      })
-    })
+  const toWorkDate = (baseDateStr) => {
+    let d = dayjs(baseDateStr)
+    let guard = 0
+    while (guard < 370) {
+      const ds = d.format('YYYY-MM-DD')
+      const dow = d.day()
+      const isSat = dow === 6
+      const isSun = dow === 0
+      const isHoliday = !!config.holidays?.[ds]
+      if ((!isSat || config.includeSat) && (!isSun || config.includeSun) && (!isHoliday || config.includeHoliday)) {
+        return ds
+      }
+      d = d.add(1, 'day')
+      guard += 1
+    }
+    return dayjs(baseDateStr).format('YYYY-MM-DD')
   }
 
-  if (config.includeFilter) {
-    pmCounters.forEach(row => {
-      const filterBase = Number(row.filter_base_count || 0)
-      const filterCount = Number(row.filter_count || 0)
-      const filterHalfBase = Math.floor(filterBase / 2)
-      const runPerDay = Number(row.run_per_day || 0)
-      if (runPerDay <= 0) return
+  const getTypeDailyLimit = (eventType) => {
+    if (!useRule1DailyCapacityLimit) return Number.POSITIVE_INFINITY
+    const value = Number(dailyMax[eventType])
+    if (!Number.isFinite(value)) return 0
+    return Math.max(0, Math.floor(value))
+  }
 
-      const fullRem = filterBase - filterCount
-      const fullDaysLeft = Math.ceil(fullRem / runPerDay)
-      const fullDateStr = today.add(Math.max(0, fullDaysLeft), 'day').format('YYYY-MM-DD')
+  const allocDateByRule = (baseDateStr, eventType) => {
+    const limit = getTypeDailyLimit(eventType)
+    if (limit <= 0) return null
+    let d = dayjs(baseDateStr)
+    let guard = 0
+    while (guard < 370) {
+      const workDate = toWorkDate(d.format('YYYY-MM-DD'))
+      const typeMap = dayTypeCountMap[eventType]
+      if (!typeMap) return workDate
+      const used = typeMap.get(workDate) || 0
+      if (used < limit) {
+        typeMap.set(workDate, used + 1)
+        return workDate
+      }
+      d = dayjs(workDate).add(1, 'day')
+      guard += 1
+    }
+    return null
+  }
+
+  pmCounters.forEach(row => {
+    const pmRem = (row.pm_base_count || 0) - (row.chamber_count || 0)
+    const runPerDay = Number(row.run_per_day || 0)
+    if (runPerDay <= 0) return
+    const daysLeft = Math.ceil(pmRem / runPerDay)
+    const baseDateStr = today.add(Math.max(0, daysLeft), 'day').format('YYYY-MM-DD')
+    const dateStr = allocDateByRule(baseDateStr, 'pm')
+    if (!dateStr) return
+    schedule.push({
+      event_type: 'pm', machine_no: row.machine_no, title: 'PM 정비',
+      occurred_at: dateStr + 'T00:00:00', date: dateStr,
+      actor: assignActors(pmPersonCount), badge: '예정',
+    })
+  })
+
+  pmCounters.forEach(row => {
+    const filterBase = Number(row.filter_base_count || 0)
+    const filterCount = Number(row.filter_count || 0)
+    const filterHalfBase = Math.floor(filterBase / 2)
+    const runPerDay = Number(row.run_per_day || 0)
+    if (runPerDay <= 0) return
+
+    const fullRem = filterBase - filterCount
+    const fullDaysLeft = Math.ceil(fullRem / runPerDay)
+    const fullBaseDateStr = today.add(Math.max(0, fullDaysLeft), 'day').format('YYYY-MM-DD')
+    const fullDateStr = allocDateByRule(fullBaseDateStr, 'filter')
+    if (!fullDateStr) return
+    schedule.push({
+      event_type: 'filter', machine_no: row.machine_no, title: '필터 교체',
+      occurred_at: fullDateStr + 'T00:00:00', date: fullDateStr,
+      actor: assignActors(1), badge: '예정',
+    })
+
+    if (filterHalfBase > 0 && filterHalfBase !== filterBase) {
+      const halfRem = filterHalfBase - filterCount
+      const halfDaysLeft = Math.ceil(halfRem / runPerDay)
+      const halfBaseDateStr = today.add(Math.max(0, halfDaysLeft), 'day').format('YYYY-MM-DD')
+      const halfDateStr = allocDateByRule(halfBaseDateStr, 'filter')
+      if (!halfDateStr) return
       schedule.push({
-        event_type: 'filter', machine_no: row.machine_no, title: '필터 교체',
-        occurred_at: fullDateStr + 'T00:00:00', date: fullDateStr,
+        event_type: 'filter', machine_no: row.machine_no, title: 'Half',
+        occurred_at: halfDateStr + 'T00:00:00', date: halfDateStr,
         actor: assignActors(1), badge: '예정',
       })
+    }
+  })
 
-      if (filterHalfBase > 0 && filterHalfBase !== filterBase) {
-        const halfRem = filterHalfBase - filterCount
-        const halfDaysLeft = Math.ceil(halfRem / runPerDay)
-        const halfDateStr = today.add(Math.max(0, halfDaysLeft), 'day').format('YYYY-MM-DD')
-        schedule.push({
-          event_type: 'filter', machine_no: row.machine_no, title: 'Half',
-          occurred_at: halfDateStr + 'T00:00:00', date: halfDateStr,
-          actor: assignActors(1), badge: '예정',
-        })
-      }
+  const seen = new Set()
+  ;(sourceStatus?.events || []).forEach(ev => {
+    const baseDateStr = ev.projected_replacement_date
+    if (!baseDateStr) return
+    const dateStr = allocDateByRule(baseDateStr, 'source_change')
+    if (!dateStr) return
+    const key = `${ev.machine_no}:${ev.source_label}`
+    if (seen.has(key)) return
+    seen.add(key)
+    schedule.push({
+      event_type: 'source_change', machine_no: ev.machine_no,
+      title: `소스 교체 (${ev.source_label})`,
+      occurred_at: dateStr + 'T00:00:00', date: dateStr,
+      actor: assignActors(sourcePersonCount), badge: '예정',
     })
-  }
-
-  if (config.includeSource) {
-    const seen = new Set()
-    ;(sourceStatus?.events || []).forEach(ev => {
-      const dateStr = ev.projected_replacement_date
-      if (!dateStr) return
-      const key = `${ev.machine_no}:${ev.source_label}`
-      if (seen.has(key)) return
-      seen.add(key)
-      schedule.push({
-        event_type: 'source_change', machine_no: ev.machine_no,
-        title: `소스 교체 (${ev.source_label})`,
-        occurred_at: dateStr + 'T00:00:00', date: dateStr,
-        actor: assignActors(sourcePersonCount), badge: '예정',
-      })
-    })
-  }
+  })
 
   return schedule.sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /* ?? ?먮룞 ?앹꽦 移대뱶 ??????????????????????????????????????????? */
-function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holidays, onConfirm }) {
-  const [config, setConfig] = useState({
-    includePm: true, includeFilter: true, includeSource: true,
-    includeSat: false, includeSun: false, includeHoliday: false,
-    pmPersonCount: 2, sourcePersonCount: 1,
-  })
+function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holidays, existingEvents, onConfirm }) {
+  const config = useMemo(() => ({ includePm: true, includeFilter: true, includeSource: true }), [])
   const [preview, setPreview] = useState(null)
+  const autoSettings = useMemo(() => getAutoScheduleSettings(), [])
 
   useEffect(() => {
-    const result = autoGenerate({ pmCounters, sourceStatus, pmMembers, config, holidays })
+    const result = autoGenerate({ pmCounters, sourceStatus, pmMembers, config: { ...config, ...autoSettings, holidays }, existingEvents, holidays })
     setPreview(result)
-  }, [config, year, month, pmCounters, pmMembers, sourceStatus, holidays])
+  }, [config, autoSettings, year, month, pmCounters, pmMembers, sourceStatus, holidays, existingEvents])
 
   const handleConfirm = () => {
     if (!preview || preview.length === 0) return
-    onConfirm?.(preview)
-    message.success(`${preview.length}건 일정이 화면에 적용되었습니다.`)
+    const latestSettings = getAutoScheduleSettings()
+    const latestPreview = autoGenerate({
+      pmCounters,
+      sourceStatus,
+      pmMembers,
+      config: { ...config, ...latestSettings, holidays },
+      existingEvents,
+      holidays,
+    })
+    if (!latestPreview.length) return
+    onConfirm?.(latestPreview)
+    message.success(`${latestPreview.length}건 일정이 화면에 적용되었습니다.`)
   }
 
-  const toggle = (key) => setConfig(p => ({ ...p, [key]: !p[key] }))
   const pmCount  = preview?.filter(i => i.event_type === 'pm').length ?? 0
   const filCount = preview?.filter(i => i.event_type === 'filter').length ?? 0
   const srcCount = preview?.filter(i => i.event_type === 'source_change').length ?? 0
@@ -164,95 +251,63 @@ function AutoGenCard({ pmCounters, sourceStatus, pmMembers, year, month, holiday
         )}
       </div>
 
-      {/* ?ㅼ젙 ??*/}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 6, fontSize: 14 }}>
-        {/* ?ы븿 ?좏삎 */}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-            <Checkbox checked={config.includePm} onChange={() => toggle('includePm')} />
-            <span style={{ color: '#7dd3fc', fontWeight: 700 }}>PM 정비</span>
-            {preview && <span style={{ color: 'rgba(196,210,226,0.5)', marginLeft: 2 }}>({pmCount}건)</span>}
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-            <Checkbox checked={config.includeFilter} onChange={() => toggle('includeFilter')} />
-            <span style={{ color: '#a78bfa', fontWeight: 700 }}>필터 교체</span>
-            {preview && <span style={{ color: 'rgba(196,210,226,0.5)', marginLeft: 2 }}>({filCount}건)</span>}
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-            <Checkbox checked={config.includeSource} onChange={() => toggle('includeSource')} />
-            <span style={{ color: '#a3e635', fontWeight: 700 }}>소스 교체</span>
-            {preview && <span style={{ color: 'rgba(196,210,226,0.5)', marginLeft: 2 }}>({srcCount}건)</span>}
-          </label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 10 }}>
+        {/* 좌측: 조건 설정 카드 */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(125,211,252,0.18)', borderRadius: 8, padding: '10px 10px 8px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(125,211,252,0.9)', marginBottom: 8 }}>적용 항목</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8, fontSize: 14 }}>
+            <span style={{ color: '#7dd3fc', fontWeight: 700 }}>PM 정비 ({pmCount}건)</span>
+            <span style={{ color: '#a78bfa', fontWeight: 700 }}>필터 교체 ({filCount}건)</span>
+            <span style={{ color: '#a3e635', fontWeight: 700 }}>소스 교체 ({srcCount}건)</span>
+          </div>
+
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', color: 'rgba(196,210,226,0.55)', fontSize: 13 }}>
+            <span>예상일 기준으로만 배치</span>
+            <span>PM 인원 {autoSettings?.pmPersonCount ?? 2}명 / 소스 인원 {autoSettings?.sourcePersonCount ?? 1}명</span>
+          </div>
+
+          {pmMembers.length > 0 && (
+            <div style={{ color: 'rgba(196,210,226,0.45)', marginTop: 8, fontSize: 13 }}>
+              투입 {pmMembers.length}명: {pmMembers.slice(0, autoSettings?.pmPersonCount ?? 2).map(m => m.name).join(', ')}
+            </div>
+          )}
         </div>
 
-        {/* 援щ텇??*/}
-        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
-
-        {/* 작업일 */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ color: 'rgba(196,210,226,0.55)' }}>작업일</span>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
-            <Checkbox checked={config.includeSat} onChange={() => toggle('includeSat')} /> 토
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
-            <Checkbox checked={config.includeSun} onChange={() => toggle('includeSun')} /> 일
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
-            <Checkbox checked={config.includeHoliday} onChange={() => toggle('includeHoliday')} /> 공휴일
-          </label>
-        </div>
-
-        {/* 援щ텇??*/}
-        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
-
-        {/* ?몄썝 */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ color: 'rgba(196,210,226,0.55)' }}>PM 인원</span>
-          <Select value={config.pmPersonCount} onChange={v => setConfig(p => ({ ...p, pmPersonCount: v }))}
-            style={{ width: 70 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
-          <span style={{ color: 'rgba(196,210,226,0.55)' }}>소스 인원</span>
-          <Select value={config.sourcePersonCount} onChange={v => setConfig(p => ({ ...p, sourcePersonCount: v }))}
-            style={{ width: 70 }} size="small" options={[1,2,3,4,5,6].map(n => ({ label: `${n}명`, value: n }))} />
-        </div>
-
-        {pmMembers.length > 0 && (
-          <span style={{ color: 'rgba(196,210,226,0.45)', marginLeft: 4 }}>
-            투입 {pmMembers.length}명: {pmMembers.slice(0, config.pmPersonCount).map(m => m.name).join(', ')}
-          </span>
+        {/* 우측: 미리보기 카드 */}
+        {preview !== null && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(74,222,128,0.22)', borderRadius: 8, padding: '10px 10px 8px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(74,222,128,0.95)', marginBottom: 8 }}>미리보기</div>
+            {preview.length === 0 ? (
+              <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.5)', textAlign: 'center', padding: '12px 0' }}>
+                해당 월에 예정된 항목이 없습니다.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto', background: 'var(--nowa-bg)', borderRadius: 8, padding: '5px 8px', border: '1px solid var(--nowa-border)' }}>
+                {preview.map((item, i) => {
+                  const cfg = evtCfg(item)
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '2px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
+                      <span style={{ color: 'rgba(196,210,226,0.7)', minWidth: 72 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 4px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
+                      <span style={{ color: 'var(--nowa-text)', flex: 1 }}>
+                        {item.machine_no ? `${formatMachineLabel(item.machine_no)} ` : ''}{item.title}
+                      </span>
+                      {item.actor && <span style={{ color: '#7dd3fc', fontSize: 14, flexShrink: 0 }}>{item.actor}</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {preview.length > 0 && (
+              <button onClick={handleConfirm} style={{ marginTop: 6, background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 6, padding: '6px 0', cursor: 'pointer', color: '#4ade80', fontSize: 14, fontWeight: 700, width: '100%' }}>
+                {`${preview.length}건 적용`}
+              </button>
+            )}
+          </div>
         )}
       </div>
-
-      {/* 誘몃━蹂닿린 */}
-      {preview !== null && (
-        <div>
-          {preview.length === 0 ? (
-            <div style={{ fontSize: 14, color: 'rgba(196,210,226,0.5)', textAlign: 'center', padding: '8px 0' }}>
-              해당 월에 예정된 항목이 없습니다.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 200, overflowY: 'auto', background: 'var(--nowa-bg)', borderRadius: 8, padding: '5px 8px', border: '1px solid var(--nowa-border)' }}>
-              {preview.map((item, i) => {
-                const cfg = evtCfg(item)
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '2px 2px', borderBottom: i < preview.length - 1 ? '1px solid var(--nowa-border)' : 'none' }}>
-                    <span style={{ color: 'rgba(196,210,226,0.7)', minWidth: 72 }}>{dayjs(item.date).format('M/D (ddd)')}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, borderRadius: 3, padding: '1px 4px', flexShrink: 0, color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>{cfg.label}</span>
-                    <span style={{ color: 'var(--nowa-text)', flex: 1 }}>
-                      {item.machine_no ? `${formatMachineLabel(item.machine_no)} ` : ''}{item.title}
-                    </span>
-                    {item.actor && <span style={{ color: '#7dd3fc', fontSize: 14, flexShrink: 0 }}>{item.actor}</span>}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {preview.length > 0 && (
-            <button onClick={handleConfirm} style={{ marginTop: 6, background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 6, padding: '6px 0', cursor: 'pointer', color: '#4ade80', fontSize: 14, fontWeight: 700, width: '100%' }}>
-              {`${preview.length}건 적용`}
-            </button>
-          )}
-        </div>
-      )}
     </div>
   )
 }
@@ -279,8 +334,11 @@ export default function MocvdScheduler() {
   const [autoGenOpen, setAutoGenOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [applyGroup, setApplyGroup] = useState(false)
-  const [draggedEvent, setDraggedEvent] = useState(null)
   const [dragOverCell, setDragOverCell] = useState(null) // 'machineNo:dateStr'
+  const draggedEventRef = useRef(null)
+  const dragOverCellRef = useRef(null)
+  const [undoAction, setUndoAction] = useState(null)
+  const [undoing, setUndoing] = useState(false)
 
   // ?꾪꽣 議곌굔
   const [filterTypes, setFilterTypes] = useState(Object.keys(EVENT_CONFIG).reduce((acc, k) => ({ ...acc, [k]: true }), {}))
@@ -354,6 +412,7 @@ export default function MocvdScheduler() {
     const nonAuto = events.filter((ev) => ev.detail !== '자동 생성 (예상일 기준)')
     const drafts = generatedEvents.map((ev, idx) => ({
       id: `draft-${idx}-${ev.machine_no}-${ev.event_type}-${ev.date}`,
+      draftIndex: idx,
       machine_no: ev.machine_no,
       event_type: ev.event_type,
       title: ev.title,
@@ -510,21 +569,89 @@ export default function MocvdScheduler() {
   }
 
   const handleDrop = async (machineNo, dateStr) => {
+    dragOverCellRef.current = null
     setDragOverCell(null)
-    if (!draggedEvent) return
-    const ev = draggedEvent
-    setDraggedEvent(null)
+    const ev = draggedEventRef.current
+    if (!ev) return
+    draggedEventRef.current = null
     const newDate = dateStr
     const oldDate = ev.occurred_at?.slice(0, 10)
     if (newDate === oldDate && machineNo === ev.machine_no) return
+    const isDraft = String(ev.id || '').startsWith('draft')
+    if (isDraft) {
+      const draftIndex = Number.isInteger(ev.draftIndex) ? ev.draftIndex : -1
+      if (draftIndex < 0) return
+      const fromDate = ev.occurred_at?.slice(0, 10) || oldDate
+      const fromMachineNo = ev.machine_no
+      setGeneratedEvents((prev) => prev.map((item, idx) => (
+        idx === draftIndex
+          ? { ...item, machine_no: machineNo, date: newDate, occurred_at: `${newDate}T00:00:00` }
+          : item
+      )))
+      setUndoAction({
+        type: 'draft_move',
+        draftIndex,
+        from: { machine_no: fromMachineNo, date: fromDate },
+      })
+      return
+    }
     try {
       const res = await authFetch(`/api/mocvd/equipment-history/${ev.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...ev, machine_no: machineNo, occurred_at: newDate + 'T00:00:00' }),
       })
       if (!res.ok) throw new Error()
+      setUndoAction({
+        type: 'persisted_move',
+        id: ev.id,
+        original: ev,
+        from: { machine_no: ev.machine_no, date: oldDate },
+      })
       fetchAll()
     } catch { message.error('이동에 실패했습니다.') }
+  }
+
+  const handleCellDragOver = (e, cellKey) => {
+    e.preventDefault()
+    if (dragOverCellRef.current === cellKey) return
+    dragOverCellRef.current = cellKey
+    setDragOverCell(cellKey)
+  }
+
+  const handleCellDragLeave = () => {
+    if (dragOverCellRef.current === null) return
+    dragOverCellRef.current = null
+    setDragOverCell(null)
+  }
+
+  const handleUndo = async () => {
+    if (!undoAction || undoing) return
+    setUndoing(true)
+    try {
+      if (undoAction.type === 'draft_move') {
+        const { draftIndex, from } = undoAction
+        setGeneratedEvents((prev) => prev.map((item, idx) => (
+          idx === draftIndex
+            ? { ...item, machine_no: from.machine_no, date: from.date, occurred_at: `${from.date}T00:00:00` }
+            : item
+        )))
+      } else if (undoAction.type === 'persisted_move') {
+        const { id, original, from } = undoAction
+        const res = await authFetch(`/api/mocvd/equipment-history/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...original, machine_no: from.machine_no, occurred_at: `${from.date}T00:00:00` }),
+        })
+        if (!res.ok) throw new Error()
+        await fetchAll()
+      }
+      setUndoAction(null)
+      message.success('최근 이동을 되돌렸습니다.')
+    } catch {
+      message.error('되돌리기에 실패했습니다.')
+    } finally {
+      setUndoing(false)
+    }
   }
 
   const machineOptions = machines.filter(m => m.is_active).map(m => ({ label: formatMachineLabel(m.machine_no), value: m.machine_no }))
@@ -611,13 +738,30 @@ export default function MocvdScheduler() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
+              onClick={handleUndo}
+              disabled={!undoAction || undoing}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700,
+                cursor: (!undoAction || undoing) ? 'default' : 'pointer',
+                padding: '5px 14px', borderRadius: 8,
+                border: '1px solid rgba(148,163,184,0.35)',
+                background: 'rgba(148,163,184,0.10)',
+                color: (!undoAction || undoing) ? 'rgba(148,163,184,0.35)' : '#cbd5e1',
+              }}
+            >
+              <UndoOutlined />
+              {undoing ? '되돌리는 중...' : '되돌리기'}
+            </button>
+            <button
               onClick={() => openCreate(today.format('YYYY-MM-DD'))}
               style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(125,211,252,0.35)', background: 'rgba(125,211,252,0.1)', color: '#7dd3fc' }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(125,211,252,0.2)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(125,211,252,0.1)'}
             ><PlusOutlined /> 수동 추가</button>
             <button
-              onClick={() => setAutoGenOpen(o => !o)}
+              onClick={() => {
+                setAutoGenOpen(o => !o)
+              }}
               style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '5px 14px', borderRadius: 8, border: `1px solid ${autoGenOpen ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.3)'}`, background: autoGenOpen ? 'rgba(74,222,128,0.18)' : 'rgba(74,222,128,0.08)', color: '#4ade80' }}
             ><RobotOutlined /> 자동 생성</button>
             <button
@@ -659,13 +803,13 @@ export default function MocvdScheduler() {
             year={year}
             month={month}
             holidays={holidays}
-            groups={groups}
+            existingEvents={events}
             onConfirm={(preview) => { setGeneratedEvents(preview); setAutoGenOpen(false) }}
           />
         )}
 
         {/* 媛꾪듃 李⑦듃 蹂몄껜 */}
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12 }}>
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, maxHeight: 'calc(100vh - 320px)', background: 'var(--nowa-panel)', border: '1px solid var(--nowa-border)', borderRadius: 12 }}>
           <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
             <colgroup>
               <col style={{ width: 104 }} />
@@ -691,7 +835,7 @@ export default function MocvdScheduler() {
                   return (
                     <th key={dateStr} style={{
                       position: 'sticky', top: 0, zIndex: 10,
-                      background: isDragCol ? 'rgba(74,222,128,0.2)' : isToday ? 'rgba(245,158,11,0.22)' : isHoliday ? 'rgba(248,113,113,0.13)' : isSun ? 'rgba(248,113,113,0.08)' : isSat ? 'rgba(125,211,252,0.08)' : '#1a1f2c',
+                      background: isDragCol ? 'rgba(74,222,128,0.2)' : isToday ? 'rgba(245,158,11,0.22)' : isHoliday ? 'rgba(248,113,113,0.13)' : isSun ? 'rgba(248,113,113,0.22)' : isSat ? 'rgba(125,211,252,0.18)' : '#1a1f2c',
                       padding: '5px 2px', textAlign: 'center',
                       borderBottom: isDragCol ? '2px solid rgba(74,222,128,0.8)' : '2px solid rgba(245,158,11,0.45)',
                       borderLeft: '1px solid rgba(245,158,11,0.26)',
@@ -779,7 +923,7 @@ export default function MocvdScheduler() {
                           const hasToRight = spanEvents.some(e => e.spanRole === 'start' || e.spanRole === 'mid')
                           const cellKey = `${machineNo}:${dateStr}`
                           const isDragOver = dragOverCell === cellKey
-                          const cellBg = isDragOver ? 'rgba(74,222,128,0.15)' : isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.05)' : rowBg
+                          const cellBg = isDragOver ? 'rgba(74,222,128,0.15)' : isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.18)' : isSat ? 'rgba(125,211,252,0.13)' : rowBg
                           return (
                             <td key={dateStr}
                               style={{
@@ -792,8 +936,8 @@ export default function MocvdScheduler() {
                                 overflow: 'visible', position: 'relative',
                                 transition: 'background 0.1s',
                               }}
-                              onDragOver={e => { e.preventDefault(); setDragOverCell(cellKey) }}
-                              onDragLeave={() => setDragOverCell(null)}
+                              onDragOver={e => handleCellDragOver(e, cellKey)}
+                              onDragLeave={handleCellDragLeave}
                               onDrop={() => handleDrop(machineNo, dateStr)}
                               onMouseLeave={e => { e.currentTarget.style.background = cellBg }}
                             >
@@ -803,47 +947,59 @@ export default function MocvdScheduler() {
                                 const isStart = role === 'start', isEnd = role === 'end'
                                 const ml = hasFromLeft ? -1 : 2, mr = hasToRight ? -1 : 2
                                 return (
-                                  <div key={ev.id + ':' + role}
-                                    draggable={isStart && !!ev.id && !String(ev.id).startsWith('draft')}
-                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
-                                    onDragEnd={() => setDragOverCell(null)}
-                                    onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
-                                    title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}` : undefined}
-                                    style={{
-                                      fontSize: 14, fontWeight: 700,
-                                      borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
-                                      padding: '1px 3px',
-                                      marginLeft: ml, marginRight: mr, marginBottom: 1, marginTop: 2,
-                                      color: cfg.color, background: cfg.bg,
-                                      borderTop: `1px solid ${cfg.border}`,
-                                      borderBottom: `1px solid ${cfg.border}`,
-                                      borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
-                                      borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
-                                      cursor: isStart ? 'grab' : 'default',
-                                      whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
-                                    }}
-                                  >{`${cfg.label} ${ev.spanDay}`}</div>
+                                  <Tooltip
+                                    key={ev.id + ':' + role}
+                                    title={isStart ? renderEventTooltip(ev, cfg) : null}
+                                    mouseEnterDelay={0.2}
+                                    color="#3b4f86"
+                                    overlayInnerStyle={{ borderRadius: 10 }}
+                                  >
+                                    <div
+                                      draggable={isStart && !!ev.id}
+                                      onDragStart={e => { e.stopPropagation(); draggedEventRef.current = ev }}
+                                      onDragEnd={handleCellDragLeave}
+                                      onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
+                                      style={{
+                                        fontSize: 14, fontWeight: 700,
+                                        borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
+                                        padding: '1px 3px',
+                                        marginLeft: ml, marginRight: mr, marginBottom: 1, marginTop: 2,
+                                        color: cfg.color, background: cfg.bg,
+                                        borderTop: `1px solid ${cfg.border}`,
+                                        borderBottom: `1px solid ${cfg.border}`,
+                                        borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
+                                        borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
+                                        cursor: isStart ? 'grab' : 'default',
+                                        whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
+                                      }}
+                                    >{`${cfg.label} ${ev.spanDay}`}</div>
+                                  </Tooltip>
                                 )
                               })}
                               {singleEvents.map(ev => {
                                 const cfg = evtCfg(ev)
-                                const isDraft = String(ev.id).startsWith('draft')
                                 return (
-                                  <div key={ev.id}
-                                    draggable={!isDraft}
-                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
-                                    onDragEnd={() => setDragOverCell(null)}
-                                    onClick={e => { e.stopPropagation(); openEdit(ev) }}
-                                    title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}`}
-                                    style={{
-                                      fontSize: 14, fontWeight: 700, borderRadius: 2,
-                                      padding: '1px 3px', margin: '2px 2px 1px',
-                                      color: cfg.color, background: cfg.bg,
-                                      border: `1px solid ${cfg.border}`,
-                                      cursor: isDraft ? 'pointer' : 'grab', whiteSpace: 'nowrap',
-                                      overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
-                                    }}
-                                  >{cfg.label}</div>
+                                  <Tooltip key={ev.id}
+                                    title={renderEventTooltip(ev, cfg)}
+                                    mouseEnterDelay={0.2}
+                                    color="#3b4f86"
+                                    overlayInnerStyle={{ borderRadius: 10 }}
+                                  >
+                                    <div
+                                      draggable={!!ev.id}
+                                      onDragStart={e => { e.stopPropagation(); draggedEventRef.current = ev }}
+                                      onDragEnd={handleCellDragLeave}
+                                      onClick={e => { e.stopPropagation(); openEdit(ev) }}
+                                      style={{
+                                        fontSize: 14, fontWeight: 700, borderRadius: 2,
+                                        padding: '1px 3px', margin: '2px 2px 1px',
+                                        color: cfg.color, background: cfg.bg,
+                                        border: `1px solid ${cfg.border}`,
+                                        cursor: 'grab', whiteSpace: 'nowrap',
+                                        overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
+                                      }}
+                                    >{cfg.label}</div>
+                                  </Tooltip>
                                 )
                               })}
                             </td>
@@ -899,7 +1055,7 @@ export default function MocvdScheduler() {
                           const machineNo = m.machine_no
                           const cellKey = `${machineNo}:${dateStr}`
                           const isDragOver = dragOverCell === cellKey
-                          const cellBg = isDragOver ? 'rgba(74,222,128,0.15)' : isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.06)' : isSat ? 'rgba(125,211,252,0.05)' : rowBg
+                          const cellBg = isDragOver ? 'rgba(74,222,128,0.15)' : isToday ? 'rgba(245,158,11,0.11)' : isHoliday || isSun ? 'rgba(248,113,113,0.18)' : isSat ? 'rgba(125,211,252,0.13)' : rowBg
                           return (
                             <td key={dateStr}
                               style={{
@@ -912,8 +1068,8 @@ export default function MocvdScheduler() {
                                 overflow: 'visible', position: 'relative',
                                 transition: 'background 0.1s',
                               }}
-                              onDragOver={e => { e.preventDefault(); setDragOverCell(cellKey) }}
-                              onDragLeave={() => setDragOverCell(null)}
+                              onDragOver={e => handleCellDragOver(e, cellKey)}
+                              onDragLeave={handleCellDragLeave}
                               onDrop={() => handleDrop(machineNo, dateStr)}
                               onMouseLeave={e => { e.currentTarget.style.background = cellBg }}
                             >
@@ -923,47 +1079,59 @@ export default function MocvdScheduler() {
                                 const isStart = role === 'start', isEnd = role === 'end'
                                 const ml = hasFromLeft ? -1 : 2, mr = hasToRight ? -1 : 2
                                 return (
-                                  <div key={ev.id + ':' + role}
-                                    draggable={isStart && !!ev.id && !String(ev.id).startsWith('draft')}
-                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
-                                    onDragEnd={() => setDragOverCell(null)}
-                                    onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
-                                    title={isStart ? `${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}` : undefined}
-                                    style={{
-                                      fontSize: 14, fontWeight: 700,
-                                      borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
-                                      padding: '1px 3px',
-                                      marginLeft: ml, marginRight: mr, marginBottom: 1, marginTop: 2,
-                                      color: cfg.color, background: cfg.bg,
-                                      borderTop: `1px solid ${cfg.border}`,
-                                      borderBottom: `1px solid ${cfg.border}`,
-                                      borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
-                                      borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
-                                      cursor: isStart ? 'grab' : 'default',
-                                      whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
-                                    }}
-                                  >{`${cfg.label} ${ev.spanDay}`}</div>
+                                  <Tooltip
+                                    key={ev.id + ':' + role}
+                                    title={isStart ? renderEventTooltip(ev, cfg) : null}
+                                    mouseEnterDelay={0.2}
+                                    color="#3b4f86"
+                                    overlayInnerStyle={{ borderRadius: 10 }}
+                                  >
+                                    <div
+                                      draggable={isStart && !!ev.id}
+                                      onDragStart={e => { e.stopPropagation(); draggedEventRef.current = ev }}
+                                      onDragEnd={handleCellDragLeave}
+                                      onClick={e => { e.stopPropagation(); isStart && openEdit(ev) }}
+                                      style={{
+                                        fontSize: 14, fontWeight: 700,
+                                        borderRadius: isStart && isEnd ? 2 : isStart ? '2px 0 0 2px' : isEnd ? '0 2px 2px 0' : 0,
+                                        padding: '1px 3px',
+                                        marginLeft: ml, marginRight: mr, marginBottom: 1, marginTop: 2,
+                                        color: cfg.color, background: cfg.bg,
+                                        borderTop: `1px solid ${cfg.border}`,
+                                        borderBottom: `1px solid ${cfg.border}`,
+                                        borderLeft: isStart ? `1px solid ${cfg.border}` : 'none',
+                                        borderRight: isEnd ? `1px solid ${cfg.border}` : 'none',
+                                        cursor: isStart ? 'grab' : 'default',
+                                        whiteSpace: 'nowrap', overflow: 'hidden', display: 'block',
+                                      }}
+                                    >{`${cfg.label} ${ev.spanDay}`}</div>
+                                  </Tooltip>
                                 )
                               })}
                               {singleEvents.map(ev => {
                                 const cfg = evtCfg(ev)
-                                const isDraft = String(ev.id).startsWith('draft')
                                 return (
-                                  <div key={ev.id}
-                                    draggable={!isDraft}
-                                    onDragStart={e => { e.stopPropagation(); setDraggedEvent(ev) }}
-                                    onDragEnd={() => setDragOverCell(null)}
-                                    onClick={e => { e.stopPropagation(); openEdit(ev) }}
-                                    title={`${formatMachineLabel(ev.machine_no)} ${ev.title || cfg.label} / ${ev.original_date ?? ev.occurred_at?.slice(0, 10)}${ev.actor ? ` / 담당: ${ev.actor}` : ''}`}
-                                    style={{
-                                      fontSize: 14, fontWeight: 700, borderRadius: 2,
-                                      padding: '1px 3px', margin: '2px 2px 1px',
-                                      color: cfg.color, background: cfg.bg,
-                                      border: `1px solid ${cfg.border}`,
-                                      cursor: isDraft ? 'pointer' : 'grab', whiteSpace: 'nowrap',
-                                      overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
-                                    }}
-                                  >{cfg.label}</div>
+                                  <Tooltip key={ev.id}
+                                    title={renderEventTooltip(ev, cfg)}
+                                    mouseEnterDelay={0.2}
+                                    color="#3b4f86"
+                                    overlayInnerStyle={{ borderRadius: 10 }}
+                                  >
+                                    <div
+                                      draggable={!!ev.id}
+                                      onDragStart={e => { e.stopPropagation(); draggedEventRef.current = ev }}
+                                      onDragEnd={handleCellDragLeave}
+                                      onClick={e => { e.stopPropagation(); openEdit(ev) }}
+                                      style={{
+                                        fontSize: 14, fontWeight: 700, borderRadius: 2,
+                                        padding: '1px 3px', margin: '2px 2px 1px',
+                                        color: cfg.color, background: cfg.bg,
+                                        border: `1px solid ${cfg.border}`,
+                                        cursor: 'grab', whiteSpace: 'nowrap',
+                                        overflow: 'hidden', textOverflow: 'ellipsis', display: 'block',
+                                      }}
+                                    >{cfg.label}</div>
+                                  </Tooltip>
                                 )
                               })}
                             </td>
@@ -1045,4 +1213,5 @@ export default function MocvdScheduler() {
     </div>
   )
 }
+
 

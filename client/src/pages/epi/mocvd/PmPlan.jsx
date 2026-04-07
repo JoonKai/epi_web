@@ -1991,7 +1991,9 @@ function PmInputTab({ onSaved, thresholds = {}, onThresholdChange }) {
               title="챔버사용횟수 / 필터사용횟수 입력"
               extra={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleCsvImport} />
                   <Button size="small" onClick={handleReset} disabled={loading || saving}>초기화</Button>
+                  <Button size="small" icon={<UploadOutlined />} onClick={() => fileInputRef.current?.click()} disabled={loading || rows.length === 0}>CSV 불러오기</Button>
                   <Button size="small" icon={<DownloadOutlined />} onClick={handleCsvExport} disabled={loading || rows.length === 0}>CSV 저장</Button>
                   <Button size="small" type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} disabled={loading}>저장</Button>
                 </div>

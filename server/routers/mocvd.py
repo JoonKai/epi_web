@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import get_db
 from datetime import datetime, date, timedelta
-from models import EquipmentHistory, MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, SourceChangeLog, SourceRemainingHistory, SourceType, SystemSetting
+from models import EquipmentHistory, MocvdHandoverNote, MocvdMachine, MocvdNotice, MocvdPmCounter, MocvdSource, MocvdTodoItem, SourceChangeLog, SourceRemainingHistory, SourceType, SystemSetting
 from source_status import (
     DEFAULT_OVERDUE_DAYS,
     DEFAULT_THRESHOLD_RATIO,
@@ -30,13 +30,18 @@ class SourceUpdate(BaseModel):
 class BulkSourceUpdate(BaseModel):
     machine_no: int
     source_name: str
-    initial_amount: float = 0.0
-    threshold_ratio: float = DEFAULT_THRESHOLD_RATIO
-    remaining: float = 0.0
-    daily_usage: float = 0.0
-    is_disabled: bool = False
-    unit: str = "kg"
-    memo: dict = {}
+    initial_amount: float | None = None
+    threshold_ratio: float | None = None
+    remaining: float | None = None
+    daily_usage: float | None = None
+    is_disabled: bool | None = None
+    unit: str | None = None
+    memo: dict | None = None
+
+
+class MachineOrderUpdateItem(BaseModel):
+    machine_no: int
+    order_idx: int
 
 
 class SourceChangeLogCreate(BaseModel):
@@ -101,6 +106,16 @@ class HandoverNoteUpdate(HandoverNoteCreate):
     pass
 
 
+class TodoItemCreate(BaseModel):
+    todo_date: str
+    content: str
+
+
+class TodoItemUpdate(BaseModel):
+    content: str | None = None
+    is_done: bool | None = None
+
+
 class NoticeCreate(BaseModel):
     title: str = ""
     content: str
@@ -154,13 +169,41 @@ def _get_source_status_settings(db: Session) -> dict[str, int]:
 
 @router.get("/machines")
 def get_machines(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    rows = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
-    return [{"machine_no": row.machine_no, "description": row.description, "is_active": row.is_active} for row in rows]
+    rows = (
+        db.query(MocvdMachine)
+        .filter(MocvdMachine.is_active == True)
+        .order_by(MocvdMachine.order_idx, MocvdMachine.machine_no)
+        .all()
+    )
+    return [
+        {
+            "machine_no": row.machine_no,
+            "description": row.description,
+            "order_idx": row.order_idx if row.order_idx is not None else 0,
+            "is_active": row.is_active,
+        }
+        for row in rows
+    ]
+
+
+@router.put("/machines/order")
+def update_machine_order(items: list[MachineOrderUpdateItem], db: Session = Depends(get_db), _=Depends(get_current_user)):
+    for item in items:
+        row = db.query(MocvdMachine).filter(MocvdMachine.machine_no == item.machine_no).first()
+        if row:
+            row.order_idx = item.order_idx
+    db.commit()
+    return {"result": "ok", "updated": len(items)}
 
 
 @router.get("/pm-counters")
 def get_pm_counters(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    machines = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
+    machines = (
+        db.query(MocvdMachine)
+        .filter(MocvdMachine.is_active == True)
+        .order_by(MocvdMachine.order_idx, MocvdMachine.machine_no)
+        .all()
+    )
     counter_map = {
         row.machine_no: row
         for row in db.query(MocvdPmCounter).all()
@@ -315,33 +358,47 @@ def update_all_sources(items: list[BulkSourceUpdate], db: Session = Depends(get_
             MocvdSource.source_name == item.source_name,
         ).first()
         if row:
-            row.initial_amount = item.initial_amount
-            row.threshold_ratio = item.threshold_ratio
-            row.remaining = item.remaining
-            row.daily_usage = item.daily_usage
-            row.is_disabled = item.is_disabled
-            row.unit = item.unit
-            row.memo = json.dumps(item.memo, ensure_ascii=False)
+            if item.initial_amount is not None:
+                row.initial_amount = item.initial_amount
+            if item.threshold_ratio is not None:
+                row.threshold_ratio = item.threshold_ratio
+            if item.remaining is not None:
+                row.remaining = item.remaining
+            if item.daily_usage is not None:
+                row.daily_usage = item.daily_usage
+            if item.is_disabled is not None:
+                row.is_disabled = item.is_disabled
+            if item.unit is not None:
+                row.unit = item.unit
+            if item.memo is not None:
+                row.memo = json.dumps(item.memo, ensure_ascii=False)
         else:
             db.add(
                 MocvdSource(
                     machine_no=item.machine_no,
                     source_name=item.source_name,
-                    initial_amount=item.initial_amount,
-                    threshold_ratio=item.threshold_ratio,
-                    remaining=item.remaining,
-                    daily_usage=item.daily_usage,
-                    is_disabled=item.is_disabled,
-                    unit=item.unit,
-                    memo=json.dumps(item.memo, ensure_ascii=False),
+                    initial_amount=item.initial_amount if item.initial_amount is not None else 0.0,
+                    threshold_ratio=item.threshold_ratio if item.threshold_ratio is not None else DEFAULT_THRESHOLD_RATIO,
+                    remaining=item.remaining if item.remaining is not None else 0.0,
+                    daily_usage=item.daily_usage if item.daily_usage is not None else 0.0,
+                    is_disabled=item.is_disabled if item.is_disabled is not None else False,
+                    unit=item.unit if item.unit else "kg",
+                    memo=json.dumps(item.memo if item.memo is not None else {}, ensure_ascii=False),
                 )
             )
     db.commit()
-    _snapshot_today([
-        {"machine_no": item.machine_no, "source_name": item.source_name,
-         "remaining": item.remaining, "daily_usage": item.daily_usage}
+    snapshot_items = [
+        {
+            "machine_no": item.machine_no,
+            "source_name": item.source_name,
+            "remaining": item.remaining if item.remaining is not None else 0.0,
+            "daily_usage": item.daily_usage if item.daily_usage is not None else 0.0,
+        }
         for item in items
-    ], db)
+        if item.remaining is not None or item.daily_usage is not None
+    ]
+    if snapshot_items:
+        _snapshot_today(snapshot_items, db)
     db.commit()
     return {"result": "ok", "updated": len(items)}
 
@@ -392,7 +449,12 @@ def get_source_history(days: int = 180, db: Session = Depends(get_db), _=Depends
 
 @router.get("/sources/all")
 def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    machines = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
+    machines = (
+        db.query(MocvdMachine)
+        .filter(MocvdMachine.is_active == True)
+        .order_by(MocvdMachine.order_idx, MocvdMachine.machine_no)
+        .all()
+    )
     source_types = _active_source_types(db)
     source_names = [source_type.name for source_type in source_types]
 
@@ -412,7 +474,11 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
 
     result = []
     for machine in machines:
-        row = {"machine_no": machine.machine_no, "description": machine.description or ""}
+        row = {
+            "machine_no": machine.machine_no,
+            "description": machine.description or "",
+            "order_idx": machine.order_idx if machine.order_idx is not None else 0,
+        }
         latest_at = None
         for source_name in source_names:
             entry = data_map.get((machine.machine_no, source_name))
@@ -437,7 +503,12 @@ def get_all_sources(db: Session = Depends(get_db), _=Depends(get_current_user)):
 
 @router.get("/source-status")
 def get_source_status(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    machines = db.query(MocvdMachine).filter(MocvdMachine.is_active == True).order_by(MocvdMachine.machine_no).all()
+    machines = (
+        db.query(MocvdMachine)
+        .filter(MocvdMachine.is_active == True)
+        .order_by(MocvdMachine.order_idx, MocvdMachine.machine_no)
+        .all()
+    )
     source_types = _active_source_types(db)
     source_rows = db.query(MocvdSource).all()
     settings = _get_source_status_settings(db)
@@ -600,6 +671,61 @@ def delete_handover_note(note_id: int, db: Session = Depends(get_db), current_us
         raise HTTPException(status_code=404, detail="?몄닔?멸퀎 寃뚯떆湲??李얠쓣 ???놁뒿?덈떎.")
     if not _can_manage_handover_note(current_user, row):
         raise HTTPException(status_code=403, detail="愿由ъ옄瑜??쒖쇅?섍퀬 蹂몄씤???묒꽦???몄닔?멸퀎?쇱?留???젣?????덉뒿?덈떎.")
+    db.delete(row)
+    db.commit()
+    return {"result": "ok"}
+
+
+@router.get("/todo-items")
+def list_todo_items(todo_date: str = "", db: Session = Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(MocvdTodoItem)
+    if todo_date:
+        q = q.filter(MocvdTodoItem.todo_date == todo_date)
+    rows = q.order_by(MocvdTodoItem.created_at.asc()).all()
+    return [
+        {
+            "id": row.id,
+            "todo_date": row.todo_date,
+            "content": row.content,
+            "is_done": row.is_done,
+            "author": row.author,
+            "created_at": row.created_at.isoformat() if row.created_at else "",
+        }
+        for row in rows
+    ]
+
+
+@router.post("/todo-items")
+def create_todo_item(body: TodoItemCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    row = MocvdTodoItem(
+        todo_date=body.todo_date,
+        content=body.content,
+        author=current_user.username,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"id": row.id, "todo_date": row.todo_date, "content": row.content, "is_done": row.is_done, "author": row.author}
+
+
+@router.patch("/todo-items/{item_id}")
+def update_todo_item(item_id: int, body: TodoItemUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = db.query(MocvdTodoItem).filter(MocvdTodoItem.id == item_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    if body.content is not None:
+        row.content = body.content
+    if body.is_done is not None:
+        row.is_done = body.is_done
+    db.commit()
+    return {"id": row.id, "todo_date": row.todo_date, "content": row.content, "is_done": row.is_done, "author": row.author}
+
+
+@router.delete("/todo-items/{item_id}")
+def delete_todo_item(item_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    row = db.query(MocvdTodoItem).filter(MocvdTodoItem.id == item_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
     db.delete(row)
     db.commit()
     return {"result": "ok"}
