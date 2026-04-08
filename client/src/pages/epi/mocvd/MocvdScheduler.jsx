@@ -60,6 +60,55 @@ function renderEventTooltip(ev, cfg) {
   )
 }
 
+function renderDateHeaderTooltip(dateStr, items, holidayName) {
+  const sortedItems = [...items].sort((a, b) => {
+    const machineCompare = String(a.machine_no || '').localeCompare(String(b.machine_no || ''), undefined, { numeric: true })
+    if (machineCompare !== 0) return machineCompare
+    return String(a.title || '').localeCompare(String(b.title || ''))
+  })
+
+  return (
+    <div style={{ minWidth: 240, maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0' }}>
+          {dayjs(dateStr).format('YYYY-MM-DD (dd)')}
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: items.length > 0 ? '#7dd3fc' : '#94a3b8' }}>
+          {items.length}건
+        </div>
+      </div>
+      {holidayName ? (
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#f87171' }}>{holidayName}</div>
+      ) : null}
+      {sortedItems.length === 0 ? (
+        <div style={{ fontSize: 13, color: '#94a3b8' }}>등록된 작업이 없습니다.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {sortedItems.map((item, idx) => {
+            const cfg = evtCfg(item)
+            return (
+              <div key={`${item.id ?? item.machine_no ?? 'na'}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, borderRadius: 4, padding: '1px 6px', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, flexShrink: 0 }}>
+                  {cfg.label}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', flexShrink: 0 }}>
+                  {item.machine_no ? formatMachineLabel(item.machine_no) : '-'}
+                </span>
+                <span style={{ fontSize: 13, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {item.title || cfg.label}
+                </span>
+                {item.actor ? (
+                  <span style={{ fontSize: 12, color: '#7dd3fc', flexShrink: 0 }}>{item.actor}</span>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ?? ?먮룞 ?쇱젙 ?앹꽦 ?뚭퀬由ъ쬁 ?????????????????????????????????? */
 // ?덉긽 援먯껜?쇱씠 ?대떦 ?붿뿉 ?대떦?섎뒗 ??ぉ??洹??좎쭨??吏곸젒 諛곗튂
 function autoGenerate({ pmCounters, sourceStatus, pmMembers, config, existingEvents = [] }) {
@@ -458,6 +507,45 @@ export default function MocvdScheduler() {
     return days
   }, [year, month])
 
+  const visibleMachineNos = useMemo(() => {
+    const activeMachines = machines
+      .filter(m => m.is_active)
+      .sort((a, b) => String(a.machine_no).localeCompare(String(b.machine_no), undefined, { numeric: true }))
+
+    const midGroupMap = {}
+    groups.filter(g => g.level >= 1).forEach(g => {
+      g.machine_nos.forEach(no => { midGroupMap[no] = g })
+    })
+
+    const visibleSet = new Set()
+    activeMachines.forEach((machine) => {
+      const grp = midGroupMap[machine.machine_no]
+      if (filterGroupIds === null) {
+        if (grp || showUnassigned) visibleSet.add(machine.machine_no)
+        return
+      }
+      if (grp && filterGroupIds.has(grp.id)) visibleSet.add(machine.machine_no)
+    })
+    return visibleSet
+  }, [machines, groups, filterGroupIds, showUnassigned])
+
+  const headerEventsByDate = useMemo(() => {
+    const map = {}
+    displayEvents.forEach((ev) => {
+      if (!ev?.machine_no || !visibleMachineNos.has(ev.machine_no)) return
+      if (filterTypes[ev.event_type] === false) return
+      const startD = ev.occurred_at?.slice(0, 10)
+      if (!startD) return
+      const duration = EVENT_DURATION[ev.event_type] ?? 1
+      for (let i = 0; i < duration; i++) {
+        const dateStr = dayjs(startD).add(i, 'day').format('YYYY-MM-DD')
+        if (!map[dateStr]) map[dateStr] = []
+        map[dateStr].push({ ...ev, spanDay: i + 1, spanTotal: duration })
+      }
+    })
+    return map
+  }, [displayEvents, visibleMachineNos, filterTypes])
+
   const pmMembers = useMemo(() =>
     members.filter(m => Object.prototype.hasOwnProperty.call(pmAssign, m.id) && m.is_active)
   , [members, pmAssign])
@@ -818,7 +906,7 @@ export default function MocvdScheduler() {
             <thead>
               <tr>
                 <th style={{
-                  position: 'sticky', left: 0, top: 64, zIndex: 11,
+                  position: 'sticky', left: 0, top: 0, zIndex: 11,
                   background: '#171b26', padding: '8px 10px',
                   textAlign: 'left', fontSize: 14, color: 'rgba(196,210,226,0.5)',
                   borderBottom: '2px solid rgba(245,158,11,0.45)',
@@ -834,7 +922,7 @@ export default function MocvdScheduler() {
                   const isDragCol = dragOverCell?.endsWith(`:${dateStr}`)
                   return (
                     <th key={dateStr} style={{
-                      position: 'sticky', top: 64, zIndex: 10,
+                      position: 'sticky', top: 0, zIndex: 10,
                       background: isDragCol ? 'linear-gradient(rgba(74,222,128,0.25),rgba(74,222,128,0.25)),#1a1f2c' : isToday ? 'linear-gradient(rgba(245,158,11,0.3),rgba(245,158,11,0.3)),#1a1f2c' : isHoliday ? 'linear-gradient(rgba(248,113,113,0.18),rgba(248,113,113,0.18)),#1a1f2c' : isSun ? 'linear-gradient(rgba(248,113,113,0.28),rgba(248,113,113,0.28)),#1a1f2c' : isSat ? 'linear-gradient(rgba(125,211,252,0.22),rgba(125,211,252,0.22)),#1a1f2c' : '#1a1f2c',
                       padding: '5px 2px', textAlign: 'center',
                       borderBottom: isDragCol ? '2px solid rgba(74,222,128,0.8)' : '2px solid rgba(245,158,11,0.45)',
@@ -842,9 +930,18 @@ export default function MocvdScheduler() {
                       color: isDragCol ? '#4ade80' : isToday ? '#f59e0b' : isSun || isHoliday ? '#f87171' : isSat ? '#7dd3fc' : 'rgba(196,210,226,0.6)',
                       transition: 'background 0.1s',
                     }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>{d.date()}</div>
-                      <div style={{ fontSize: 14, opacity: 0.8 }}>{WEEK_DAYS[dow]}</div>
-                      {isHoliday && <div style={{ fontSize: 14, color: '#f87171', lineHeight: 1, marginTop: 1, overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 42, textOverflow: 'ellipsis' }}>{holidays[dateStr]}</div>}
+                      <Tooltip
+                        title={renderDateHeaderTooltip(dateStr, headerEventsByDate[dateStr] || [], holidays[dateStr])}
+                        mouseEnterDelay={0.15}
+                        color="#24324c"
+                        overlayInnerStyle={{ borderRadius: 10 }}
+                      >
+                        <div style={{ cursor: 'help' }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>{d.date()}</div>
+                        <div style={{ fontSize: 14, opacity: 0.8 }}>{WEEK_DAYS[dow]}</div>
+                        {isHoliday && <div style={{ fontSize: 14, color: '#f87171', lineHeight: 1, marginTop: 1, overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 42, textOverflow: 'ellipsis' }}>{holidays[dateStr]}</div>}
+                        </div>
+                      </Tooltip>
                     </th>
                   )
                 })}
@@ -1213,5 +1310,3 @@ export default function MocvdScheduler() {
     </div>
   )
 }
-
-
